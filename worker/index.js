@@ -2,7 +2,7 @@ import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
 import {syncRecentSports} from "./sport-sync.js";
 import * as exifr from "exifr";
-import {importGpx,publicArchives,archiveMapPoints,archiveIndex} from "./parcours-archive.js";
+import {importGpx,publicArchives,archiveMapPoints,archiveIndex,isPublishedActivity} from "./parcours-archive.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
@@ -179,8 +179,11 @@ export default {
     if(path==="/api/prive/admin/defi/strava-recentes"&&request.method==="GET"&&auth.user.isAdmin){
       const result=await syncRecentSports(env);
       const stored=await archiveIndex(env);
+      const automatic=stored.filter(x=>x.source==="import_automatique");
       return json({items:result.items,etat:result.etat,lastSync:result.lastSync,
-        archives:stored.filter(x=>x.source==="import_automatique").length,
+        archives:automatic.length,
+        activitesPubliques:automatic.filter(isPublishedActivity).length,
+        parcoursDisponibles:automatic.filter(x=>["resume","disponible"].includes(x.routeState)).length,
         ...(result.reason?{error:result.reason}:{})});
     }
     const gps=/^\/api\/prive\/admin\/defi\/strava-parcours\/([1-9][0-9]{0,19})$/.exec(path);
