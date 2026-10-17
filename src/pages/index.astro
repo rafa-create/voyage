@@ -67,6 +67,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const yesterdayKey = new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(yesterday);
       let index = Math.max(0, ordered.findIndex(d=>d<=yesterdayKey));
       if (ordered[index] > yesterdayKey) index = ordered.length-1;
+      const todayIndex = index;
       const render = () => {
         const day = ordered[index];
         dateText.textContent = dateLabel(day);
@@ -93,6 +94,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       };
       previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
       next.addEventListener("click",()=>{if(index>0){index--;render();}});
+      window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
       render();
     }
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
