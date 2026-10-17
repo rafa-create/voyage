@@ -50,7 +50,7 @@ export function parseGpx(source){
     start,end,pointCount:points.length};
 }
 function publicItem(item){
-  const parcours=item.source!=="import_automatique"||item.routeState==="disponible";
+  const parcours=item.source!=="import_automatique"||["disponible","resume"].includes(item.routeState);
   return {id:item.id,date:item.date,fin:item.fin,km:item.km,
     minutes:item.minutes,titre:item.titre,sport:item.sport||"course",
     parcours,url:"/defi/#courses",source:"archive"};
@@ -115,7 +115,7 @@ export async function importGpx(env,form){
   await env.PHOTOS_PRIVEES.put(SOURCE+id+".gpx",xml,{
     httpMetadata:{contentType:"application/gpx+xml"}});
   await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",{...item,route:parsed.route});
-  await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...duplicates,item].slice(-6000)});
+  await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...duplicates,item]});
   return publicItem(item);
 }
 export async function publicArchivedRoute(env,id){
@@ -123,7 +123,7 @@ export async function publicArchivedRoute(env,id){
   const items=await archiveIndex(env);
   if(!items.some(item=>item.id===id&&isPublishedActivity(item)))return null;
   const record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
-  if(!record?.route||!Array.isArray(record.route))return null;
+  if(!Array.isArray(record?.route)||record.route.length<2)return null;
   // Les premières et dernières portions ne sont jamais livrées au navigateur public.
   const points=record.route;
   const cut=points.length>=20?Math.ceil(points.length*.07):0;
