@@ -1,33 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
-import { chemin } from "../lib/paths";
 ---
-<Base title="Connexion">
+<Base title="Espace Admin">
   <section class="container connection-page">
-    <div class="connection-intro">
-      <p class="eyebrow">Espace Admin</p>
-      <h1>Nos souvenirs,<br /><em>entre nous.</em></h1>
-      <p class="lead">Certains moments du voyage sont partagés ici uniquement avec les personnes invitées. Pas de mot de passe à retenir : Cloudflare envoie un code à ton adresse e-mail autorisée.</p>
-    </div>
-    <div class="connection-panel">
-      
-      <h2>Accéder aux albums privés</h2>
-      <p>Une fois identifié, tu restes connecté pendant la durée de session configurée. Les visiteurs autorisés voient les albums. L'administrateur peut aussi ajouter des souvenirs.</p>
-      <a class="button button-primary" href={chemin("/espace/")}>Recevoir un code de connexion <span aria-hidden="true">↗</span></a>
-      <p class="connection-help">Le formulaire d'e-mail et le code sont gérés par Cloudflare Access, et non par ce site.</p>
-    </div>
+    <h1>Espace Admin</h1>
   </section>
   <style>
-    .connection-page { min-height: 65vh; display: grid; grid-template-columns: 1fr minmax(280px,440px); gap: 8%; align-items: center; padding: 90px 0 120px; }
-    .connection-intro h1 { font-size: clamp(2.8rem,5.5vw,5rem); line-height: 1.15; margin: 24px 0; }
-    .connection-intro em { color: var(--orange); font-weight: 500; }
-    .connection-intro .lead { max-width: 490px; }
-    .connection-panel { padding: clamp(25px,4vw,42px); background: var(--white); border: 1px solid var(--line); }
-    .connection-icon { color: var(--orange); font-size: 2.8rem; }
-    .connection-panel h2 { font-size: 2rem; margin: 14px 0; }
-    .connection-panel p { color: var(--muted); line-height: 1.8; font-size: .91rem; }
-    .connection-panel .button { margin: 10px 0 8px; }
-    .connection-panel .connection-help { font-size: .74rem; }
-    @media(max-width:780px) { .connection-page { grid-template-columns: 1fr; padding: 44px 0 80px; gap: 30px; } }
+    .connection-page { min-height: 65vh; display: flex; align-items: center; padding: 90px 0 120px; }
+    .connection-page h1 { font-size: clamp(2.8rem,5.5vw,5rem); line-height: 1.15; margin: 0; }
+    @media(max-width:780px) { .connection-page { padding: 44px 0 80px; } }
   </style>
 </Base>
