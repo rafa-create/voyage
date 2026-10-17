@@ -80,6 +80,8 @@ export async function importGpx(env,form){
     minutes:parsed.start!==null&&parsed.end!==null&&parsed.end>parsed.start
       ?Math.round((parsed.end-parsed.start)/60000):null,
     titre: title, public:visibility==="public",pointCount:parsed.pointCount,
+    latitude:parsed.route[Math.floor(parsed.route.length/2)][0],
+    longitude:parsed.route[Math.floor(parsed.route.length/2)][1],
     source:"archive",ajouteLe:new Date().toISOString()};
   // La copie GPX originale appartient au propriétaire et ne dépend pas de l'API.
   await env.PHOTOS_PRIVEES.put(SOURCE+id+".gpx",xml,{
@@ -102,15 +104,9 @@ export async function publicArchivedRoute(env,id){
 }
 export async function archiveMapPoints(env){
   const items=await archiveIndex(env);
-  const marked=items.filter(item=>item.public===true).sort((a,b)=>b.fin-a.fin).slice(0,100);
-  const records=await Promise.all(marked.map(item=>getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null)));
-  return marked.flatMap((item,i)=>{
-    const pts=records[i]?.route||[];
-    if(pts.length<2)return [];
-    const position=pts[Math.floor(pts.length/2)];
-    if(!Array.isArray(position)||position.length!==2)return [];
-    return [{id:item.id,type:"course",date:item.date,fin:item.fin,
-      titre:item.titre,latitude:position[0],longitude:position[1],
-      distance:item.km}];
-  });
+  return items.filter(item=>item.public===true&&Number.isFinite(item.latitude)&&
+    Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,160)
+    .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
+      titre:item.titre,latitude:item.latitude,longitude:item.longitude,
+      distance:item.km}));
 }
