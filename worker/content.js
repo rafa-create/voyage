@@ -55,8 +55,10 @@ export function legacyPhotos(){
 function infoObject(obj,visibilite,stage,alt,legende,legacy=false){
   return {key:obj.key,src:photoPath(obj.key,visibilite),visibilite,etape:stage||null,
     datePrise:obj.customMetadata?.datePrise||null,
+    lieu:obj.customMetadata?.lieu||"",
     alt:obj.customMetadata?.alt||alt||"Photo de voyage",
     legende:obj.customMetadata?.legende||legende||"",
+    commentaire:obj.customMetadata?.commentaire||"",
     ajouteLe:obj.uploaded?.toISOString()||null,
     dateHeure:typeof obj.customMetadata?.dateHeure==="string"&&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(obj.customMetadata.dateHeure)
