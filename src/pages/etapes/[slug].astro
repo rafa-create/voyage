@@ -26,11 +26,11 @@ const { etape } = Astro.props;
       <p class="story-text">{etape.texte}</p>
     </section>
 
-    {etape.photos.length > 0 && (
+    {etape.photos.filter(photo => !photo.src.startsWith("/media/")).length > 0 && (
       <section class="container section">
         <div class="section-heading"><div><p class="eyebrow">SOUVENIRS EN IMAGES</p><h2>Les photos</h2></div></div>
         <div class="photo-grid">
-          {etape.photos.map((photo) => (
+          {etape.photos.filter(photo => !photo.src.startsWith("/media/")).map((photo) => (
             <figure class="photo-tile">
               <a href={chemin(photo.src)} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo en grand">
                 <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="960" height="720" />
@@ -101,6 +101,42 @@ const { etape } = Astro.props;
             area.hidden = false;
           })
           .catch(() => {});
+      }
+    </script>
+
+    <section class="container section" id="videos-r2-direct" data-etape={etape.slug} hidden>
+      <div class="section-heading"><div><p class="eyebrow">VIDÉOS YOUTUBE</p><h2>Les vidéos de l'étape</h2></div></div>
+      <div id="videos-r2-grid" class="video-grid"></div>
+    </section>
+    <script>
+      const videosSection = document.querySelector<HTMLElement>("#videos-r2-direct");
+      const videosGrid = document.querySelector<HTMLElement>("#videos-r2-grid");
+      const slug = videosSection?.dataset.etape || "";
+      if (slug && videosGrid && videosSection) {
+        fetch("/api/public/videos?etape=" + encodeURIComponent(slug), {cache:"no-store"})
+          .then(r => r.ok ? r.json() : {videos:[]})
+          .then(({videos}) => {
+            const saved = new Set<string>(Array.from(document.querySelectorAll<HTMLIFrameElement>(".video-frame iframe")).map(f => f.src.match(/embed\/([^?]+)/)?.[1] || ""));
+            for (const video of videos) {
+              const id = new URL(video.url).searchParams.get("v");
+              if (!id || saved.has(id) || !/^[a-zA-Z0-9_-]{11}$/.test(id)) continue;
+              const card = document.createElement("div"); card.className = "video-card";
+              const frame = document.createElement("div"); frame.className = "video-frame";
+              const iframe = document.createElement("iframe");
+              iframe.src = "https://www.youtube-nocookie.com/embed/" + id;
+              iframe.title = video.titre;
+              iframe.loading = "lazy";
+              iframe.referrerPolicy = "strict-origin-when-cross-origin";
+              iframe.allowFullscreen = true;
+              iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share";
+              frame.append(iframe);
+              const link = document.createElement("a");
+              link.href = video.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent=video.titre+" ↗";
+              card.append(frame,link);videosGrid.append(card);
+              saved.add(id);
+            }
+            videosSection.hidden = !videosGrid.childElementCount;
+          }).catch(()=>{});
       }
     </script>
     <div class="container story-end"><a class="text-link" href={chemin("/journal/")}>← Retour au journal</a></div>
