@@ -304,7 +304,27 @@ import { chemin } from "../../lib/paths";
           const target=checkbox.checked?"prive":"public";
           if(!window.confirm("Changer la visibilité de cette photo ? Une photo déjà publique a pu être enregistrée ou mise en cache par d'autres personnes.")){checkbox.checked=!checkbox.checked;return;}
           checkbox.disabled=true;
-          try{await post("/api/prive/admin/visibilite",{key:photo.key,visibilite:photo.visibilite,nouvelleVisibilite:target});await refresh();}
+          try{
+            if(photo.visibilite==="prive"&&target==="public"){
+              if(!photo.etape)throw Error("Classe d'abord la photo dans une étape.");
+              // Réencoder l'original privé sans EXIF/GPS avant la publication.
+              const imageResponse=await fetch(photo.src,{credentials:"same-origin"});
+              if(!imageResponse.ok)throw Error("Impossible de lire la photo privée.");
+              const original=await imageResponse.blob();
+              const filename=new File([original],"photo-privee",{type:original.type||"image/jpeg"});
+              const clean=await optimizedPublic(filename);
+              const args=new URLSearchParams({etape:photo.etape,visibilite:"public",auto:"0"});
+              if(photo.datePrise)args.set("datePrise",photo.datePrise);
+              const uploaded=await api("/api/prive/admin/upload?"+args.toString(),{
+                method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body:clean
+              });
+              // L'original privé est supprimé seulement après réussite de la publication.
+              await post("/api/prive/admin/supprimer-photo",{key:photo.key,visibilite:"prive"});
+            }else{
+              await post("/api/prive/admin/visibilite",{key:photo.key,visibilite:photo.visibilite,nouvelleVisibilite:target});
+            }
+            await refresh();
+          }
           catch(e){checkbox.checked=!checkbox.checked;message("sync-result",String(e));}
           finally{checkbox.disabled=false;}
         });
