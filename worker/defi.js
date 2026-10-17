@@ -311,7 +311,7 @@ export function summarizeChallenge(config,chess,activities,today){
   const games=Array.isArray(chess?.games)?chess.games:[];
   const runs=Array.isArray(activities)?activities:[];
   const gamesByDay=new Map(),activityByDay=new Map();
-  const orderedGames=[...games].filter(g=>validDate(g.date)&&g.date>=config.debut&&g.date<=today)
+  const orderedGames=[...games].filter(g=>g.mode==="rapid"&&validDate(g.date)&&g.date>=config.debut&&g.date<=today)
     .sort((a,b)=>a.fin-b.fin);
   // Elo de la cadence exacte du jour, pas un mélange blitz/rapid.
   const previousModeRating=new Map();
@@ -344,12 +344,12 @@ export function summarizeChallenge(config,chess,activities,today){
   }
   const finished=days.filter(d=>d.date<today);
   const completed=finished.filter(d=>d.resultat==="reussi").length;
-  const latestRated=orderedGames.filter(g=>g.rating!=null&&g.mode).at(-1);
-  const mode=latestRated?.mode||"rapid";
+  const latestRated=orderedGames.filter(g=>g.rating!=null).at(-1);
+  const mode="rapid";
   const sameMode=orderedGames.filter(g=>g.mode===mode&&g.rating!=null);
   const previous=sameMode.length>1?sameMode.at(-2)?.rating:null;
-  const rating=chess?.ratingStats?.[mode]||latestRated?.rating||null;
-  const delta=rating!=null&&previous!=null?rating-previous:null;
+  const rating=chess?.ratingStats?.rapid||latestRated?.rating||null;
+  const delta=sameMode.length>1 ? sameMode.at(-1).rating-previous : null;
   return {configured:true,debut:config.debut,timezone:config.timezone,username:config.chessUsername,
     misAJour:chess?.lastSync||null,historiquePartiel:Boolean(chess?.partial),
     elo:{rating,mode,delta,tendance:delta==null?"stable":delta>0?"hausse":delta<0?"baisse":"stable",
