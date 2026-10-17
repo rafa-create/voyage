@@ -1,6 +1,6 @@
 import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
-import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed } from "./defi.js";
+import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
@@ -77,6 +77,11 @@ export default {
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
     if(path==="/api/public/defi"&&request.method==="GET")return json(await freshPublicChallenge(env));
+    const publicGps=/^\/api\/public\/defi\/parcours\/([1-9][0-9]{0,19})$/.exec(path);
+    if(publicGps&&request.method==="GET"){
+      const points=await publicRoute(env,publicGps[1]);
+      return points?json({route:points}):error("Parcours public indisponible.",404);
+    }
     if(path==="/api/public/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/public/photos"&&request.method==="GET"){
       const slug=url.searchParams.get("etape");
