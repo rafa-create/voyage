@@ -1,6 +1,13 @@
 import { getJSON, putJSON, validDate } from "./content.js";
 
 const CONFIG_KEY="__meta/defi/config.json";
+// Valeurs provisoires pour tester le défi avant d'activer l'espace administrateur.
+// Toute configuration enregistrée dans R2 remplace ces valeurs.
+const DEFAULT_CONFIG=Object.freeze({
+  debut:"2026-10-17",
+  chessUsername:"rafaelorset",
+  timezone:"Europe/Paris"
+});
 const CHESS_KEY="__meta/defi/chess.json";
 const STRAVA_KEY="__meta/defi/strava.json";
 const MAX_DAYS=1095;
@@ -46,7 +53,7 @@ export function validateConfig(input){
   return {debut:input.debut,chessUsername:input.chessUsername.trim(),timezone};
 }
 export async function getChallengeConfig(env){
-  return getJSON(env.PHOTOS_PRIVEES,CONFIG_KEY,null);
+  return getJSON(env.PHOTOS_PRIVEES,CONFIG_KEY,DEFAULT_CONFIG);
 }
 export async function setChallengeConfig(env,input){
   const next=validateConfig(input);
