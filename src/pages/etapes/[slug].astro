@@ -32,7 +32,7 @@ const { etape } = Astro.props;
         <div class="photo-grid">
           {etape.photos.filter(photo => !photo.src.startsWith("/media/")).map((photo) => (
             <figure class="photo-tile">
-              <a href={chemin(photo.src)} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo en grand">
+              <a href={chemin("/galerie/?photo=" + encodeURIComponent(photo.src))} title="Afficher dans la visionneuse">
                 <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="960" height="720" />
               </a>
               {photo.legende && <figcaption>{photo.legende}</figcaption>}
@@ -85,9 +85,8 @@ const { etape } = Astro.props;
               const figure = document.createElement("figure");
               figure.className = "photo-tile";
               const a = document.createElement("a");
-              a.href = photo.src;
-              a.target = "_blank";
-              a.rel = "noopener noreferrer";
+              a.href = "/galerie/?photo=" + encodeURIComponent(photo.src);
+              a.title = "Afficher dans la visionneuse";
               const img = document.createElement("img");
               img.src = photo.src;
               img.alt = photo.alt || "Photo de voyage";
