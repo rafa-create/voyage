@@ -168,8 +168,12 @@ const points = etapes
               fetch("/api/public/photos",{cache:"no-store"}),
               fetch("/api/public/carte-evenements",{cache:"no-store"})
             ]);
-            if(!photosResponse.ok||!sportsResponse.ok)return;
-            const [{photos},{courses}]=await Promise.all([photosResponse.json(),sportsResponse.json()]);
+            // La carte et son bouton de tracés doivent rester disponibles même si
+            // l'une des API d'événements est momentanément indisponible.
+            const photoData=photosResponse.ok?await photosResponse.json():{};
+            const sportData=sportsResponse.ok?await sportsResponse.json():{};
+            const photos=photoData.photos;
+            const courses=sportData.courses;
             const memories:Event[]=[];
             for(const photo of (Array.isArray(photos)?photos:[])){
               if(!photo||!photo.etape)continue;
