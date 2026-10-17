@@ -185,6 +185,27 @@ const points = etapes
             onAdd: () => dayControl,
             onRemove: () => dayControl.remove()
           } as maplibregl.IControl, "bottom-left");
+
+          // Bouton indépendant à droite pour revenir à la journée par défaut.
+          const todayButton = document.createElement("button");
+          todayButton.type = "button";
+          todayButton.className = "map-today-control maplibregl-ctrl";
+          todayButton.textContent = "Aujourd’hui";
+          todayButton.setAttribute("aria-label", "Revenir à aujourd’hui");
+          todayButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            window.dispatchEvent(new CustomEvent("voyage:aujourdhui"));
+          });
+          for (const eventName of ["pointerdown", "mousedown", "touchstart", "dblclick"]) {
+            todayButton.addEventListener(eventName, (event) => {
+              event.stopPropagation();
+              if (eventName === "dblclick") event.preventDefault();
+            });
+          }
+          map.addControl({
+            onAdd: () => todayButton,
+            onRemove: () => todayButton.remove()
+          } as maplibregl.IControl, "bottom-right");
         }
         // Frise de voyage : chacune des photos publiques et toutes les activités
         // GPX publiées sont positionnées selon l'heure de leur capture/départ.
