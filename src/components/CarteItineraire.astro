@@ -388,6 +388,11 @@ const points = etapes
                 }
                 if(typeof memory.minutes==="number"&&Number.isFinite(memory.minutes)&&memory.minutes>0){
                   details.push(memory.minutes+" min");
+                  if(memory.sport && /course|run|running|trail/i.test(memory.sport) &&
+                    typeof memory.km==="number"&&Number.isFinite(memory.km)&&memory.km>0){
+                    const paceSeconds=Math.round(memory.minutes*60/memory.km);
+                    details.push(Math.floor(paceSeconds/60)+":"+String(paceSeconds%60).padStart(2,"0")+" min/km");
+                  }
                 }
                 metrics.textContent=details.join(" · ");
                 if(details.length)panel.append(metrics);
