@@ -37,7 +37,7 @@ function validRoute(data){
   return route.filter(point=>Array.isArray(point)&&point.length===2&&
     point.every(Number.isFinite)&&Math.abs(point[0])<=85&&Math.abs(point[1])<=180);
 }
-export async function archiveNewSports(env,items,{maxRoutes=3}={}){
+export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   if(!env.PHOTOS_PRIVEES||!Array.isArray(items)||!items.length)
     return {imported:0,routes:0};
   const indexed=await archiveIndex(env);
@@ -50,6 +50,7 @@ export async function archiveNewSports(env,items,{maxRoutes=3}={}){
     record.id=crypto.randomUUID();
     bySource.set(record.sourceId,record);
     additions.push(record);
+    if(additions.length>=maxImports)break;
   }
   if(additions.length){
     for(const item of additions)await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
