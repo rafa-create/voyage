@@ -134,7 +134,7 @@ const points = etapes
             },
           });
         }
-        let selectedDay = "";
+        let selectedDay = document.documentElement.dataset.voyageDay || "";
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string}>).detail;
           selectedDay = detail?.date || "";
