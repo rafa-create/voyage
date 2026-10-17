@@ -53,10 +53,10 @@ import { chemin } from "../../lib/paths";
         <section class="challenge-admin-panel full">
           <p class="eyebrow">03 / MES ARCHIVES PERSONNELLES</p>
           <h2>Garder mes courses pour toujours</h2>
-          <p>Ajoute ici un fichier GPX depuis ta montre, ton téléphone ou un export personnel. Le fichier original et le parcours restent sauvegardés dans le stockage de ce site : il n'y a aucune dépendance à un service sportif extérieur.</p>
+          <p>Ajoute ici un GPX issu de tes propres fichiers ou exports. Le lieu, la distance et l'heure sont extraits automatiquement du fichier. Le fichier original et le parcours restent sauvegardés dans le stockage de ce site : il n'y a aucune dépendance à un service sportif extérieur.</p>
           <form id="gpx-import-form" class="admin-form">
             <label for="gpx-title">Nom de l'activité</label>
-            <input id="gpx-title" name="titre" required maxlength="120" placeholder="Course, kitesurf ou football…" />
+            <input id="gpx-title" name="titre" maxlength="120" placeholder="Course, kitesurf ou football…" />
             <label for="gpx-sport">Type d'activité</label>
             <select id="gpx-sport" name="sport">
               <option value="course">Course à pied</option>
@@ -68,8 +68,8 @@ import { chemin } from "../../lib/paths";
             </select>
             <div class="two-col">
               <div>
-                <label for="gpx-date">Date</label>
-                <input id="gpx-date" name="date" type="date" required />
+                <label for="gpx-date">Date (facultative si le GPX contient l’heure)</label>
+                <input id="gpx-date" name="date" type="date" />
               </div>
               <div>
                 <label for="gpx-visibilite">Visibilité</label>
