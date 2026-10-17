@@ -190,12 +190,15 @@ import { chemin } from "../../lib/paths";
         const data=await request("/api/prive/admin/defi/strava-recentes");
         const items=Array.isArray(data?.items)?data.items:[];
         const archived=Number.isFinite(data.archives)?data.archives:0;
+        const publicCount=Number.isFinite(data.activitesPubliques)?data.activitesPubliques:0;
+        const gpsCount=Number.isFinite(data.parcoursDisponibles)?data.parcoursDisponibles:0;
         write("activities-sync-status",data.etat==="non_configure"
           ?"Connexion sportive non activée : vérifier la clé Cloudflare commune aux deux sites."
           :data.error
           ?"Synchronisation momentanément indisponible : "+data.error
-          :items.length+" activités récentes détectées · "+archived+
-            " copies personnelles enregistrées dans R2.");
+          :items.length+" activités récentes · "+archived+
+            " archivées dans R2 · "+publicCount+" dans le journal public · "+
+            gpsCount+" parcours GPS disponibles.");
         if(!items.length){
           const empty=document.createElement("p");
           empty.className="fineprint";
