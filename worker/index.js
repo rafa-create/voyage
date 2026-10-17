@@ -1,5 +1,6 @@
 import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
+import {syncRecentSports} from "./sport-sync.js";
 import * as exifr from "exifr";
 import {importGpx,publicArchives,archiveMapPoints} from "./parcours-archive.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
@@ -103,6 +104,7 @@ export default {
     ctx.waitUntil(synchroniserR2(env));
     ctx.waitUntil(enrichirPositionsPhotos(env).catch(e=>console.warn("Localisation photos:",String(e))));
     ctx.waitUntil(syncChess(env).catch(e=>console.warn("Synchronisation Chess.com:",String(e))));
+    ctx.waitUntil(syncRecentSports(env).catch(e=>console.warn("Synchronisation des activités sportives:",String(e))));
     ctx.waitUntil((async()=>{
       const marker="__meta/defi/cache-api-nettoye.json";
       const already=await getJSON(env.PHOTOS_PRIVEES,marker,null);
@@ -173,8 +175,9 @@ export default {
     if(path==="/api/prive/moi"&&request.method==="GET")return json(auth.user);
     if(path==="/api/prive/admin/defi"&&request.method==="GET"&&auth.user.isAdmin)return json(await privateChallenge(env));
     if(path==="/api/prive/admin/defi/strava-recentes"&&request.method==="GET"&&auth.user.isAdmin){
-      const result=await privateStravaFetch(env,"activities");
-      return json(result.body,result.status);
+      const result=await syncRecentSports(env);
+      return json({items:result.items,etat:result.etat,lastSync:result.lastSync,
+        ...(result.reason?{error:result.reason}:{})});
     }
     const gps=/^\/api\/prive\/admin\/defi\/strava-parcours\/([1-9][0-9]{0,19})$/.exec(path);
     if(gps&&request.method==="GET"&&auth.user.isAdmin){
