@@ -410,9 +410,25 @@ const points = etapes
               if(selectedDay && selectedDay !== memory.date){
                 marker.style.opacity=".38";marker.style.transform="scale(.82)";
               }
+              const popup = new maplibregl.Popup({
+                offset: 14,
+                className: "memory-map-popup",
+                closeButton: true,
+                closeOnClick: true,
+                maxWidth: "280px",
+              }).setDOMContent(panel);
+              popup.on("open", () => {
+                // MapLibre rend les popups dans un conteneur séparé des marqueurs :
+                // placer explicitement la popup active au-dessus des autres éléments.
+                const popupElement = popup.getElement();
+                if (popupElement) popupElement.style.zIndex = "1000";
+                element.querySelectorAll<HTMLElement>(".maplibregl-popup").forEach((other) => {
+                  if (other !== popupElement) other.style.zIndex = "1";
+                });
+              });
               new maplibregl.Marker({element:marker,anchor:"center"})
                 .setLngLat([memory.longitude,memory.latitude])
-                .setPopup(new maplibregl.Popup({offset:14}).setDOMContent(panel)).addTo(map);
+                .setPopup(popup).addTo(map);
             }
             if (selectedDay) updateSelectedDay(selectedDay);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
