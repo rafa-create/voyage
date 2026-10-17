@@ -162,18 +162,25 @@ const points = etapes
         // au bas de la carte : les boutons gardent ainsi leur comportement existant.
         const dateElement = document.querySelector<HTMLElement>("#daily-date");
         const dailyControls = document.querySelector<HTMLElement>(".daily-controls");
-        if (dateElement && dailyControls) {
+        const previousDay = document.querySelector<HTMLButtonElement>("#day-previous");
+        const nextDay = document.querySelector<HTMLButtonElement>("#day-next");
+        if (dateElement && dailyControls && previousDay && nextDay) {
           const dayControl = document.createElement("div");
-          // Le contrôle personnalisé doit intercepter les événements comme les
-          // contrôles natifs MapLibre, sinon les clics peuvent être captés par la carte.
+          // Une seule ligne compacte au pied de la carte.
           dayControl.className = "map-day-control maplibregl-ctrl";
+          previousDay.textContent = "←";
+          previousDay.setAttribute("aria-label", "Jour précédent");
+          nextDay.textContent = "→";
+          nextDay.setAttribute("aria-label", "Jour suivant");
+          previousDay.classList.add("daily-day-arrow");
+          nextDay.classList.add("daily-day-arrow");
           for (const eventName of ["pointerdown", "mousedown", "touchstart", "dblclick", "click", "wheel"]) {
             dayControl.addEventListener(eventName, (event) => {
               event.stopPropagation();
               if (eventName === "dblclick") event.preventDefault();
             });
           }
-          dayControl.append(dateElement, dailyControls);
+          dayControl.append(previousDay, dateElement, nextDay);
           map.addControl({
             onAdd: () => dayControl,
             onRemove: () => dayControl.remove()
