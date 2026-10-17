@@ -13,156 +13,118 @@ import { chemin } from "../lib/paths";
   </section>
 
   <section class="container section">
-    {photosAClasser.length > 0 && (
-      <>
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">PREMIER ESSAI · CLOUDFLARE R2</p>
-            <h2>Album de test<span class="heading-dot">.</span></h2>
-            <p class="gallery-description">{photosAClasser.length} photos déjà hébergées dans R2, en attente de leur pays et de leur étape.</p>
-          </div>
-        </div>
-        <div class="photo-grid gallery-grid">
-          {photosAClasser.map((photo) => (
-            <figure class="photo-tile">
-              <button
-                type="button"
-                class="photo-open"
-                data-photo={chemin(photo.src)}
-                data-alt={photo.alt}
-                aria-label={"Afficher en grand : " + photo.alt}
-              >
-                <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
-              </button>
-              {photo.legende && <figcaption class="photo-caption">{photo.legende}</figcaption>}
-            </figure>
-          ))}
-        </div>
-      </>
-    )}
-
-    {galerie.filter(photo => !photo.src.startsWith("/media/")).length > 0 && (
-      <>
-        <div class="section-heading" style={photosAClasser.length ? "margin-top: 5rem;" : undefined}>
-          <div>
-            <p class="eyebrow">PHOTOS CLASSÉES PAR ÉTAPE</p>
-            <h2>Le voyage en images<span class="heading-dot">.</span></h2>
-          </div>
-        </div>
-        <div class="photo-grid gallery-grid">
-          {galerie.filter(photo => !photo.src.startsWith("/media/")).map((photo) => (
-            <figure class="photo-tile">
-              <button
-                type="button"
-                class="photo-open"
-                data-photo={chemin(photo.src)}
-                data-alt={photo.alt}
-                aria-label={"Afficher en grand : " + photo.alt}
-              >
-                <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
-              </button>
-              <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
-            </figure>
-          ))}
-        </div>
-      </>
-    )}
-
-    {galerie.length === 0 && photosAClasser.length === 0 && (
-      <div class="empty-state">
-        <div class="empty-symbol" aria-hidden="true">▧</div>
-        <h2>Une galerie à remplir</h2>
-        <p>Les photos apparaîtront ici dès qu'elles seront ajoutées au carnet.</p>
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">INSTANTS CAPTURÉS</p>
+        <h2>Le voyage en images<span class="heading-dot">.</span></h2>
       </div>
-    )}
-  </section>
-
-  <section id="videos-r2-direct" class="container section" hidden><div class="section-heading"><div><p class="eyebrow">CARNET VIDÉO</p><h2>Les vidéos du voyage<span class="heading-dot">.</span></h2></div></div><div id="videos-r2-grid" class="photo-grid gallery-grid"></div></section>
-  <section id="galerie-r2-direct" class="container section" hidden>
-    <div class="section-heading"><div><p class="eyebrow">AJOUTÉES EN COURS DE ROUTE</p><h2>Nouveaux souvenirs<span class="heading-dot">.</span></h2></div></div>
-    <div id="galerie-r2-grid" class="photo-grid gallery-grid"></div>
+    </div>
+    <div id="galerie-unifiee-grid" class="photo-grid gallery-grid">
+      {photosAClasser.map((photo) => (
+        <figure class="photo-tile" data-date={(photo as any).date || ""}>
+          <button type="button" class="photo-open" data-photo={chemin(photo.src)} data-alt={photo.alt} aria-label={"Afficher en grand : " + photo.alt}>
+            <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
+          </button>
+          {photo.legende && <figcaption class="photo-caption">{photo.legende}</figcaption>}
+        </figure>
+      ))}
+      {galerie.filter(photo => !photo.src.startsWith("/media/")).map((photo) => (
+        <figure class="photo-tile" data-date={photo.etape.date}>
+          <button type="button" class="photo-open" data-photo={chemin(photo.src)} data-alt={photo.alt} aria-label={"Afficher en grand : " + photo.alt}>
+            <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
+          </button>
+          <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <p id="galerie-vide" class="empty-state" hidden>Les souvenirs apparaîtront ici dès qu'ils seront ajoutés au carnet.</p>
   </section>
   <script>
-    const videoGallery = document.querySelector<HTMLElement>("#videos-r2-direct");
-    const videoGrid = document.querySelector<HTMLElement>("#videos-r2-grid");
-    if (videoGallery && videoGrid) {
-      fetch("/api/public/etapes").then(r => r.ok ? r.json() : { etapes: [] }).then(async ({ etapes }) => {
-        const groups = await Promise.all((etapes || []).map(async (step: any) => {
+    const unifiedGrid = document.querySelector<HTMLElement>("#galerie-unifiee-grid");
+    const sortUnified = () => {
+      if (!unifiedGrid) return;
+      const items = Array.from(unifiedGrid.querySelectorAll<HTMLElement>("figure.photo-tile"));
+      items.sort((a, b) => String(b.dataset.date || "").localeCompare(String(a.dataset.date || "")));
+      items.forEach(item => unifiedGrid.append(item));
+      const empty = document.querySelector<HTMLElement>("#galerie-vide");
+      if (empty) empty.hidden = items.length > 0;
+    };
+    const videoDate = (video: any, step: any) => String(video.dateHeure || video.datePrise || video.date || step.date || "");
+    async function loadUnifiedGallery() {
+      if (!unifiedGrid) return;
+      const [stepsResponse, photosResponse] = await Promise.all([
+        fetch("/api/public/etapes"),
+        fetch("/api/public/photos")
+      ]);
+      const stepsData = stepsResponse.ok ? await stepsResponse.json() : { etapes: [] };
+      const photosData = photosResponse.ok ? await photosResponse.json() : { photos: [] };
+      const steps = stepsData.etapes || [];
+      const videosByStep = await Promise.all(steps.map(async (step: any) => {
+        try {
           const response = await fetch("/api/public/videos?etape=" + encodeURIComponent(step.slug));
           if (!response.ok) return [];
           const data = await response.json();
-          return (data.videos || []).map((video: any) => ({ ...video, etape: step.slug, ville: step.ville, pays: step.pays, date: step.date }));
-        }));
-        const seen = new Set<string>();
-        for (const video of groups.flat()) {
-          const match = String(video.url || "").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
-          const id = match?.[1];
-          if (!id || seen.has(id)) continue;
-          seen.add(id);
-          const figure = document.createElement("figure"); figure.className = "photo-tile";
-          const button = document.createElement("button"); button.type = "button"; button.className = "photo-open";
-          button.dataset.video = id; button.dataset.videoTitle = video.titre || "Vidéo du voyage";
-          button.dataset.videoRecordId = String(video.id || video.key || id);
-          button.dataset.alt = button.dataset.videoTitle;
-          button.dataset.date = video.date || "";
-          button.dataset.lieu = [video.ville, video.pays].filter(Boolean).join(" · ");
-          button.dataset.etape = video.etape || "";
-          button.dataset.videoUrl = video.url || "";
-          button.setAttribute("aria-label", "Lire la vidéo : " + button.dataset.videoTitle);
-          const poster = document.createElement("img"); poster.src = "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg"; poster.alt = button.dataset.videoTitle; poster.loading = "lazy";
-          button.append(poster); figure.append(button);
-          const caption = document.createElement("figcaption"); caption.textContent = button.dataset.videoTitle + (button.dataset.lieu ? " · " + button.dataset.lieu : "");
-          figure.append(caption); videoGrid.append(figure);
-        }
-        videoGallery.hidden = !videoGrid.childElementCount;
-      }).catch(() => {});
+          return (data.videos || []).map((video: any) => ({ ...video, etape: step.slug, ville: step.ville, pays: step.pays, date: videoDate(video, step) }));
+        } catch { return []; }
+      }));
+      const seenVideos = new Set<string>();
+      for (const video of videosByStep.flat()) {
+        const match = String(video.url || "").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
+        const id = match?.[1];
+        if (!id || seenVideos.has(id)) continue;
+        seenVideos.add(id);
+        const figure = document.createElement("figure");
+        figure.className = "photo-tile";
+        figure.dataset.date = video.date || "";
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "photo-open";
+        button.dataset.video = id;
+        button.dataset.videoTitle = video.titre || "Vidéo du voyage";
+        button.dataset.videoRecordId = String(video.id || video.key || id);
+        button.dataset.alt = button.dataset.videoTitle;
+        button.dataset.date = video.date || "";
+        button.dataset.lieu = [video.ville, video.pays].filter(Boolean).join(" · ");
+        button.dataset.etape = video.etape || "";
+        button.dataset.videoUrl = video.url || "";
+        button.setAttribute("aria-label", "Lire la vidéo : " + button.dataset.videoTitle);
+        const poster = document.createElement("img");
+        poster.src = "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+        poster.alt = button.dataset.videoTitle; poster.loading = "lazy";
+        button.append(poster); figure.append(button);
+        const caption = document.createElement("figcaption");
+        const dateLabel = video.date ? " · " + String(video.date).replace("T", " ").slice(0, 16) : "";
+        caption.textContent = button.dataset.videoTitle + (button.dataset.lieu ? " · " + button.dataset.lieu : "") + dateLabel;
+        figure.append(caption); unifiedGrid.append(figure);
+      }
+      for (const photo of (photosData.photos || [])) {
+        const figure = document.createElement("figure");
+        figure.className = "photo-tile";
+        const stamp = String(photo.dateHeure || photo.datePrise || photo.ajouteLe || "");
+        figure.dataset.date = stamp || "";
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "photo-open";
+        button.dataset.photo = photo.src;
+        button.dataset.alt = photo.alt || "Photo de voyage";
+        button.dataset.date = stamp;
+        button.setAttribute("aria-label", "Afficher " + (photo.alt || "la photo"));
+        const img = document.createElement("img");
+        img.src = photo.src; img.alt = photo.alt || "Photo de voyage"; img.loading = "lazy"; img.decoding = "async";
+        button.append(img);
+        const cap = document.createElement("figcaption");
+        const lieu = photo.etape ? "Étape : " + photo.etape : "";
+        const heure = stamp ? " · " + stamp.replace("T", " ").slice(0, 16) : "";
+        cap.textContent = (photo.alt || "Photo de voyage") + (lieu ? " · " + lieu : "") + heure;
+        figure.append(button, cap); unifiedGrid.append(figure);
+      }
+      sortUnified();
+      const requested = new URLSearchParams(location.search).get("photo");
+      if (requested) {
+        const target = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
+          .find(button => button.dataset.photo === requested || decodeURIComponent(button.dataset.photo || "") === requested);
+        target?.click();
+      }
     }
-    const gallery = document.querySelector<HTMLElement>("#galerie-r2-direct");
-    const grid = document.querySelector<HTMLElement>("#galerie-r2-grid");
-    if (gallery && grid) {
-      fetch("/api/public/photos")
-        .then(response => response.ok ? response.json() : { photos: [] })
-        .then(({ photos }) => {
-          if (!photos.length) return;
-          // Les photos de l’API sont affichées des plus récentes aux plus anciennes.
-          photos.sort((a: any, b: any) => {
-            const da = String(a.dateHeure || a.datePrise || a.ajouteLe || "");
-            const db = String(b.dateHeure || b.datePrise || b.ajouteLe || "");
-            return db.localeCompare(da);
-          });
-          for (const photo of photos) {
-            const figure = document.createElement("figure");
-            figure.className = "photo-tile";
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "photo-open";
-            button.dataset.photo = photo.src;
-            button.dataset.alt = photo.alt || "Photo de voyage";
-            button.setAttribute("aria-label", "Afficher " + (photo.alt || "la photo"));
-            const img = document.createElement("img");
-            img.src = photo.src;
-            img.alt = photo.alt || "Photo de voyage";
-            img.loading = "lazy";
-            button.append(img);
-            const cap = document.createElement("figcaption");
-            const lieu = photo.etape ? "Étape : " + photo.etape : "";
-            const horodatage = photo.dateHeure || photo.datePrise || "";
-            const heure = horodatage ? " · " + String(horodatage).replace("T", " ").slice(0, 16) : "";
-            cap.textContent = lieu + heure;
-            figure.append(button, cap);
-            grid.append(figure);
-          }
-          gallery.hidden = false;
-          // Une photo ouverte depuis la carte est sélectionnée dès son insertion.
-          const requested = new URLSearchParams(location.search).get("photo");
-          if (requested) {
-            const target = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
-              .find(button => button.dataset.photo === requested || decodeURIComponent(button.dataset.photo || "") === requested);
-            target?.click();
-          }
-        })
-        .catch(() => {});
-    }
+    loadUnifiedGallery().catch(() => sortUnified());
   </script>
   <dialog id="visionneuse" class="lightbox" aria-label="Photo agrandie">
     <button type="button" class="lightbox-close" aria-label="Fermer la photo" title="Fermer">✕</button>
