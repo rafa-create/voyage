@@ -18,7 +18,7 @@ import { chemin } from "../lib/paths";
         <p>Les journées de voyage apparaîtront ici, de la plus récente à la plus ancienne.</p>
       </div>
     ) : (
-      <ol class="timeline">
+      <ol class="timeline" id="timeline-live">
         {etapes.map((etape) => (
           <li>
             <span class="timeline-date">{dateFr(etape.date)}</span>
@@ -33,4 +33,24 @@ import { chemin } from "../lib/paths";
       </ol>
     )}
   </section>
+
+  <script>
+    fetch("/api/public/etapes").then(r=>r.ok?r.json():null).then(data=>{
+      if(!data)return;
+      const list=document.querySelector<HTMLOListElement>("#timeline-live");
+      if(!list)return;
+      list.replaceChildren();
+      const sorted=[...data.etapes].sort((a:{date:string},b:{date:string})=>b.date.localeCompare(a.date));
+      for(const e of sorted){
+        const li=document.createElement("li");
+        const date=document.createElement("span");date.className="timeline-date";date.textContent=e.date;
+        const link=document.createElement("a");link.className="timeline-card";link.href="/etapes/"+encodeURIComponent(e.slug)+"/";
+        const label=document.createElement("span");label.className="eyebrow";label.textContent=e.pays+" · "+e.ville;
+        const h=document.createElement("h2");h.textContent=e.titre;
+        const text=document.createElement("p");text.textContent=e.texte?.slice(0,150)||"Découvrir cette étape";
+        const more=document.createElement("span");more.className="card-more";more.textContent="Lire cette étape ↗";
+        link.append(label,h,text,more);li.append(date,link);list.append(li);
+      }
+    }).catch(()=>{});
+  </script>
 </Base>
