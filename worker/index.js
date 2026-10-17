@@ -2,7 +2,7 @@ import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
 import {syncRecentSports} from "./sport-sync.js";
 import * as exifr from "exifr";
-import {importGpx,publicArchives,archiveMapPoints,archiveIndex,isPublishedActivity} from "./parcours-archive.js";
+import {importGpx,publicArchives,archiveMapPoints,archiveIndex,isPublishedActivity,autoPublicationEnabled,setAutoPublication} from "./parcours-archive.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
@@ -178,11 +178,12 @@ export default {
     if(path==="/api/prive/admin/defi"&&request.method==="GET"&&auth.user.isAdmin)return json(await privateChallenge(env));
     if(path==="/api/prive/admin/defi/strava-recentes"&&request.method==="GET"&&auth.user.isAdmin){
       const result=await syncRecentSports(env);
-      const stored=await archiveIndex(env);
+      const [stored,publishAuto]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
       const automatic=stored.filter(x=>x.source==="import_automatique");
       return json({items:result.items,etat:result.etat,lastSync:result.lastSync,
         archives:automatic.length,
-        activitesPubliques:automatic.filter(isPublishedActivity).length,
+        publicationAutomatique:publishAuto,
+        activitesPubliques:automatic.filter(x=>isPublishedActivity(x,publishAuto)).length,
         parcoursDisponibles:automatic.filter(x=>["resume","disponible"].includes(x.routeState)).length,
         ...(result.reason?{error:result.reason}:{})});
     }
@@ -208,6 +209,12 @@ export default {
     }
     if(request.method!=="POST"||!mutationOk(request))return error("Action non autorisée.",403);
 
+    if(path==="/api/prive/admin/defi/publication-activites"){
+      try{
+        const payload=await request.json();
+        return json(await setAutoPublication(env,payload?.enabled));
+      }catch(e){return error(e instanceof Error?e.message:"Modification impossible.",400);}
+    }
     if(path==="/api/prive/admin/defi/import-gpx"){
       try{
         const form=await request.formData();
