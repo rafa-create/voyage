@@ -67,7 +67,7 @@ import Base from "../layouts/Base.astro";
             <div><p>Dernières sorties</p><iframe id="sport-feed" title="Dernières sorties sportives" loading="lazy" scrolling="no"></iframe></div>
             <div><p>Résumé</p><iframe id="sport-summary" title="Résumé des sorties sportives" loading="lazy" scrolling="no"></iframe></div>
           </div>
-          <a class="outside-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Toutes mes sorties ↗</a>
+          <a class="outside-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Toutes mes sorties</a>
         </details>
       </section>
     </div>
@@ -153,7 +153,7 @@ import Base from "../layouts/Base.astro";
       body.append(summary);
       const chart=chessGraph(day.date);
       if(chart)body.append(chart);
-      const origin=externalLink(game.url,"chess","Voir la partie sur Chess.com ↗");
+      const origin=externalLink(game.url,"chess","Voir la partie sur Chess.com");
       if(origin)body.append(origin);
     }
     function chessGraph(date:string){
@@ -216,7 +216,7 @@ import Base from "../layouts/Base.astro";
         const old=body.querySelector(".source-actions");
         if(old)old.remove();
         const actions=create("div","source-actions");
-        const link=externalLink(run.url,"activity","Voir l'activité originale ↗");
+        const link=externalLink(run.url,"activity","Voir l'activité originale");
         if(link)actions.append(link);
         if(actions.childNodes.length)body.append(actions);
         void drawRoute(run,canvas,hint,details);
@@ -283,7 +283,7 @@ import Base from "../layouts/Base.astro";
       const done=Boolean(isChess?day.echecs:day.activite);
       const details=create("details","goal "+(isChess?"goal-chess":"goal-activity"));
       const summary=create("summary","goal-summary");
-      const icon=create("span","goal-marker "+(done?"done":"undone"),done?"✓":"·");
+      const icon=create("span","goal-marker "+(done?"done":"undone"),done?"":"·");
       const description=create("span","goal-info");
       description.append(create("small",undefined,isChess?"ÉCHECS RAPIDES":"ACTIVITÉ PHYSIQUE"));
       description.append(create("strong",undefined,isChess
