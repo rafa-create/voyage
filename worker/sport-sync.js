@@ -20,14 +20,14 @@ function normalized(item){
   if(!/^[1-9][0-9]{0,19}$/.test(id)||!Number.isFinite(startedAtMs)||
     startedAtMs<946684800000||startedAtMs>Date.now()+300000)return null;
   const sportType=String(item.sportType||"Workout").slice(0,36);
-  const distanceMeters=Number(item?.distanceMeters);
+  const distanceMeters=item?.distanceMeters==null?null:Number(item.distanceMeters);
   return {
     id,startedAtMs,date:new Intl.DateTimeFormat("fr-FR",{
       timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"
     }).formatToParts(new Date(startedAtMs)).reduce((r,p)=>({...r,[p.type]:p.value}),{}),
     sportType,sport:sports[sportType]||"autre",
     name:String(item.name||"Activité physique").slice(0,100),
-    distanceMeters:Number.isFinite(distanceMeters)&&distanceMeters>=0?distanceMeters:null,
+    distanceMeters:distanceMeters!==null&&Number.isFinite(distanceMeters)&&distanceMeters>=0?distanceMeters:null,
     durationSeconds:Number.isFinite(item.durationSeconds)?Math.round(item.durationSeconds):null,
     visibility:item.visibility||"unknown"
   };
@@ -76,5 +76,13 @@ export async function syncRecentSports(env,{force=false}={}){
     .sort((a,b)=>b.startedAtMs-a.startedAtMs).slice(0,100);
   const syncedAt=new Date().toISOString();
   await putJSON(env.PHOTOS_PRIVEES,STORE,{items,syncedAt});
-  return {etat:"actualise",items,lastSync:syncedAt};
+  // Enregistrer une copie PERSONNELLE dans R2, y compris lorsqu'aucun
+  // parcours GPS n'est disponible. Chaque activité est dédupliquée par ID.
+  // La passerelle n'envoie pas les fichiers originaux de la montre.
+  let archive={imported:0,routes:0};
+  try{
+    const {archiveNewSports}=await import("./archive-auto.js");
+    archive=await archiveNewSports(env,items,{maxRoutes:3});
+  }catch(e){archive={imported:0,routes:0,error:String(e)};}
+  return {etat:"actualise",items,lastSync:syncedAt,archive};
 }
