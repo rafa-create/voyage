@@ -235,7 +235,12 @@ export async function deleteStravaActivity(env,url){
 // une archive permanente. Les archives conservables proviennent des fichiers
 // GPX originaux fournis par le propriétaire, dans parcours-archive.js.
 export async function syncPublicRuns(env){
-  return {etat:"archives_personnelles"};
+  // L'ouverture de la page déclenche la mise à jour du cache PERSONNEL.
+  // Le résultat du défi public reste exclusivement fondé sur les archives
+  // indépendantes importées par le propriétaire.
+  const {syncRecentSports}=await import("./sport-sync.js");
+  const result=await syncRecentSports(env);
+  return {etat:result.etat};
 }
 export async function publicRoute(env,id){
   const {publicArchivedRoute}=await import("./parcours-archive.js");
