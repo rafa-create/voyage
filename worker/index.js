@@ -197,6 +197,28 @@ export default {
       return json({photos:(await listedPhotos(env,"prive")).filter(p=>p.etape)});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
+    if(path==="/api/prive/admin/photo-modifier"){
+      const input=await readBody(request);const bucket=bucketFor(env,input?.visibilite),key=input?.key;
+      if(!bucket||!imageKey(key))return error("Photo invalide.");const file=await bucket.get(key);if(!file)return error("Photo introuvable.",404);
+      const date=input.datePrise===""?null:input.datePrise;if(date!==null&&!validDate(date))return error("Date invalide.");
+      const latitude=input.latitude===""||input.latitude===null?null:Number(input.latitude),longitude=input.longitude===""||input.longitude===null?null:Number(input.longitude);
+      if((latitude===null)!==(longitude===null)||(latitude!==null&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>85||Math.abs(longitude)>180)))return error("Coordonnées GPS invalides.");
+      const all=await steps(env),etape=input.etape===""?null:input.etape;if(etape!==null&&(!slugOk(etape)||!all.some(s=>s.slug===etape)))return error("Étape inconnue.");
+      const metadata={...(file.customMetadata||{})};for(const field of ["datePrise","dateHeure","lieu","legende","commentaire","etape","latitude","longitude","precision"])delete metadata[field];
+      if(date)metadata.datePrise=date;
+      if(typeof input.dateHeure==="string"&&/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(input.dateHeure)&&validDate(input.dateHeure.slice(0,10))&&(!date||input.dateHeure.slice(0,10)===date))metadata.dateHeure=input.dateHeure.length===16?input.dateHeure+":00":input.dateHeure;
+      if(typeof input.lieu==="string"&&input.lieu.trim())metadata.lieu=input.lieu.trim().slice(0,240);
+      if(typeof input.commentaire==="string"&&input.commentaire.trim())metadata.commentaire=input.commentaire.trim().slice(0,2000);
+      if(typeof input.legende==="string"&&input.legende.trim())metadata.legende=input.legende.trim().slice(0,2000);if(etape)metadata.etape=etape;
+      if(latitude!==null){metadata.latitude=String(latitude);metadata.longitude=String(longitude);metadata.precision="exact";}
+      await bucket.put(key,file.body,{httpMetadata:file.httpMetadata,customMetadata:metadata});return json({ok:true});
+    }
+    if(path==="/api/prive/admin/etape-modifier"){
+      const input=await readBody(request);if(!slugOk(input?.slug)||typeof input.texte!=="string"||input.texte.length>6000)return error("Texte d’étape invalide.");
+      const all=await steps(env),current=all.find(s=>s.slug===input.slug);if(!current)return error("Étape inconnue.",404);
+      const stored=await getJSON(env.PHOTOS_PRIVEES,"__meta/etapes/"+input.slug+".json",{...current,photos:[],videos:[]});stored.texte=input.texte;
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/etapes/"+input.slug+".json",stored);return json({ok:true});
+    }
     if(path==="/api/prive/admin/media"&&request.method==="GET"){
       const pub=await listedPhotos(env,"public");
       const pri=await listedPhotos(env,"prive");
