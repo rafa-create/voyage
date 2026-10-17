@@ -150,7 +150,7 @@ export default {
     }
     if(path==="/api/prive/admin/defi/strava-flux"){
       const input=await readBody(request);
-      try{return json({ok:true,url:await setPublicStravaFeed(env,input?.embed)});}
+      try{return json({ok:true,widgets:await setPublicStravaFeed(env,{feed:input?.embed,summary:input?.summary})});}
       catch(e){return error(e.message);}
     }
     if(path==="/api/prive/admin/defi/strava-ajouter"){
