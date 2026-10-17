@@ -68,7 +68,7 @@ const points = etapes
       map.doubleClickZoom.disable();
       // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
       let voyageLinksHidden = false;
-      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "trace-sportive", "tous-les-traces"];
+      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs"];
       const syncVoyageLinkVisibility = () => {
         for (const id of voyageLinkLayers) {
           if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", voyageLinksHidden ? "none" : "visible");
