@@ -363,9 +363,9 @@ const points = etapes
                 if(eventName==="dblclick") event.preventDefault();
               });
             }
-            allTracesButton.textContent="Masquer tous les liens entre les étapes";
-            allTracesButton.setAttribute("aria-label","Masquer tous les liens entre les étapes");
-            allTracesButton.setAttribute("aria-pressed","true");
+            allTracesButton.textContent="Afficher tous les liens entre les étapes";
+            allTracesButton.setAttribute("aria-label","Afficher tous les liens entre les étapes");
+            allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
             const loadAllTraces=async()=>{
               const activities=memories.filter(e=>e.type==="sport"&&e.id);
