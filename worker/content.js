@@ -57,7 +57,13 @@ function infoObject(obj,visibilite,stage,alt,legende,legacy=false){
     datePrise:obj.customMetadata?.datePrise||null,
     alt:obj.customMetadata?.alt||alt||"Photo de voyage",
     legende:obj.customMetadata?.legende||legende||"",
-    ajouteLe:obj.uploaded?.toISOString()||null,legacy};
+    ajouteLe:obj.uploaded?.toISOString()||null,
+    // Emplacement volontairement arrondi (~500 m) sur l'espace public.
+    latitude:Number.isFinite(Number(obj.customMetadata?.latitude))&&obj.customMetadata?.latitude
+      ?Math.round(Number(obj.customMetadata.latitude)*200)/200:null,
+    longitude:Number.isFinite(Number(obj.customMetadata?.longitude))&&obj.customMetadata?.longitude
+      ?Math.round(Number(obj.customMetadata.longitude)*200)/200:null,
+    legacy};
 }
 export async function listedPhotos(env,visibility="public"){
   const bucket=visibility==="public"?env.PHOTOS_PUBLIQUES:env.PHOTOS_PRIVEES;
@@ -86,6 +92,16 @@ export async function videos(env,slug){
   const stored=Array.isArray(db)?db:[];
   const step=etapesInitiales.find(x=>x.slug===slug);
   return [...(step?.videos||[]),...stored].filter(v=>urlYoutube(v.url)).map(v=>({id:v.id||null,url:v.url,titre:v.titre||"Vidéo du voyage"}));
+}
+export async function getCaptureCoords(bucket,key){
+  try{
+    const file=await bucket.get(key,{range:{offset:0,length:524288}});
+    if(!file)return null;
+    const gps=await exifr.gps(await file.arrayBuffer());
+    if(!gps||!Number.isFinite(gps.latitude)||!Number.isFinite(gps.longitude)||
+      Math.abs(gps.latitude)>85||Math.abs(gps.longitude)>180)return null;
+    return {latitude:gps.latitude,longitude:gps.longitude};
+  }catch{return null;}
 }
 export async function getCaptureDate(bucket,key){
   // Lire seulement l'en-tête pour l'EXIF, jamais la date de téléversement.
