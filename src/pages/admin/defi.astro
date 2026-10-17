@@ -51,7 +51,16 @@ import { chemin } from "../../lib/paths";
         </section>
 
         <section class="challenge-admin-panel full">
-          <p class="eyebrow">03 / MES ARCHIVES PERSONNELLES</p>
+          <p class="eyebrow">03 / ACTIVITÉS DÉTECTÉES</p>
+          <h2>Montre Garmin ou enregistrement sur téléphone</h2>
+          <p>Toutes les activités synchronisées vers ton compte sportif arrivent ici : course, vélo, kitesurf, football ou marche. Aucune deuxième connexion Garmin à configurer. Ce tableau est réservé à ton administration.</p>
+          <p id="activities-sync-status" class="fineprint" role="status">Chargement automatique des activités récentes…</p>
+          <div id="activities-sync-list" class="strava-records"></div>
+          <button id="activities-reload" type="button">↻ Rafraîchir les activités</button>
+          <p class="fineprint">Pour conserver durablement un tracé hors de la plateforme sportive, tu peux importer son fichier GPX dans l'archive ci-dessous. La liste connectée n'est pas une sauvegarde permanente.</p>
+        </section>
+        <section class="challenge-admin-panel full">
+          <p class="eyebrow">04 / MES ARCHIVES PERSONNELLES</p>
           <h2>Garder mes courses pour toujours</h2>
           <p>Ajoute ici un GPX issu de tes propres fichiers ou exports. Le lieu, la distance et l'heure sont extraits automatiquement du fichier. Le fichier original et le parcours restent sauvegardés dans le stockage de ce site : il n'y a aucune dépendance à un service sportif extérieur.</p>
           <form id="gpx-import-form" class="admin-form">
@@ -88,7 +97,7 @@ import { chemin } from "../../lib/paths";
           </form>
         </section>
         <section class="challenge-admin-panel full">
-          <p class="eyebrow">04 / FLUX SPORTIF AUTOMATIQUE</p>
+          <p class="eyebrow">05 / FLUX SPORTIF AUTOMATIQUE</p>
           <h2>Mes dernières activités, sans saisie</h2>
           <p>Copie une seule fois le code « Partager vos activités » depuis ton profil Strava sur ordinateur. Les sorties récentes seront ensuite affichées directement par Strava sur la page Défi, sans connexion API supplémentaire.</p>
           <p class="fineprint"><a href="https://www.strava.com/dashboard" target="_blank" rel="noopener noreferrer">Ouvrir mon compte Strava ↗</a> · Sur ton profil, choisis « Partager vos activités », puis le flux des dernières sorties (ou le résumé). Il ne faut pas copier le code d'une seule activité.</p>
@@ -103,7 +112,7 @@ import { chemin } from "../../lib/paths";
           <p class="fineprint">Le flux se met à jour sur Strava et ne donne pas directement les totaux du calendrier jour par jour. Les activités manuelles ci-dessous restent disponibles pour ce bilan.</p>
         </section>
         <section class="challenge-admin-panel full">
-          <p class="eyebrow">05 / SAISIE MANUELLE DES COURSES</p>
+          <p class="eyebrow">06 / SAISIE MANUELLE DES COURSES</p>
           <h2>Ajouter une activité</h2>
           <p>Pour rester à 0 €, copie simplement le lien de ton activité Strava et indique sa distance. Le site fera automatiquement le bilan quotidien.</p>
           <form id="strava-form" class="admin-form">
@@ -164,6 +173,47 @@ import { chemin } from "../../lib/paths";
         row.append(left,del);list.append(row);
       }
     }
+    const sportLabels:Record<string,string>={
+      Run:"Course à pied",TrailRun:"Trail",VirtualRun:"Course virtuelle",
+      Ride:"Vélo",MountainBikeRide:"VTT",GravelRide:"Gravel",
+      Walk:"Marche",Hike:"Randonnée",Kitesurf:"Kitesurf",Soccer:"Football",
+      Swim:"Natation",Workout:"Entraînement",Sail:"Voile",Windsurf:"Planche à voile"
+    };
+    async function loadConnectedActivities(){
+      write("activities-sync-status","Lecture des dernières activités…");
+      const list=get("activities-sync-list");
+      if(!list)return;
+      list.replaceChildren();
+      try{
+        const data=await request("/api/prive/admin/defi/strava-recentes");
+        const items=Array.isArray(data?.items)?data.items:[];
+        write("activities-sync-status",items.length+
+          " activités détectées · Garmin et enregistrements directs réunis.");
+        if(!items.length){
+          const empty=document.createElement("p");
+          empty.className="fineprint";
+          empty.textContent="Aucune activité détectée. Vérifie la connexion de ton compte sportif dans BeatOnStep.";
+          list.append(empty);return;
+        }
+        for(const item of items.slice(0,30)){
+          const row=document.createElement("div");row.className="strava-item";
+          const body=document.createElement("div");
+          const title=document.createElement("strong");title.textContent=item.name||"Activité";
+          const when=document.createElement("small");
+          const date=new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeZone:"Europe/Paris"})
+            .format(new Date(item.startedAtMs));
+          const distance=Number.isFinite(item.distanceMeters)&&item.distanceMeters>0
+            ?" · "+(item.distanceMeters/1000).toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"";
+          when.textContent=date+" · "+(sportLabels[item.sportType]||item.sportType||"Sport")+distance;
+          body.append(title,when);
+          const open=document.createElement("a");
+          open.href="https://www.strava.com/activities/"+encodeURIComponent(String(item.id||""));
+          open.target="_blank";open.rel="noopener noreferrer";open.textContent="Ouvrir ↗";
+          row.append(body,open);list.append(row);
+        }
+      }catch(err){write("activities-sync-status",err instanceof Error?err.message:"Liste momentanément indisponible.");}
+    }
+    get("activities-reload")?.addEventListener("click",()=>void loadConnectedActivities());
     async function reload(){
       const state:Summary=await request("/api/prive/admin/defi");
       if(state.configured){
@@ -185,6 +235,7 @@ import { chemin } from "../../lib/paths";
         const me=await request("/api/prive/moi");
         if(!me.isAdmin)throw Error("Accès réservé à l'administrateur.");
         await reload();
+        void loadConnectedActivities();
         const area=get("defi-admin-content");if(area)area.hidden=false;
         (get("defi-reload") as HTMLButtonElement).disabled=false;
       }catch(e){write("defi-status",e instanceof Error?e.message:"Connexion nécessaire.");}
