@@ -56,9 +56,11 @@ import { chemin } from "../../lib/paths";
           <p>Copie une seule fois le code « Partager vos activités » depuis ton profil Strava sur ordinateur. Les sorties récentes seront ensuite affichées directement par Strava sur la page Défi, sans connexion API supplémentaire.</p>
           <p class="fineprint"><a href="https://www.strava.com/dashboard" target="_blank" rel="noopener noreferrer">Ouvrir mon compte Strava ↗</a> · Sur ton profil, choisis « Partager vos activités », puis le flux des dernières sorties (ou le résumé). Il ne faut pas copier le code d'une seule activité.</p>
           <form id="strava-embed-form" class="admin-form">
-            <label for="strava-embed">Code d'intégration Strava ou adresse du widget</label>
-            <textarea id="strava-embed" rows="3" maxlength="2500" placeholder="Colle ici le code d'intégration du flux Strava"></textarea>
-            <button type="submit" class="primary">Enregistrer le flux automatique</button>
+            <label for="strava-embed">Dernières sorties — code d'intégration Strava</label>
+            <textarea id="strava-embed" rows="2" maxlength="2500" placeholder="Code des dernières activités Strava"></textarea>
+            <label for="strava-summary">Résumé des activités — code d'intégration Strava</label>
+            <textarea id="strava-summary" rows="2" maxlength="2500" placeholder="Code du résumé des activités Strava"></textarea>
+            <button type="submit" class="primary">Enregistrer les widgets Strava</button>
             <p id="strava-embed-message" class="feedback" role="status"></p>
           </form>
           <p class="fineprint">Le flux se met à jour sur Strava et ne donne pas directement les totaux du calendrier jour par jour. Les activités manuelles ci-dessous restent disponibles pour ce bilan.</p>
@@ -88,7 +90,7 @@ import { chemin } from "../../lib/paths";
   </section>
   <script>
     type Entry = {date:string;km:number;titre:string;url:string};
-    type Summary = {configured:boolean;debut?:string;username?:string;timezone?:string;stats?:{jours:number;joursComplets:number};activitesEnregistrees?:Entry[];misAJour?:string|null;stravaFeed?:string};
+    type Summary = {configured:boolean;debut?:string;username?:string;timezone?:string;stats?:{jours:number;joursComplets:number};activitesEnregistrees?:Entry[];misAJour?:string|null;stravaFeed?:string;stravaSummary?:string};
 
     const get=(id:string)=>document.getElementById(id);
     const value=(id:string)=>(get(id) as HTMLInputElement|HTMLSelectElement).value.trim();
@@ -136,6 +138,7 @@ import { chemin } from "../../lib/paths";
         zone.value=state.timezone||"Europe/Paris";
         entries=state.activitesEnregistrees||[];
         (get("strava-embed") as HTMLTextAreaElement).value=state.stravaFeed||"";
+        (get("strava-summary") as HTMLTextAreaElement).value=state.stravaSummary||"";
       }
       renderEntries();
       write("defi-status",state.configured?("Défi configuré · "+state.stats?.jours+" jours · "+state.stats?.joursComplets+" jours complets"):"Défi non configuré.");
@@ -173,8 +176,8 @@ import { chemin } from "../../lib/paths";
     get("strava-embed-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
       try{
-        await post("/api/prive/admin/defi/strava-flux",{embed:value("strava-embed")});
-        write("strava-embed-message","Flux Strava enregistré. Les dernières sorties apparaîtront automatiquement sur la page publique.");
+        await post("/api/prive/admin/defi/strava-flux",{embed:value("strava-embed"),summary:value("strava-summary")});
+        write("strava-embed-message","Widgets Strava enregistrés. Les activités et leur résumé apparaîtront sur la page publique.");
         await reload();
       }catch(err){write("strava-embed-message",err instanceof Error?err.message:"Erreur.");}
     });
