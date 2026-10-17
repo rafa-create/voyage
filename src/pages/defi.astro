@@ -343,7 +343,7 @@ import Base from "../layouts/Base.astro";
     void load();
   </script>
 
-  <style>
+  <style is:global>
     .defi-hero{background:var(--forest);color:#fff;padding:clamp(48px,7vw,88px) 0}
     .hero-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(250px,.65fr);gap:clamp(30px,7vw,90px);align-items:end}
     .defi-hero .eyebrow{color:#e2a789}
