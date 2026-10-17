@@ -15,6 +15,36 @@ const MAP={
   Football:"football",Walk:"marche",Hike:"marche"
 };
 
+// Polyline résumé présent dans la liste des activités : permet d'afficher
+// une carte immédiatement, même si la lecture GPS détaillée est indisponible.
+export function decodeSummaryPolyline(encoded){
+  if(typeof encoded!=="string"||!encoded||encoded.length>16000)return [];
+  const points=[];let cursor=0,lat=0,lon=0;
+  const part=()=>{
+    let result=0,shift=0,byte=0;
+    do{
+      if(cursor>=encoded.length||shift>30)throw Error("Tracé incomplet");
+      byte=encoded.charCodeAt(cursor++)-63;
+      if(byte<0||byte>63)throw Error("Tracé invalide");
+      result|=(byte&31)<<shift;shift+=5;
+    }while(byte>=32);
+    return result&1?~(result>>1):result>>1;
+  };
+  try{
+    while(cursor<encoded.length){
+      lat+=part();lon+=part();
+      const point=[lat/100000,lon/100000];
+      if(!Number.isFinite(point[0])||!Number.isFinite(point[1])||
+        Math.abs(point[0])>85||Math.abs(point[1])>180)return [];
+      points.push(point);
+      if(points.length>25000)return [];
+    }
+  }catch{return [];}
+  if(points.length<2)return [];
+  if(points.length<=120)return points;
+  return Array.from({length:120},(_,i)=>points[Math.round(i*(points.length-1)/119)]);
+}
+
 function details(item){
   const id=String(item?.id||"");
   const fin=Number(item?.startedAtMs);
@@ -39,26 +69,64 @@ function validRoute(data){
 }
 export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   if(!env.PHOTOS_PRIVEES||!Array.isArray(items)||!items.length)
-    return {imported:0,routes:0};
+    return {imported:0,routes:0,total:0};
   const indexed=await archiveIndex(env);
   const bySource=new Map(indexed.filter(a=>a.sourceId).map(a=>[a.sourceId,a]));
   const additions=[];
-  // Importer les résumés sans exiger de traces GPS (sports en salle, football...).
-  for(const item of [...items].sort((a,b)=>b.startedAtMs-a.startedAtMs)){
+  let modified=false;
+  const sorted=[...items].sort((a,b)=>b.startedAtMs-a.startedAtMs);
+  // Toutes les activités sont identifiées par leur ID distant, quel que soit
+  // l'appareil d'origine. Ne jamais écraser un original GPX existant.
+  for(const item of sorted){
     const record=details(item);
-    if(!record||bySource.has(record.sourceId))continue;
+    if(!record)continue;
+    const existing=bySource.get(record.sourceId);
+    const preview=decodeSummaryPolyline(item.summaryPolyline);
+    if(existing){
+      // Si l'activité a changé de visibilité, remettre l'index à jour.
+      const visibility=record.visibility;
+      const changed=existing.visibility!==visibility;
+      if(changed){
+        existing.visibility=visibility;
+        existing.public=visibility==="everyone";
+        modified=true;
+      }
+      // Réparer les archives constituées AVANT que la passerelle n'envoie
+      // le tracé résumé (c'était le cas des premières copies R2).
+      if(preview.length>=2&&existing.routeState!=="disponible"&&
+         existing.routeState!=="resume"){
+        const midpoint=preview[Math.floor(preview.length/2)];
+        const upgraded={...existing,latitude:midpoint[0],longitude:midpoint[1],
+          routeState:"resume"};
+        Object.assign(existing,upgraded);
+        const stored=await getJSON(env.PHOTOS_PRIVEES,PREFIX+existing.id+".json",null);
+        await putJSON(env.PHOTOS_PRIVEES,PREFIX+existing.id+".json",{
+          ...(stored||existing),...upgraded,route:preview
+        });
+        modified=true;
+      }
+      continue;
+    }
+    if(additions.length>=Math.max(0,maxImports))continue;
     record.id=crypto.randomUUID();
+    const hasPreview=preview.length>=2;
+    if(hasPreview){
+      const midpoint=preview[Math.floor(preview.length/2)];
+      record.latitude=midpoint[0];record.longitude=midpoint[1];
+      record.routeState="resume";
+    }
     bySource.set(record.sourceId,record);
-    additions.push(record);
-    if(additions.length>=maxImports)break;
+    additions.push({record,route:hasPreview?preview:[]});
   }
-  if(additions.length){
-    for(const item of additions)await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
-      ...item,route:[]});
-    await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...indexed,...additions].slice(-6000)});
-  }
-  const history=additions.length?[...indexed,...additions].slice(-6000):indexed;
+  const history=[...indexed,...additions.map(x=>x.record)];
+  for(const {record,route} of additions)
+    await putJSON(env.PHOTOS_PRIVEES,PREFIX+record.id+".json",{...record,route});
+  if(modified||additions.length)
+    await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:history});
+
   let routes=0;
+  // Compléter les tracés sans aperçu. Une indisponibilité temporaire de
+  // l'un ne doit pas bloquer les autres activités.
   const pending=history.filter(a=>a.source==="import_automatique"&&
     a.routeState==="en_attente"&&
     (!a.routeRetryAt||Date.parse(a.routeRetryAt)<=Date.now()))
@@ -67,8 +135,6 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
     for(const item of pending){
       const activityId=item.sourceId?.split(":")[1];
       const result=await privateStravaFetch(env,"activities/"+activityId+"/route");
-      // En cas de refus temporaire, décaler l'essai pour ne pas bloquer
-      // toutes les autres activités du mois derrière le même parcours.
       const route=result.status===200?validRoute(result.body):[];
       const failed=result.status!==200;
       const checked={...item,
@@ -80,11 +146,10 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
         checked.longitude=route[Math.floor(route.length/2)][1];
         routes++;
       }
-      const original=await getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null);
+      const stored=await getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null);
       await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
-        ...(original||item),...checked,route});
-      const where=history.findIndex(row=>row.id===item.id);
-      if(where>=0)history[where]=checked;
+        ...(stored||item),...checked,route});
+      Object.assign(item,checked);
     }
     await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:history});
   }
