@@ -242,7 +242,11 @@ const points = etapes
             let allTracesVisible=false;
             let allTracesLoaded=false;
             allTracesButton.addEventListener("click",async()=>{
+              if (allTracesButton.disabled) return;
               allTracesButton.disabled=true;
+              allTracesButton.textContent=allTracesLoaded
+                ? (allTracesVisible ? "Masquage des tracés…" : "Affichage des tracés…")
+                : "Chargement des tracés…";
               try{
                 if(!allTracesLoaded){
                   const activities=memories.filter(e=>e.type==="sport"&&e.id);
@@ -262,6 +266,7 @@ const points = etapes
                   }));
                   if(!features.length){
                     allTracesButton.textContent="Aucun tracé disponible";
+                    allTracesButton.setAttribute("aria-pressed","false");
                     return;
                   }
                   const data={type:"FeatureCollection" as const,features};
@@ -286,6 +291,9 @@ const points = etapes
                 if(map.getLayer("tous-les-traces"))map.setLayoutProperty("tous-les-traces","visibility",allTracesVisible?"visible":"none");
                 allTracesButton.textContent=allTracesVisible?"Masquer les tracés":"Afficher tous les tracés";
                 allTracesButton.setAttribute("aria-pressed",String(allTracesVisible));
+              }catch(error){
+                console.error("Impossible d’afficher les tracés GPS :",error);
+                allTracesButton.textContent="Erreur de chargement — réessayer";
               }finally{allTracesButton.disabled=false;}
             });
             map.addControl({onAdd:()=>allTracesButton,onRemove:()=>allTracesButton.remove()} as maplibregl.IControl,"top-left");
