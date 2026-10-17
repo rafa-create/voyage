@@ -7,18 +7,10 @@ import { chemin } from "../lib/paths";
 
 <Base title="Galerie photo" active="galerie">
   <section class="page-intro container">
-    <p class="eyebrow">INSTANTS CAPTURÉS</p>
     <h1>La galerie photo<span class="heading-dot">.</span></h1>
-    <p>Les images du voyage, réunies au même endroit. Cliquez sur une photo pour l'afficher en grand.</p>
   </section>
 
   <section class="container section">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">INSTANTS CAPTURÉS</p>
-        <h2>Le voyage en images<span class="heading-dot">.</span></h2>
-      </div>
-    </div>
     <div id="galerie-unifiee-grid" class="gallery-months">
       {photosAClasser.map((photo) => (
         <figure class="photo-tile" data-date={(photo as any).date || ""}>
