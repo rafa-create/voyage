@@ -27,7 +27,7 @@ import { chemin } from "../../lib/paths";
             <input id="defi-start" type="date" required />
             <label for="defi-chess">Pseudo Chess.com</label>
             <input id="defi-chess" required maxlength="30" value="rafaelorset" placeholder="Ton pseudo Chess.com" autocomplete="off" />
-            <p class="fineprint">Profil suivi : <a href="https://www.chess.com/member/rafaelorset" target="_blank" rel="noopener noreferrer">rafaelorset sur Chess.com ↗</a></p>
+            <p class="fineprint">Profil suivi : <a href="https://www.chess.com/member/rafaelorset" target="_blank" rel="noopener noreferrer">rafaelorset sur Chess.com</a></p>
             <label for="defi-zone">Fuseau horaire de référence</label>
             <select id="defi-zone">
               <option value="Europe/Paris">France (Europe/Paris)</option>
@@ -109,7 +109,7 @@ import { chemin } from "../../lib/paths";
           <p class="eyebrow">05 / FLUX SPORTIF AUTOMATIQUE</p>
           <h2>Mes dernières activités, sans saisie</h2>
           <p>Copie une seule fois le code « Partager vos activités » depuis ton profil Strava sur ordinateur. Les sorties récentes seront ensuite affichées directement par Strava sur la page Défi, sans connexion API supplémentaire.</p>
-          <p class="fineprint"><a href="https://www.strava.com/dashboard" target="_blank" rel="noopener noreferrer">Ouvrir mon compte Strava ↗</a> · Sur ton profil, choisis « Partager vos activités », puis le flux des dernières sorties (ou le résumé). Il ne faut pas copier le code d'une seule activité.</p>
+          <p class="fineprint"><a href="https://www.strava.com/dashboard" target="_blank" rel="noopener noreferrer">Ouvrir mon compte Strava</a> · Sur ton profil, choisis « Partager vos activités », puis le flux des dernières sorties (ou le résumé). Il ne faut pas copier le code d'une seule activité.</p>
           <form id="strava-embed-form" class="admin-form">
             <label for="strava-embed">Dernières sorties — code d'intégration Strava</label>
             <textarea id="strava-embed" rows="2" maxlength="2500" placeholder="Code des dernières activités Strava"></textarea>
@@ -140,7 +140,7 @@ import { chemin } from "../../lib/paths";
           <div id="strava-records" class="strava-records"></div>
         </section>
       </div>
-      <div class="preview-link"><a class="text-link" href={chemin("/defi/")}>Voir ma page Défi publique ↗</a></div>
+      <div class="preview-link"><a class="text-link" href={chemin("/defi/")}>Voir ma page Défi publique</a></div>
     </div>
   </section>
   <script>
@@ -170,7 +170,7 @@ import { chemin } from "../../lib/paths";
         const left=document.createElement("div");
         const strong=document.createElement("strong");strong.textContent=item.titre;
         const span=document.createElement("small");span.textContent=item.date+" · "+item.km.toFixed(2).replace(".",",")+" km";
-        const url=document.createElement("a");url.textContent="Ouvrir sur Strava ↗";url.href=item.url;url.target="_blank";url.rel="noopener noreferrer";
+        const url=document.createElement("a");url.textContent="Ouvrir sur Strava";url.href=item.url;url.target="_blank";url.rel="noopener noreferrer";
         left.append(strong,span,url);
         const del=document.createElement("button");del.type="button";del.textContent="Supprimer";del.setAttribute("aria-label","Retirer "+item.titre);
         del.addEventListener("click",async()=>{
@@ -228,7 +228,7 @@ import { chemin } from "../../lib/paths";
           body.append(title,when);
           const open=document.createElement("a");
           open.href="https://www.strava.com/activities/"+encodeURIComponent(String(item.id||""));
-          open.target="_blank";open.rel="noopener noreferrer";open.textContent="Ouvrir ↗";
+          open.target="_blank";open.rel="noopener noreferrer";open.textContent="Ouvrir";
           row.append(body,open);list.append(row);
         }
       }catch(err){write("activities-sync-status",err instanceof Error?err.message:"Liste momentanément indisponible.");}
