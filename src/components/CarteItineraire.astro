@@ -141,7 +141,6 @@ const points = etapes
           element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
             const active = !selectedDay || marker.dataset.date === selectedDay;
             marker.style.opacity = active ? "1" : ".38";
-            marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
             marker.style.zIndex = active ? "2" : "1";
           });
         });
