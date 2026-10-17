@@ -7,8 +7,8 @@ import Base from "../layouts/Base.astro";
     <div class="container hero-inner">
       <div>
         <p class="eyebrow">LE DÉFI DU VOYAGE</p>
-        <h1>Un jour.<br /><em>Deux objectifs.</em></h1>
-        <p class="hero-subtitle">Une partie rapide aux échecs. Une activité physique. Tous les jours.</p>
+        <h1>Le défi, au quotidien.</h1>
+        <p class="hero-subtitle">Une partie rapide et une activité physique par jour.</p>
       </div>
       <div class="hero-progress">
         <span>AUJOURD'HUI</span>
@@ -22,12 +22,13 @@ import Base from "../layouts/Base.astro";
     <p id="defi-loading" class="update-note" role="status">Actualisation du carnet…</p>
     <div id="defi-empty" hidden>Le défi sera bientôt disponible.</div>
     <div id="defi-content" hidden>
-      <div class="score-grid" aria-label="Bilan du voyage">
-        <div class="score"><small>JOURS</small><strong id="score-days">—</strong></div>
-        <div class="score"><small>ÉCHECS</small><strong id="score-chess">—</strong></div>
+      <div class="score-grid" aria-label="Bilan du défi">
+        <div class="score"><small>JOURS SUIVIS</small><strong id="score-days">—</strong></div>
+        <div class="score"><small>PARTIES RAPIDES</small><strong id="score-chess">—</strong></div>
         <div class="score"><small>ACTIVITÉS</small><strong id="score-activities">—</strong></div>
-        <div class="score score-highlight"><small>RÉUSSITE</small><strong id="score-success">—</strong></div>
+        <div class="score score-highlight"><small>JOURNÉES COMPLÈTES</small><strong id="score-completed">—</strong><span class="score-note">Deux objectifs remplis</span></div>
       </div>
+      <p id="success-explainer" class="success-explainer"></p>
 
       <section id="aujourdhui" class="today-section">
         <div class="section-heading">
@@ -123,13 +124,13 @@ import Base from "../layouts/Base.astro";
       return a;
     }
     function status(day:Day){
-      if(day.resultat==="reussi")return {name:"Réussi · 2/2",css:"win"};
+      if(day.resultat==="reussi")return {name:"Complet · 2/2 objectifs",css:"win"};
       if(day.date===state.jours?.[0]?.date){
         const score=Number(Boolean(day.echecs))+Number(Boolean(day.activite));
-        return {name:"En cours · "+score+"/2",css:"pending"};
+        return {name:"Aujourd’hui · "+score+"/2 objectifs",css:"pending"};
       }
-      if(day.echecs||day.activite)return {name:"Partiel · 1/2",css:"partial"};
-      return {name:"Manqué · 0/2",css:"miss"};
+      if(day.echecs||day.activite)return {name:"Partiel · 1/2 objectif",css:"partial"};
+      return {name:"Incomplet · 0/2 objectif",css:"miss"};
     }
     function statusBadge(day:Day){const v=status(day);return create("span","day-status "+v.css,v.name);}
     function detailLine(label:string,value:string){
@@ -364,7 +365,10 @@ import Base from "../layouts/Base.astro";
         set("score-days",String(stats.jours));
         set("score-chess",String(stats.joursEchecs));
         set("score-activities",String(stats.joursActivites));
-        set("score-success",stats.reussite===null?"—":stats.reussite+" %");
+        set("score-completed",String(stats.joursComplets||0));
+        set("success-explainer",stats.joursTermines>0
+          ? "Taux de réussite : "+(stats.reussite===null?"—":stats.reussite+" %")+" · "+(stats.joursComplets||0)+" journées complètes sur "+stats.joursTermines+" journées terminées. Aujourd’hui n’entre pas encore dans le calcul."
+          : "Le taux sera calculé à partir des journées terminées ; la journée en cours est exclue.");
         const days=state.jours||[];
         set("hero-status",days[0]?status(days[0]).name:"En attente");
         if(days[0]){
@@ -394,13 +398,13 @@ import Base from "../layouts/Base.astro";
   </script>
 
   <style is:global>
-    .defi-hero{background:var(--forest);color:#fff;padding:clamp(42px,6vw,74px) 0}
+    .defi-hero{background:var(--forest);color:#fff;padding:clamp(28px,4vw,46px) 0}
     .hero-inner{display:flex;align-items:end;justify-content:space-between;gap:48px}
     .defi-hero .eyebrow{color:#e4ad8f;font-size:.7rem;letter-spacing:.16em}
-    .defi-hero h1{font:500 clamp(2.9rem,7vw,5.8rem)/1.02 'Playfair Display',Georgia,serif;letter-spacing:-.04em;margin:16px 0}
+    .defi-hero h1{font:500 clamp(2.15rem,4.5vw,3.65rem)/1.1 'Playfair Display',Georgia,serif;letter-spacing:-.035em;margin:12px 0}
     .defi-hero h1 em{font-weight:400;color:#ecaa86}
     .hero-subtitle{font-size:clamp(.92rem,1.6vw,1.08rem);color:#d1e1dc;line-height:1.6;max-width:440px}
-    .hero-progress{display:flex;flex-direction:column;gap:10px;border-top:1px solid #748e83;padding-top:15px;min-width:230px}
+    .hero-progress{display:flex;flex-direction:column;gap:8px;border-top:1px solid #748e83;padding-top:12px;min-width:210px}
     .hero-progress span{font-size:.68rem;letter-spacing:.13em;color:#d5a48a;font-weight:800}
     .hero-progress strong{font:500 1.65rem/1.2 'Playfair Display',Georgia,serif}
     .hero-progress a{color:#f9f6f2;font-size:.84rem;text-decoration:underline;text-underline-offset:4px}
@@ -412,6 +416,8 @@ import Base from "../layouts/Base.astro";
     .score small{display:block;letter-spacing:.1em;color:var(--muted);font-weight:800;font-size:.68rem}
     .score strong{display:block;font:500 clamp(2.1rem,3.9vw,3rem)/1.15 'Playfair Display',Georgia,serif;color:var(--forest);margin-top:12px}
     .score-highlight{background:#e8efe7}
+    .score-note{display:block;margin-top:5px;color:var(--muted);font-size:.72rem;line-height:1.4}
+    .success-explainer{font-size:.78rem;line-height:1.5;color:var(--muted);margin:10px 0 0}
     .today-section,.journal-section{margin-top:clamp(38px,6vw,65px)}
     .section-heading{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:16px}
     .section-heading .eyebrow{color:var(--orange);letter-spacing:.15em;font-weight:800;font-size:.68rem;margin:0 0 7px}
@@ -489,8 +495,8 @@ import Base from "../layouts/Base.astro";
       .score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
     @media(max-width:650px){
-      .defi-hero{padding:36px 0}
-      .defi-hero h1{font-size:clamp(2.8rem,12vw,4.2rem)}
+      .defi-hero{padding:26px 0}
+      .defi-hero h1{font-size:clamp(2rem,8vw,3rem)}
       .score{padding:14px}
       .score strong{font-size:2.45rem}
       .section-heading{align-items:start;flex-direction:column;gap:10px}
