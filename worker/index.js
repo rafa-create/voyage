@@ -216,6 +216,7 @@ export default {
       try{return json({ok:true,config:await setChallengeConfig(env,input)});}
       catch(e){return error(e.message);}
     }
+    if(path==="/api/prive/admin/defi/sports-synchroniser"){const result=await syncRecentSports(env,{force:true});return json(result);}
     if(path==="/api/prive/admin/defi/chess-synchroniser"){
       try{return json(await syncChess(env));}
       catch(e){return error("Synchronisation Chess.com impossible : "+e.message,502);}
