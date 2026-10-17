@@ -262,3 +262,33 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 
 /* Six rubriques : garder une navigation lisible sur les petits téléphones. */
 @media(max-width:650px){.main-nav{flex-wrap:wrap;justify-content:center;column-gap:18px;row-gap:0;}.main-nav a{font-size:.74rem;white-space:nowrap;}}
+
+
+/* Vue quotidienne et visionneuse chronologique */
+.daily-controls { display:flex; gap:10px; flex-wrap:wrap; }
+.daily-controls button, .lightbox-prev, .lightbox-next {
+  border:1px solid var(--line); background:var(--white); color:var(--forest);
+  border-radius:3px; padding:10px 14px; font-weight:700; cursor:pointer;
+}
+.daily-controls button:disabled { opacity:.4; cursor:not-allowed; }
+.daily-view #daily-date { color:var(--muted); margin-top:12px; }
+.daily-all { margin-top:28px; }
+.lightbox { position:fixed; inset:0; width:min(96vw,1200px); max-width:none; height:min(92dvh,900px);
+  max-height:none; border:0; padding:56px 58px 54px; background:#101817; color:white;
+  overflow:hidden; align-items:center; justify-content:center; gap:16px; }
+.lightbox[open] { display:flex; }
+.lightbox::backdrop { background:rgba(8,15,14,.92); }
+.lightbox > img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
+.lightbox-close { position:absolute; top:12px; right:12px; border:1px solid #ffffff55;
+  background:#ffffff12; color:white; padding:10px 14px; cursor:pointer; }
+.lightbox-prev, .lightbox-next { flex:0 0 auto; font-size:1.4rem; padding:12px 16px; }
+.lightbox-counter { position:absolute; bottom:10px; left:0; right:0; text-align:center; color:#ffffffb8; font-size:.8rem; }
+.memory-map-marker { transition:opacity .2s,transform .2s; }
+@media (max-width:640px) {
+  .daily-controls { width:100%; }
+  .daily-controls button { flex:1; }
+  .lightbox { width:100vw; height:100dvh; padding:58px 10px 54px; }
+  .lightbox-prev, .lightbox-next { position:absolute; z-index:2; bottom:22px; }
+  .lightbox-prev { left:10px; }
+  .lightbox-next { right:10px; }
+}
