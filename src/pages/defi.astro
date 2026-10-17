@@ -17,13 +17,13 @@ import Base from "../layouts/Base.astro";
     <p id="defi-loading" class="update-note" role="status">Actualisation du carnet…</p>
     <div id="defi-empty" hidden>Le défi sera bientôt disponible.</div>
     <div id="defi-content" hidden>
-      <div class="score-grid" aria-label="Bilan du défi">
+      <div class="score-grid compact-score-grid" aria-label="Bilan du défi">
         <div class="score"><small>JOURS SUIVIS</small><strong id="score-days">—</strong></div>
         <div class="score"><small>JOURS AVEC PARTIE</small><strong id="score-chess">—</strong></div>
         <div class="score"><small>JOURS AVEC ACTIVITÉ</small><strong id="score-activities">—</strong></div>
         <div class="score score-highlight"><small>JOURNÉES COMPLÈTES</small><strong id="score-completed">—</strong><span class="score-note">Deux objectifs remplis</span></div>
       </div>
-      <p id="success-explainer" class="success-explainer"></p>
+      
 
       <section id="aujourdhui" class="today-section">
         <div class="section-heading">
@@ -362,9 +362,6 @@ import Base from "../layouts/Base.astro";
         set("score-chess",String(stats.joursEchecs));
         set("score-activities",String(stats.joursActivites));
         set("score-completed",(stats.joursComplets||0)+" / "+(stats.joursTermines||0));
-        set("success-explainer",stats.joursTermines>0
-          ? "Taux de réussite : "+(stats.reussite===null?"—":stats.reussite+" %")+" · "+(stats.joursComplets||0)+" journées complètes sur "+stats.joursTermines+" journées terminées. Aujourd’hui n’entre pas encore dans le calcul."
-          : "Le taux sera calculé à partir des journées terminées ; la journée en cours est exclue.");
         const days=state.jours||[];
         set("hero-status",days[0]?status(days[0]).name:"En attente");
         if(days[0]){
@@ -417,7 +414,6 @@ import Base from "../layouts/Base.astro";
     .score strong{display:block;font:500 clamp(2.1rem,3.9vw,3rem)/1.15 'Playfair Display',Georgia,serif;color:var(--forest);margin-top:12px}
     .score-highlight{background:#e8efe7}
     .score-note{display:block;margin-top:5px;color:var(--muted);font-size:.72rem;line-height:1.4}
-    .success-explainer{font-size:.78rem;line-height:1.5;color:var(--muted);margin:10px 0 0}
     .today-section,.journal-section{margin-top:clamp(38px,6vw,65px)}
     .section-heading{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:16px}
     .section-heading .eyebrow{color:var(--orange);letter-spacing:.15em;font-weight:800;font-size:.68rem;margin:0 0 7px}
@@ -495,6 +491,10 @@ import Base from "../layouts/Base.astro";
       .score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
     @media(max-width:650px){
+      .compact-score-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+      .compact-score-grid .score{padding:9px 5px;text-align:center}
+      .compact-score-grid .score small{font-size:.52rem;letter-spacing:0;line-height:1.25}
+      .compact-score-grid .score strong{font-size:1.45rem;margin-top:7px}
       .defi-hero{padding:26px 0}
       .defi-hero h1{font-size:clamp(2rem,8vw,3rem)}
       .score{padding:14px}
