@@ -198,6 +198,8 @@ export default {
       const slug=path.endsWith("/assigner")?input?.etape:currentStep;
       if(!await stageExists(env,slug))return error("Choisis d'abord une étape valide.");
       const toVis=path.endsWith("/visibilite")?input?.nouvelleVisibilite:oldVis;
+      // Ne jamais exposer une photo privée brute : elle peut encore contenir le GPS/EXIF.
+      if(oldVis==="prive"&&toVis==="public")return error("La photo privée doit être réencodée côté admin avant publication.",422);
       const to=bucketFor(env,toVis);
       if(!to)return error("Visibilité invalide.");
       if(toVis===oldVis&&key.startsWith("etapes/"+slug+"/"))return json({ok:true,src:photoPath(key,toVis)});
