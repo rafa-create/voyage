@@ -42,19 +42,52 @@ Ce contenu est un EXEMPLE de structure, pas un voyage déjà publié. Le vrai fi
 - Retirer les métadonnées GPS des photos publiques et garder une sauvegarde des originaux.
 - Ne jamais ajouter d'images ou de liens privés : ils pourraient être visibles et indexés.
 
-## Mettre en ligne
+## Mise en ligne : Cloudflare Workers
 
-**Option utilisée : Cloudflare Workers (assets statiques)**. Le fichier `wrangler.jsonc` configure le stockage du résultat Astro dans `./dist`. Dans l'écran de configuration de Cloudflare avec le dépôt `rafa-create/voyage`, choisir :
+Le Worker cible s'appelle **voyage**. Son URL de production est
+https://voyage.site-ready.workers.dev/ (à confirmer après le premier déploiement réussi).
+Le dossier `dist/` généré par Astro est servi comme assets statiques ; aucune base
+de données ni aucun secret n'est nécessaire au fonctionnement actuel.
 
-- Branche de production : `main`
-- Build command : `npm run build`
-- Deploy command : `npx wrangler deploy` (valeur par défaut)
-- Preview builds : optionnel, peut être activé pour tester les changements
-- Protect with Cloudflare Access : **désactivé** car le site public doit rester visible
+Le dépôt contient `wrangler.jsonc` (nom, assets, URL workers.dev et Previews).
+Depuis **Cloudflare > Workers & Pages > voyage > Settings > Builds** :
 
-Cloudflare attribuera une adresse `*.workers.dev`. GitHub reste l'endroit où modifier le code et Cloudflare gère l'hébergement. La configuration actuelle est **statique** : aucun serveur d'administration, album privé ou service d'IA n'est encore installé.
+1. Connecter le dépôt GitHub `rafa-create/voyage` au Worker existant, s'il ne l'est pas déjà.
+2. Définir le dossier racine sur la racine du dépôt et la branche de production sur `main`.
+3. Définir la commande de build sur `npm run build` (inclut la validation des étapes).
+4. Définir la commande de déploiement sur `npx wrangler deploy`.
+5. Activer les Preview Builds pour les branches secondaires, avec `npx wrangler preview`.
+6. Vérifier dans l'historique des déploiements que le dernier build est réussi, puis ouvrir l'URL de production.
 
-**Alternative GitHub Pages** : exécuter le build avec la variable `GITHUB_PAGES=true` afin de générer les liens sous `/voyage/`. Déployer `dist` avec une action GitHub Pages. L'URL cible serait https://rafa-create.github.io/voyage/. Les deux plateformes ne sont pas nécessaires à la fois.
+Les Worker Previews nécessitent Wrangler 4.135.0 ou ultérieur : la dépendance du projet
+est maintenant ajustée. Les environnements de Preview ne publient pas sur la production.
+L'URL `*-voyage.site-ready.workers.dev` est un **modèle d'URL** : une URL réelle est créée
+lorsqu'une Preview est effectivement déployée. Cloudflare ajoute un en-tête de non-indexation
+aux URLs Preview sur `workers.dev`.
+
+### Domaine personnalisé (facultatif)
+
+En attendant de choisir un domaine, conserver l'URL workers.dev ci-dessus.
+Pour ajouter un domaine déjà géré dans Cloudflare : ouvrir **voyage > Domains >
+Custom Domains and Routes > Add Domain**, puis saisir le domaine exact souhaité.
+Ne pas inventer de DNS ni écraser un domaine utilisé par un autre site.
+
+### Avant le départ
+
+- Laisser `src/data/etapes.json` vide tant qu'aucune étape réelle n'est à publier.
+- Préparer une première étape avec date, pays, ville, titre et récit ; garder un slug unique.
+- Optimiser les photos publiques (WebP si possible), retirer les métadonnées GPS et vérifier les droits à l'image.
+- Publier les souvenirs **après** le passage dans un lieu plutôt qu'en temps réel si l'itinéraire est privé.
+- Lancer `npm run validate` et `npm run build` avant de fusionner les changements.
+- Vérifier navigation, rendu mobile, liens, images, YouTube et page introuvable en production.
+- Garder les fichiers originaux et les sauvegardes de photos ailleurs que dans ce dépôt public.
+
+Le site est public et statique. Il n'a pas de connexion privée ni de formulaire
+d'administration ; publier une étape signifie faire un commit GitHub et laisser
+Cloudflare reconstruire le site. Une Preview doit être testée avant de publier en production.
+
+**Alternative non utilisée :** GitHub Pages, avec `GITHUB_PAGES=true` pour le préfixe
+`/voyage/`. Ne pas activer les deux hébergements par erreur.
 
 ## Évolutions prévues
 
