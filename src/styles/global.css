@@ -384,15 +384,17 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 }
 
 
-/* Carte de l'accueil sur toute la largeur de l'écran. */
-.home-full-width-map { width:100%; max-width:none; border-left:0; border-right:0; }
+/* Carte de l'accueil : légère marge latérale et hauteur plus équilibrée. */
+.home-full-width-map { width:calc(100% - 48px); max-width:none; margin-inline:auto; border-left:0; border-right:0; }
 .home-full-width-map .voyage-map-shell, .home-full-width-map .voyage-map { width:100%; }
 
-/* Accueil : donner davantage de hauteur à la carte d'itinéraire. */
-.home-full-width-map .voyage-map { height: 760px; }
+/* Accueil : conserver une carte ample sans trop descendre dans la page. */
+.home-full-width-map .voyage-map { height: 700px; }
 @media(max-width:900px) {
-  .home-full-width-map .voyage-map { height: 660px; }
+  .home-full-width-map { width:calc(100% - 32px); }
+  .home-full-width-map .voyage-map { height: 610px; }
 }
 @media(max-width:650px) {
-  .home-full-width-map .voyage-map { height: 560px; }
+  .home-full-width-map { width:calc(100% - 20px); }
+  .home-full-width-map .voyage-map { height: 520px; }
 }
