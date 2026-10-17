@@ -123,7 +123,7 @@ export default {
       if(!slugOk(slug)||!all.some(e=>e.slug===slug))return error("Étape inconnue.");
       const type=request.headers.get("Content-Type")?.split(";")[0]?.toLowerCase();
       const extension=type==="image/jpeg"?"jpeg":Object.entries(types).find(([e,t])=>t===type)?.[0];
-      if(!extension)return error("Utiliser JPEG, PNG, WebP, AVIF ou GIF.");
+      if(!extension)return error("Utiliser JPEG, PNG, WebP, AVIF, HEIC ou HEIF.");
       const advertised=Number(request.headers.get("Content-Length"));
       if(advertised>12*1024*1024)return error("12 Mo maximum par photo.",413);
       const body=await request.arrayBuffer();
