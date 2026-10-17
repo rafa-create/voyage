@@ -46,7 +46,7 @@ import { chemin } from "../../lib/paths";
           <input id="upload-files" class="visually-hidden" type="file" accept="image/*,.heic,.heif" multiple />
           <div id="chosen-files" class="chosen-files"></div>
           <button class="admin-primary" type="submit">Envoyer les photos <span aria-hidden="true">↗</span></button>
-          <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos publiques sont compressées et leurs métadonnées GPS supprimées avant envoi.</p>
+          <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos sont converties en JPEG léger sans métadonnées GPS avant envoi. Conserve tes originaux sur ton appareil ou dans une sauvegarde.</p>
           <p id="photo-progress" role="status" class="admin-feedback"></p>
         </form>
       </section>
@@ -260,7 +260,7 @@ import { chemin } from "../../lib/paths";
         for(const item of selected){
           message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
           const publicPhoto=!item.prive;
-          const body=publicPhoto?await optimizedPublic(item.file):item.file;
+          const body=await optimizedPublic(item.file);
           if(body.size>12*1024*1024)throw Error(item.file.name+" dépasse 12 Mo.");
           const params=new URLSearchParams({
             etape:$<HTMLSelectElement>("upload-etape")?.value||"",
@@ -269,7 +269,7 @@ import { chemin } from "../../lib/paths";
           });
           if(item.date)params.set("datePrise",item.date);
           const res=await api("/api/prive/admin/upload?"+params.toString(),{
-            method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":publicPhoto?"image/jpeg":item.file.type},body
+            method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body
           });
           done++;
         }
