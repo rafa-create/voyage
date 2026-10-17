@@ -14,6 +14,10 @@ import { chemin } from "../lib/paths";
       <h2>Photos de l'étape</h2>
       <div id="dynamic-photos" class="photo-grid"></div>
     </section>
+    <section id="dynamic-videos-wrap" hidden>
+      <h2>Vidéos de l'étape</h2>
+      <div id="dynamic-videos" class="video-grid"></div>
+    </section>
   </div>
   <script>
     const slug = location.pathname.split("/").filter(Boolean).at(-1) || "";
@@ -21,6 +25,8 @@ import { chemin } from "../lib/paths";
     const title = document.querySelector<HTMLElement>("#dynamic-title");
     const story = document.querySelector<HTMLElement>("#dynamic-story");
     const photos = document.querySelector<HTMLElement>("#dynamic-photos");
+    const videoGrid = document.querySelector<HTMLElement>("#dynamic-videos");
+    const videoSection = document.querySelector<HTMLElement>("#dynamic-videos-wrap");
     async function load() {
       try {
         const r = await fetch("/api/public/etapes");
@@ -35,7 +41,7 @@ import { chemin } from "../lib/paths";
         const uploaded = await fetch("/api/public/photos?etape=" + encodeURIComponent(slug));
         const newPhotos = uploaded.ok ? (await uploaded.json()).photos : [];
         if (!photos) return;
-        for (const photo of [...original, ...newPhotos]) {
+        for (const photo of [...original.filter((p: {src: string}) => !p.src.startsWith("/media/")), ...newPhotos]) {
           const figure = document.createElement("figure");
           figure.className = "photo-tile";
           const a = document.createElement("a");
@@ -54,6 +60,32 @@ import { chemin } from "../lib/paths";
             figure.append(cap);
           }
           photos.append(figure);
+        }
+        const vids = await fetch("/api/public/videos?etape=" + encodeURIComponent(slug));
+        if(vids.ok && videoGrid && videoSection){
+          const {videos} = await vids.json();
+          for(const v of videos){
+            let id:string|null = null;
+            try { id = new URL(v.url).searchParams.get("v"); } catch {}
+            if(!id || !/^[a-zA-Z0-9_-]{11}$/.test(id))continue;
+            const box=document.createElement("div");
+            box.className="video-card";
+            const frame=document.createElement("div");
+            frame.className="video-frame";
+            const iframe=document.createElement("iframe");
+            iframe.src="https://www.youtube-nocookie.com/embed/"+id;
+            iframe.title=v.titre;
+            iframe.loading="lazy";
+            iframe.allowFullscreen=true;
+            iframe.allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
+            frame.append(iframe);
+            const link=document.createElement("p");
+            const a=document.createElement("a");
+            a.href=v.url;a.target="_blank";a.rel="noopener noreferrer";a.textContent=v.titre+" ↗";
+            link.append(a);
+            box.append(frame,link);videoGrid.append(box);
+          }
+          videoSection.hidden=!videoGrid.childElementCount;
         }
       } catch (e) { if (meta) meta.textContent = e instanceof Error ? e.message : "Cette étape est indisponible."; }
     }
