@@ -11,9 +11,9 @@ import { chemin } from "../../lib/paths";
         <p>Étapes, photos et vidéos. Tout depuis ton téléphone.</p>
       </div>
       <div class="admin-quick-links">
-        <a class="text-link" href={chemin("/admin/defi/")}>Gérer le défi quotidien ↗</a>
-        <a class="text-link" href={chemin("/espace/")}>Albums privés ↗</a>
-        <a class="admin-secondary admin-logout" href="/cdn-cgi/access/logout">Déconnexion ↗</a>
+        <a class="text-link" href={chemin("/admin/defi/")}>Gérer le défi quotidien</a>
+        <a class="text-link" href={chemin("/espace/")}>Albums privés</a>
+        <a class="admin-secondary admin-logout" href="/cdn-cgi/access/logout">Déconnexion</a>
       </div>
     </header>
     <div class="admin-topline">
@@ -66,7 +66,7 @@ import { chemin } from "../../lib/paths";
           <input id="video-title" placeholder="Ex. Coucher de soleil sur le port" required maxlength="180"/>
           <label for="video-url">Lien YouTube</label>
           <input id="video-url" type="url" required placeholder="https://youtu.be/…"/>
-          <button type="submit" class="admin-primary">Ajouter la vidéo ↗</button>
+          <button type="submit" class="admin-primary">Ajouter la vidéo</button>
           <p id="video-feedback" role="status" class="admin-feedback"></p>
         </form>
         <div id="video-list" class="admin-video-list"></div>
@@ -111,7 +111,7 @@ import { chemin } from "../../lib/paths";
           <button class="admin-secondary admin-geocode" type="button" id="find-coordinates">⌖ Trouver les coordonnées de la ville</button>
           <label for="step-texte">Quelques mots (facultatif)</label>
           <textarea id="step-texte" rows="3" placeholder="Ce que tu as envie de raconter…"></textarea>
-          <button class="admin-primary" type="submit">Créer l'étape ↗</button>
+          <button class="admin-primary" type="submit">Créer l'étape</button>
           <p id="step-feedback" role="status" class="admin-feedback"></p>
         </form>
       </section>
@@ -242,7 +242,7 @@ import { chemin } from "../../lib/paths";
         const details=document.createElement("div");details.className="chosen-details";
         const name=document.createElement("strong");name.textContent=item.file.name;
         const date=document.createElement("span");
-        const lieu=item.latitude!==null&&item.longitude!==null?"GPS exact ✓":dateStep(item.date)?.ville?"Lieu estimé : "+dateStep(item.date)?.ville:"Lieu : étape choisie";
+        const lieu=item.latitude!==null&&item.longitude!==null?"GPS exact":dateStep(item.date)?.ville?"Lieu estimé : "+dateStep(item.date)?.ville:"Lieu : étape choisie";
         date.textContent=(item.dateHeure?"Prise le "+item.dateHeure.replace("T"," à ").slice(0,16):item.date?"Prise le "+item.date:"Date non renseignée")+" · "+lieu;
         details.append(name,date);
         const label=document.createElement("label");label.className="chosen-private";
@@ -410,7 +410,7 @@ import { chemin } from "../../lib/paths";
       const result=await api("/api/prive/admin/videos?etape="+encodeURIComponent(slug));
       for(const video of result.videos){
         const line=document.createElement("div");line.className="admin-video-item";
-        const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=video.titre+" ↗";
+        const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=video.titre+"";
         line.append(link);
         if(video.id){
           const del=document.createElement("button");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Supprimer cette vidéo");
