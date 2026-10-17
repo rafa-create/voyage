@@ -37,7 +37,10 @@ function normalized(item){
     durationSeconds:Number.isFinite(item.durationSeconds)?Math.round(item.durationSeconds):null,
     visibility:item.visibility||"unknown",
     summaryPolyline:typeof item.summaryPolyline==="string"&&item.summaryPolyline.length<=16000
-      ?item.summaryPolyline:null
+      ?item.summaryPolyline:null,
+    startLatlng:Array.isArray(item.startLatlng)&&item.startLatlng.length===2&&
+      item.startLatlng.every(Number.isFinite)&&Math.abs(item.startLatlng[0])<=85&&
+      Math.abs(item.startLatlng[1])<=180?item.startLatlng:null
   };
 }
 function publicDate({date,...item}){
