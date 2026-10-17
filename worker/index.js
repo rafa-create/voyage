@@ -109,6 +109,15 @@ export default {
 
     const protectedRoute = pathname.startsWith("/espace/") || pathname.startsWith("/admin/") ||
       pathname.startsWith("/api/prive/") || pathname.startsWith("/media-prive/");
+    // Les étapes créées dans l'administration ont une page dynamique sans rebuild.
+    if (request.method === "GET" && /^\/etapes\/[a-z0-9-]+\/?$/.test(pathname)) {
+      const staticPage = await env.ASSETS.fetch(request);
+      if (staticPage.status !== 404) return staticPage;
+      const slug = pathname.split("/").filter(Boolean)[1];
+      if (!(await stages(env)).some(e => e.slug === slug)) return staticPage;
+      return env.ASSETS.fetch(new Request(new URL("/etape/", url.origin), request));
+    }
+
     if (!protectedRoute) return env.ASSETS.fetch(request);
 
     const adminOnly = pathname.startsWith("/admin/") || pathname.startsWith("/api/prive/admin/");
