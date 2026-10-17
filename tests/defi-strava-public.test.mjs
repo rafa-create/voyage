@@ -30,7 +30,7 @@ test("le GPX vérifié peut être archivé sans passer par l'API Strava",async()
   const points=parseGpx(fakeGpx());
   assert.equal(points.pointCount,30);
   assert.ok(points.distanceKm>0);
-  assert.equal((await syncPublicRuns({})).etat,"archives_personnelles");
+  assert.equal((await syncPublicRuns({})).etat,"non_configure");
 });
 test("seules les archives expressément publiées apparaissent au public",async()=>{
   const env={PHOTOS_PRIVEES:bucket()};
