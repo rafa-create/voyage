@@ -29,7 +29,7 @@ test("une seule course est retenue par jour et une saisie manuelle ne masque pas
   assert.equal(s.stats.joursActivites,1);
 });
 test("les objectifs du jour ne sont validés qu'avec les deux activités",()=>{
-  const game={date:"2026-10-17",result:"Victoire",fin:1792241000,url:"https://www.chess.com/game/2"};
+  const game={date:"2026-10-17",result:"Victoire",fin:1792241000,url:"https://www.chess.com/game/2",mode:"rapid"};
   const run={date:"2026-10-17",id:"1",source:"strava",fin:145000,km:6,url:"https://www.strava.com/activities/1"};
   const waiting=summarizeChallenge(config,{games:[game]},[],"2026-10-17");
   assert.equal(waiting.jours[0].resultat,"en_cours");
