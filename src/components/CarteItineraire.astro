@@ -350,7 +350,13 @@ const points = etapes
                 map.addSource("tous-les-traces",{type:"geojson",data});
                 map.addLayer({id:"tous-les-traces",type:"line",source:"tous-les-traces",
                   layout:{"line-cap":"round","line-join":"round"},
-                  paint:{"line-color":"#df784a","line-width":3.5,"line-opacity":.85}});
+                  paint:{"line-color":selectedDay
+                    ? ["case",["==",["get","date"],selectedDay],currentDayColor,"#df784a"]
+                    : "#df784a",
+                  "line-width":selectedDay
+                    ? ["case",["==",["get","date"],selectedDay],5,2.5]
+                    : 3.5,
+                  "line-opacity":.85}});
                 syncVoyageLinkVisibility();
               }
               const bounds=new maplibregl.LngLatBounds();
@@ -388,6 +394,11 @@ const points = etapes
                 :"width:16px;height:16px;cursor:pointer;border:2px solid #fff;border-radius:50%;"+
                   "background:#c86f4d;box-shadow:0 1px 5px #0005;";
               marker.style.zIndex = marker.classList.contains("memory-map-photo-marker") ? "3" : "2";
+              if(selectedDay && memory.date === selectedDay){
+                marker.style.borderColor = currentDayColor;
+                marker.style.borderWidth = "3px";
+                if(!marker.classList.contains("memory-map-photo-marker")) marker.style.backgroundColor = currentDayColor;
+              }
               const panel=document.createElement("div");
               panel.className="map-popup-content";
               const title=document.createElement("strong");title.textContent=memory.titre;
