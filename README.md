@@ -46,8 +46,7 @@ Ce contenu est un EXEMPLE de structure, pas un voyage déjà publié. Le vrai fi
 
 Le Worker cible s'appelle **voyage**. Son URL de production est
 https://voyage.site-ready.workers.dev/ (à confirmer après le premier déploiement réussi).
-Le dossier `dist/` généré par Astro est servi comme assets statiques ; aucune base
-de données ni aucun secret n'est nécessaire au fonctionnement actuel.
+Le site Astro reste principalement statique ; le Worker sert les photos R2 et les API dynamiques. La connexion privée nécessite des variables de configuration secrètes dans Cloudflare, jamais dans GitHub.
 
 Le dépôt contient `wrangler.jsonc` (nom, assets, URL workers.dev et Previews).
 Depuis **Cloudflare > Workers & Pages > voyage > Settings > Builds** :
@@ -82,9 +81,7 @@ Ne pas inventer de DNS ni écraser un domaine utilisé par un autre site.
 - Vérifier navigation, rendu mobile, liens, images, YouTube et page introuvable en production.
 - Garder les fichiers originaux et les sauvegardes de photos ailleurs que dans ce dépôt public.
 
-Le site est public et statique. Il n'a pas de connexion privée ni de formulaire
-d'administration ; publier une étape signifie faire un commit GitHub et laisser
-Cloudflare reconstruire le site. Une Preview doit être testée avant de publier en production.
+Le contenu initial dans GitHub est complété par les données dynamiques stockées dans R2. Les photos et les étapes créées depuis l’admin se publient sans commit ni redéploiement GitHub. Une Preview doit être testée avant les modifications importantes.
 
 **Alternative non utilisée :** GitHub Pages, avec `GITHUB_PAGES=true` pour le préfixe
 `/voyage/`. Ne pas activer les deux hébergements par erreur.
@@ -92,11 +89,7 @@ Cloudflare reconstruire le site. Une Preview doit être testée avant de publier
 
 ## Photos publiques dans Cloudflare R2
 
-Un seul binding R2 est actif : `PHOTOS_PUBLIQUES`, lié au bucket
-`voyage-photos` dans `wrangler.jsonc`. Wrangler crée automatiquement
-cette liaison lors du déploiement. Le bucket **privé** `voyage-photos-prive`
-ne doit pas être lié à ce Worker public tant que l'authentification et les
-autorisations ne sont pas implémentées.
+Deux bindings sont configurés : `PHOTOS_PUBLIQUES` pour `voyage-photos` et `PHOTOS_PRIVEES` pour `voyage-photos-prive`. Les routes privées sont fermées par défaut et exigent une vérification de jeton Cloudflare Access ; ne pas activer les URL publiques du bucket privé.
 
 Pour ajouter une photo publique :
 
@@ -107,8 +100,7 @@ Pour ajouter une photo publique :
 3. Valider et publier le changement sur GitHub. Le site affiche alors la photo
    à `https://voyage.site-ready.workers.dev/media/japon/tokyo-01.webp`.
 
-Le code `worker/index.js` n'autorise que la lecture des images publiques
-(`GET` et `HEAD`). Il ne permet ni d'écrire ni de lister les fichiers.
+Le Worker expose les photos publiques en lecture seulement ; les opérations de gestion exigent une session administrateur authentifiée. Il ne fournit aucune API publique de modification ou de listing des photos privées.
 Ne pas mettre de photo privée dans ce bucket. Conserver les originaux ailleurs.
 
 ## Galerie de test et photos à classer
@@ -156,13 +148,15 @@ L'admin sélectionne une étape (étape active sélectionnée par défaut), puis
 
 Les étapes créées depuis l'admin sont enregistrées dans les métadonnées du bucket privé et accessibles publiquement par leur page d'étape, la carte étant mise à jour depuis l'API publique. Les images du bucket privé ne sont jamais publiées par cette API.
 
-**Important** : un transfert réalisé directement dans le tableau de bord R2 n'est **pas** encore automatiquement classé ; seuls les transferts effectués depuis l'admin le sont. Pour automatiser les changements faits depuis le tableau de bord R2, on pourra plus tard configurer R2 Event Notifications et Cloudflare Queues (vérifier les limites gratuites). Les albums privés sont communs à tous les invités autorisés pour l'instant ; une autorisation par album serait une étape supplémentaire.
+**Import et synchronisation :** les fichiers déposés depuis l’admin sont associés immédiatement à l’étape sélectionnée ou, en mode automatique, à l’unique étape correspondant à la date de prise de vue EXIF. Le bouton « Synchroniser R2 » et un Cron Trigger quotidien (04 h UTC) analysent également un lot limité de fichiers déposés directement dans R2. Ceux dont la date est absente ou ambiguë restent « À classer ». Un fichier retiré de R2 disparaît de l’inventaire à l’actualisation. Le Cron Trigger n’est pas une notification instantanée d’ajout.
+
+L’admin permet aussi de supprimer une photo, changer sa visibilité, l’affecter à une autre étape et ajouter/supprimer des liens YouTube. Le passage privé → public réencode la photo dans le navigateur pour éviter de publier l’EXIF/GPS ; les photos déjà publiques peuvent avoir été mises en cache et ne peuvent pas être rendues secrètes rétroactivement. Les albums privés restent communs aux invités autorisés pour le moment.
 
 ## Évolutions prévues
 
-1. Publier des photos et des textes publics depuis ChatGPT, via des modifications du dépôt.
-2. Déplacer les nouvelles photos publiques volumineuses dans Cloudflare R2 lorsque cela devient utile.
-3. Ajouter plus tard un vrai espace privé avec Cloudflare Access et un stockage R2 **non public** : ne pas simuler la sécurité avec de simples pages cachées.
+1. Terminer la configuration Cloudflare Access avec les seuls e-mails autorisés et le secret `ADMIN_EMAIL`.
+2. Améliorer la miniaturisation pour les grandes galeries et la navigation rapide depuis téléphone.
+3. Ajouter des autorisations distinctes selon les albums privés, si nécessaire.
 4. Envisager une IA intégrée uniquement si les quotas gratuits disponibles suffisent.
 
-Pas de clé d'API ni de secret dans ce dépôt.
+**Zéro budget :** rester dans les quotas Cloudflare Workers et R2, surveiller régulièrement la consommation (stockage R2 gratuit jusqu’à 10 Go-mois, avec quotas d’opérations). Aucune gratuité illimitée n’est garantie. Ne jamais activer volontairement une option payante. Pas de clé d’API ni de secret dans ce dépôt.
