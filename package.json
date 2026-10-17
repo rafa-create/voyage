@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "astro": "^7.3.0",
-    "maplibre-gl": "^5.0.0"
+    "maplibre-gl": "^5.0.0",
+    "jose": "^6.0.0"
   },
   "engines": {
     "node": ">=22.12.0"
