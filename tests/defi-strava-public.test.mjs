@@ -18,6 +18,7 @@ function activity(id,date,visibility="everyone",distanceMeters=4000){
 test("les courses Strava privées ne sont jamais dans le flux public, et l'historique persiste",async()=>{
   const original=globalThis.fetch;
   const store=bucket(),env={PHOTOS_PRIVEES:store,VOYAGE_BRIDGE_KEY:"x".repeat(48)};
+  store.objects.set("__meta/defi/config.json",{debut:"2026-10-15",chessUsername:"rafaelorset",timezone:"Europe/Paris"});
   let batch=[activity(1,"2026-10-17"),activity(2,"2026-10-17","only_me"),
     activity(3,"2026-10-16")];
   globalThis.fetch=async()=>new Response(JSON.stringify({items:batch}),{
