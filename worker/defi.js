@@ -83,7 +83,12 @@ export function normalizeChessGame(game,username,timezone){
   if(!result)return null;
   const date=dateInZone(Number(game.end_time)*1000,timezone);
   if(!date)return null;
-  return {date,result,url:game.url,fin:Number(game.end_time)};
+  const player=String(game.white?.username||"").toLowerCase()===username.toLowerCase()?game.white:game.black;
+  const rating=Number(player?.rating);
+  const mode=String(game.time_class||"");
+  return {date,result,url:game.url,fin:Number(game.end_time),
+    rating:Number.isInteger(rating)&&rating>0&&rating<4000?rating:null,
+    mode:["bullet","blitz","rapid","daily"].includes(mode)?mode:null};
 }
 export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
   const config=await getChallengeConfig(env);
@@ -111,7 +116,19 @@ export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
     fetched++;
   }
   const games=[...all.values()].filter(g=>g.date>=config.debut).sort((a,b)=>a.fin-b.fin).slice(-8000);
-  await putJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games,username:config.chessUsername,lastSync:new Date().toISOString(),partial:months.length>MAX_MONTHS_PER_SYNC});
+  // Le classement actuel doit être celui de la cadence correspondante.
+  // Une partie blitz n'est jamais comparée à une partie rapid.
+  let ratingStats=old.ratingStats||{};
+  try{
+    const response=await fetch("https://api.chess.com/pub/player/"+encodeURIComponent(config.chessUsername)+"/stats",{
+      headers:{"Accept":"application/json","User-Agent":"VoyageCarnet/1.0 contact: carnet-de-voyage"}});
+    if(response.ok){
+      const body=await response.json();
+      ratingStats=Object.fromEntries(["bullet","blitz","rapid","daily"].map(mode=>[
+        mode,Number(body?.["chess_"+mode]?.last?.rating)||null]));
+    }
+  }catch{}
+  await putJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games,ratingStats,username:config.chessUsername,lastSync:new Date().toISOString(),partial:months.length>MAX_MONTHS_PER_SYNC});
   return {ok:true,parties:games.length,moisSynchronises:fetched,historiquePartiel:months.length>MAX_MONTHS_PER_SYNC};
 }
 // L'actualisation publique synchronise les parties récentes avec un délai anti-abus.
@@ -138,8 +155,11 @@ export async function freshPublicChallenge(env){
       sync={etat:"erreur",prochaineVerification:PUBLIC_POLL_MIN_MS/1000};
     }
   }
+  // Mettre aussi à jour les dernières courses publiquement visibles,
+  // avec un plafond d'un appel toutes les dix minutes.
+  const stravaSync=await syncPublicRuns(env);
   const current=await publicChallenge(env);
-  return {...current,synchronisation:sync};
+  return {...current,synchronisation:sync,stravaSynchronisation:stravaSync};
 }
 
 // Intégration officielle du flux Strava (widget servi par Strava).
@@ -202,7 +222,7 @@ export async function addStravaActivity(env,input){
   if(!item||item.date<config.debut)throw Error("Activité invalide : date, titre, distance ou lien Strava public.");
   const all=await getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[]);
   const without=(Array.isArray(all)?all:[]).filter(a=>a.url!==item.url);
-  const next=[...without,item].sort((a,b)=>a.date.localeCompare(b.date));
+  const next=[...without,{...item,ajouteLe:new Date().toISOString()}].sort((a,b)=>a.date.localeCompare(b.date));
   await putJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,next);
   return item;
 }
@@ -211,23 +231,92 @@ export async function deleteStravaActivity(env,url){
   if(!Array.isArray(items)||!items.some(a=>a.url===url))throw Error("Activité introuvable.");
   await putJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,items.filter(a=>a.url!==url));
 }
+const PUBLIC_RUNS_KEY="__meta/defi/strava-public-recent.json";
+const PUBLIC_RUNS_POLL_KEY="__meta/defi/strava-public-poll.json";
+const PUBLIC_ROUTE_PREFIX="__meta/defi/route-public/";
+const PUBLIC_RUNS_INTERVAL=10*60*1000;
+
+export async function syncPublicRuns(env){
+  if(!env.PHOTOS_PRIVEES||!env.VOYAGE_BRIDGE_KEY)return {etat:"non_configure"};
+  const now=Date.now();
+  const last=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_POLL_KEY,null);
+  const elapsed=last?.at?now-Date.parse(last.at):Infinity;
+  if(Number.isFinite(elapsed)&&elapsed>=0&&elapsed<PUBLIC_RUNS_INTERVAL)return {etat:"cache"};
+  await putJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_POLL_KEY,{at:new Date(now).toISOString()});
+  try{
+    const {privateStravaFetch}=await import("./strava-bridge.js");
+    const response=await privateStravaFetch(env,"activities");
+    if(response.status!==200)throw Error(response.body?.error||"Synchronisation Strava impossible.");
+    // Seules les courses déjà explicitement publiques chez Strava
+    // sont projetées dans la page publique, jamais les courses privées.
+    const config=await getChallengeConfig(env);
+    const items=(response.body.items||[]).filter(a=>a.visibility==="everyone")
+      .map(a=>{
+        const startedAtMs=Number(a.startedAtMs);
+        const date=dateInZone(startedAtMs,config.timezone);
+        const meters=Number(a.distanceMeters);
+        const id=String(a.id||"");
+        if(!/^[1-9][0-9]{0,19}$/.test(id)||!validDate(date)||
+          date<config.debut||!Number.isFinite(meters)||meters<=0)return null;
+        return {id,date,fin:startedAtMs,
+          km:Math.round(meters/10)/100,
+          minutes:Math.max(1,Math.round(Number(a.durationSeconds||0)/60)),
+          titre:String(a.name||"Course à pied").slice(0,120),
+          url:"https://www.strava.com/activities/"+id,source:"strava"};
+      }).filter(Boolean).sort((a,b)=>b.fin-a.fin).slice(0,10);
+    await putJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items,misAJour:new Date().toISOString()});
+    return {etat:"actualise",count:items.length};
+  }catch(e){return {etat:"erreur"};}
+}
+
+export async function publicRoute(env,id){
+  if(!/^[1-9][0-9]{0,19}$/.test(String(id)))return null;
+  const recent=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items:[]});
+  if(!recent.items?.some(item=>item.id===id))return null;
+  const key=PUBLIC_ROUTE_PREFIX+id+".json";
+  const existing=await getJSON(env.PHOTOS_PRIVEES,key,null);
+  if(existing&&Date.now()-Date.parse(existing.at)<24*3600*1000)return existing.route;
+  const {privateStravaFetch}=await import("./strava-bridge.js");
+  const response=await privateStravaFetch(env,"activities/"+id+"/route");
+  if(response.status!==200)return null;
+  const points=(Array.isArray(response.body?.geoRoute)?response.body.geoRoute:[])
+    .filter(p=>Array.isArray(p)&&p.length===2&&
+      Number.isFinite(p[0])&&Number.isFinite(p[1])&&
+      Math.abs(p[0])<=85&&Math.abs(p[1])<=180);
+  // Atténuation du risque d'exposer une adresse précise au début ou à la fin.
+  const trim=points.length>=20?Math.ceil(points.length*.07):0;
+  const route=points.slice(trim,points.length-trim).slice(0,110);
+  if(route.length<2)return null;
+  await putJSON(env.PHOTOS_PRIVEES,key,{at:new Date().toISOString(),route});
+  return route;
+}
+
 export function summarizeChallenge(config,chess,activities,today){
   if(!config||!validDate(config.debut)||!validDate(today)||today<config.debut)return {configured:false};
   const games=Array.isArray(chess?.games)?chess.games:[];
   const runs=Array.isArray(activities)?activities:[];
   const gamesByDay=new Map(),activityByDay=new Map();
-  for(const g of games){
-    if(validDate(g.date)&&g.date>=config.debut&&g.date<=today){
-      const existing=gamesByDay.get(g.date);
-      if(!existing||g.fin>existing.fin)gamesByDay.set(g.date,{...g,count:(existing?.count||0)+1});
-    }
+  const orderedGames=[...games].filter(g=>validDate(g.date)&&g.date>=config.debut&&g.date<=today)
+    .sort((a,b)=>a.fin-b.fin);
+  // Elo de la cadence exacte du jour, pas un mélange blitz/rapid.
+  const previousModeRating=new Map();
+  for(const g of orderedGames){
+    const previous=previousModeRating.get(g.mode);
+    const delta=g.rating!=null&&previous!=null?g.rating-previous:null;
+    if(g.rating!=null&&g.mode)previousModeRating.set(g.mode,g.rating);
+    const existing=gamesByDay.get(g.date);
+    if(!existing||Number(g.fin)>Number(existing.fin))
+      gamesByDay.set(g.date,{...g,eloDelta:delta,count:1});
   }
   for(const a of runs){
-    if(validDate(a.date)&&a.date>=config.debut&&a.date<=today){
-      const existing=activityByDay.get(a.date);
-      if(!existing)activityByDay.set(a.date,{...a,kmTotal:Number(a.km),count:1});
-      else activityByDay.set(a.date,{...a,kmTotal:existing.kmTotal+Number(a.km),count:existing.count+1});
-    }
+    if(!validDate(a.date)||a.date<config.debut||a.date>today)continue;
+    // Une seule activité par journée, la plus récente : ordre chronologique réel
+    // pour Strava, ordre d'ajout pour les saisies manuelles.
+    const existing=activityByDay.get(a.date);
+    const time=Number(a.fin||Date.parse(a.ajouteLe||"")||0);
+    const oldTime=Number(existing?.fin||Date.parse(existing?.ajouteLe||"")||0);
+    if(!existing||time>oldTime||(time===oldTime&&String(a.url)>String(existing.url)))
+      activityByDay.set(a.date,{...a,kmTotal:Number(a.km),count:1});
   }
   const days=[];
   for(let date=config.debut;date<=today&&days.length<MAX_DAYS;date=addDays(date)){
@@ -235,26 +324,37 @@ export function summarizeChallenge(config,chess,activities,today){
     days.push({date,echecs:game,activite:activity,
       resultat:game&&activity?"reussi":date===today?"en_cours":"manque"});
   }
-  const fini=days.filter(d=>d.date<today);
-  const completed=fini.filter(d=>d.resultat==="reussi").length;
-  const chessDays=days.filter(d=>d.echecs).length;
-  const stravaDays=days.filter(d=>d.activite).length;
+  const finished=days.filter(d=>d.date<today);
+  const completed=finished.filter(d=>d.resultat==="reussi").length;
+  const latestRated=orderedGames.filter(g=>g.rating!=null&&g.mode).at(-1);
+  const mode=latestRated?.mode||"rapid";
+  const sameMode=orderedGames.filter(g=>g.mode===mode&&g.rating!=null);
+  const previous=sameMode.length>1?sameMode.at(-2)?.rating:null;
+  const rating=chess?.ratingStats?.[mode]||latestRated?.rating||null;
+  const delta=rating!=null&&previous!=null?rating-previous:null;
   return {configured:true,debut:config.debut,timezone:config.timezone,username:config.chessUsername,
     misAJour:chess?.lastSync||null,historiquePartiel:Boolean(chess?.partial),
-    stats:{jours:days.length,joursEchecs:chessDays,joursActivites:stravaDays,joursComplets:days.filter(d=>d.resultat==="reussi").length,
-      reussite:fini.length?Math.round(completed/fini.length*100):null,joursTermines:fini.length},
+    elo:{rating,mode,delta,tendance:delta==null?"stable":delta>0?"hausse":delta<0?"baisse":"stable",
+      historique:sameMode.slice(-12).map(g=>({date:g.date,fin:g.fin,rating:g.rating}))},
+    stats:{jours:days.length,joursEchecs:days.filter(d=>d.echecs).length,
+      joursActivites:days.filter(d=>d.activite).length,joursComplets:days.filter(d=>d.resultat==="reussi").length,
+      reussite:finished.length?Math.round(completed/finished.length*100):null,joursTermines:finished.length},
     jours:days.reverse()};
 }
 export async function publicChallenge(env){
   const config=await getChallengeConfig(env);
   if(!config)return {configured:false};
-  const [chess,activities]=await Promise.all([
+  const [chess,manual,snapshot]=await Promise.all([
     getJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games:[],lastSync:null}),
-    getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[])
+    getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[]),
+    getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items:[],misAJour:null})
   ]);
-  const result=summarizeChallenge(config,chess,activities,dateInZone(new Date(),config.timezone));
+  const auto=Array.isArray(snapshot.items)?snapshot.items:[];
+  const manualNotDuplicate=(Array.isArray(manual)?manual:[]).filter(a=>!auto.some(b=>b.url===a.url));
+  const result=summarizeChallenge(config,chess,[...manualNotDuplicate,...auto],dateInZone(new Date(),config.timezone));
   const widgets=await getPublicStravaWidgets(env);
-  return {...result,stravaFeed:widgets.feed,stravaSummary:widgets.summary};
+  return {...result,stravaFeed:widgets.feed,stravaSummary:widgets.summary,
+    coursesRecentes:auto,derniereCourseSynchro:snapshot.misAJour||null};
 }
 export async function privateChallenge(env){
   const result=await publicChallenge(env);
