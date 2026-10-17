@@ -297,11 +297,12 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 .map-day-control {
   display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:center;
+  gap:8px;
   margin:0 0 10px 10px;
-  padding:7px 9px;
+  padding:5px 8px;
   max-width:calc(100vw - 36px);
-  background:rgba(255,253,248,.92);
+  background:rgba(255,253,248,.94);
   border:1px solid rgba(35,65,58,.18);
   border-radius:4px;
   box-shadow:0 1px 5px rgba(0,0,0,.12);
@@ -314,22 +315,23 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   color:var(--forest);
   font-size:.72rem;
   white-space:nowrap;
+  text-align:center;
 }
-.map-day-control .daily-controls { gap:5px; flex-wrap:nowrap; }
-.map-day-control .daily-controls button {
-  padding:5px 7px;
+.map-day-control .daily-day-arrow {
+  flex:0 0 24px;
+  width:24px;
+  padding:3px 0;
   border:0;
   background:transparent;
   color:var(--forest);
-  font-size:.68rem;
-  font-weight:600;
-  white-space:nowrap;
+  font-size:1rem;
+  line-height:1;
+  cursor:pointer;
 }
-.map-day-control .daily-controls button:disabled { opacity:.32; }
-.map-day-control .daily-controls button:hover:not(:disabled) { text-decoration:underline; }
+.map-day-control .daily-day-arrow:disabled { opacity:.32; cursor:not-allowed; }
+.map-day-control .daily-day-arrow:hover:not(:disabled) { background:#ebe6da; border-radius:3px; }
 @media(max-width:600px) {
-  .map-day-control { gap:5px; margin:0 0 7px 7px; padding:6px; flex-wrap:wrap; }
-  .map-day-control #daily-date { width:100%; font-size:.67rem; }
-  .map-day-control .daily-controls { width:100%; }
-  .map-day-control .daily-controls button { flex:1; font-size:.65rem; }
+  .map-day-control { gap:5px; margin:0 0 7px 7px; padding:5px 6px; flex-wrap:nowrap; }
+  .map-day-control #daily-date { width:auto; font-size:.65rem; }
+  .map-day-control .daily-day-arrow { flex-basis:22px; width:22px; }
 }
