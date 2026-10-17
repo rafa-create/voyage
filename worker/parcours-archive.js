@@ -51,7 +51,7 @@ export function parseGpx(source){
 }
 function publicItem(item){
   return {id:item.id,date:item.date,fin:item.fin,km:item.km,
-    minutes:item.minutes,titre:item.titre,url:"/defi/#courses",source:"archive"};
+    minutes:item.minutes,titre:item.titre,sport:item.sport||"course",url:"/defi/#courses",source:"archive"};
 }
 export async function archiveIndex(env){
   const value=await getJSON(env.PHOTOS_PRIVEES,INDEX,{items:[]});
@@ -66,9 +66,11 @@ export async function importGpx(env,form){
   const title=String(form?.get("titre")||"Course à pied").trim().slice(0,120);
   const date=String(form?.get("date")||"");
   const visibility=String(form?.get("visibilite")||"prive");
+  const sport=String(form?.get("sport")||"course");
   if(!file||typeof file.text!=="function"||file.size>MAX_BYTES||file.size===0)
     throw Error("Choisis un fichier GPX de 5 Mo maximum.");
-  if(!title||!validDate(date)||!["public","prive"].includes(visibility))
+  if(!title||!validDate(date)||!["public","prive"].includes(visibility)||
+    !["course","kitesurf","football","velo","marche","autre"].includes(sport))
     throw Error("Renseigne un titre, une date et la visibilité.");
   const xml=await file.text();
   const parsed=parseGpx(xml);
@@ -79,7 +81,7 @@ export async function importGpx(env,form){
   const item={id,date,fin:dateTime,km:parsed.distanceKm,
     minutes:parsed.start!==null&&parsed.end!==null&&parsed.end>parsed.start
       ?Math.round((parsed.end-parsed.start)/60000):null,
-    titre: title, public:visibility==="public",pointCount:parsed.pointCount,
+    titre: title,sport, public:visibility==="public",pointCount:parsed.pointCount,
     latitude:parsed.route[Math.floor(parsed.route.length/2)][0],
     longitude:parsed.route[Math.floor(parsed.route.length/2)][1],
     source:"archive",ajouteLe:new Date().toISOString()};
@@ -107,6 +109,6 @@ export async function archiveMapPoints(env){
   return items.filter(item=>item.public===true&&Number.isFinite(item.latitude)&&
     Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,160)
     .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
-      titre:item.titre,latitude:item.latitude,longitude:item.longitude,
+      titre:item.titre,sport:item.sport||"course",latitude:item.latitude,longitude:item.longitude,
       distance:item.km}));
 }
