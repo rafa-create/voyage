@@ -1,34 +1,29 @@
-# Intégration Strava entre BeatOnStep et Voyage
+# Liaison des activités BeatOnStep → Voyage
 
-Les deux sites utilisent le même compte Strava. BeatOnStep reste la source des jetons OAuth stockés sur son Worker ; l'interface BeatOnStep est inchangée.
+Les activités sont enregistrées soit avec une montre Garmin, puis synchronisées vers Strava, soit directement avec Strava. BeatOnStep conserve les jetons OAuth ; aucun jeton n'est transmis au navigateur ou au Worker Voyage.
 
-## Activation Cloudflare
+## Configuration
 
-- Ajouter le même secret `VOYAGE_BRIDGE_KEY` (minimum 40 caractères) dans `beatonstep-website` et `voyage`, et déployer les deux Workers.
-- BeatOnStep doit avoir une connexion Strava active autorisant `activity:read`.
-- BeatOnStep peut préciser l'athlète dans `VOYAGE_STRAVA_ATHLETE_ID`, sinon le profil déjà configuré par défaut est utilisé.
-- Les secrets restent dans Cloudflare, jamais dans le dépôt GitHub.
+- Le même secret Cloudflare `VOYAGE_BRIDGE_KEY` (40 caractères minimum) doit exister dans les Workers `beatonstep-website` et `voyage`.
+- La connexion BeatOnStep de l'athlète doit être active avec `activity:read`.
+- Le Worker BeatOnStep doit avoir la version déployée incluant `recentVoyageActivities`, qui expose toutes les disciplines via le pont privé. Sans ce déploiement, les anciennes versions ne renvoient que les courses.
+- Le Worker Voyage doit aussi être déployé avec sa nouvelle configuration de cron (toutes les deux heures).
 
-## Synchronisation publique
+## Chargement et copies personnelles
 
-- `/api/public/defi` déclenche au maximum toutes les dix minutes la synchronisation des dernières courses via le pont privé.
-- Seules les activités dont la visibilité renvoyée par Strava est exactement `everyone` sont incluses, jamais les sorties privées ou réservées aux abonnés.
-- La liste des dix sorties les plus récentes se trouve dans R2. Elle inclut les sorties antérieures à la date de début du défi pour la carte de localisation historique.
-- Sur la page `/defi/`, chaque journée de défi présente **la dernière** course publique de la date et **la dernière** partie d'échecs, sans cumul d'activités.
-- Pour chaque course publique récente, `/api/public/defi/parcours/:id` retourne un tracé simplifié : uniquement pour les IDs de courses présentes dans la liste publique ; les extrémités du tracé sont réduites d'environ 7 % lorsqu'il y a assez de points.
-- La carte MapLibre utilise les tuiles OpenFreeMap.
-- Les widgets Strava officiels sont repliés par défaut en complément du journal.
+- L'ouverture de `/defi/` déclenche une synchronisation serveur, limitée à une requête par dix minutes. Le cron vérifie également toutes les deux heures.
+- Jusqu'à 100 activités récentes sont récupérées dans l'espace privé, quelle que soit leur origine Garmin ou Strava, avec un cache API transitoire de sept jours dans R2.
+- Les nouvelles activités détectées sont copiées dans l'archive personnelle R2 : résumé, date de départ, sport, distance, durée et, lorsque disponible, un tracé simplifié. L'import est limité à huit nouveaux résumés et deux tracés par passage pour respecter le forfait gratuit Cloudflare.
+- Les copies sont privées par défaut, avec déduplication selon l'ID de l'activité. La page administration indique le total archivé.
+- Cette copie API n'est **pas** le FIT/GPX original Garmin/Strava : elle comporte au plus 120 points GPS. L'import GPX manuel conserve l'original, et reste disponible pour compléter l'archive.
 
-## Échecs / ELO
+## Public
 
-Les parties récentes sont synchronisées avec l'API publique Chess.com, au maximum toutes les deux minutes lors d'une visite. Le dernier résultat terminé dans une journée est retenu.
+- Le journal public et la carte grand public utilisent uniquement les fichiers GPX personnels explicitement publiés par l'administrateur et les entrées manuelles existantes. Les nouvelles copies automatiques restent privées.
+- Les widgets officiels Strava restent accessibles mais repliés.
+- Chaque journée retient la dernière activité et la dernière partie Chess.com Rapid ; la carte principale accueille toutes les activités GPS et les photos publiques.
+- La publication de données issues de l'API, ainsi que la durée de conservation de ces copies API, devront être revues vis-à-vis des conditions du fournisseur avant diffusion publique. Le fait d'être propriétaire des activités ne supprime pas les conditions d'utilisation de l'API.
 
-Les classements sont lus depuis les statistiques et les archives Chess.com ; on ne compare que les parties de la même cadence pour les variations. Si les données sont insuffisantes, l'interface affiche un tiret plutôt qu'une variation inventée.
+## Validation
 
-## Limites et publication
-
-Les parcours GPS sont visibles à tout visiteur du carnet. Cela peut révéler la localisation de l'athlète ; les débuts et fins sont atténués, mais le tracé reste informatif. Les utilisateurs doivent veiller à configurer leurs zones de confidentialité sur Strava.
-
-Les données partagées via l'API restent soumises aux conditions Strava en vigueur, indépendamment du fait que l'athlète soit propriétaire du compte et du partage d'une application OAuth avec BeatOnStep.
-
-L'API ne représente pas une géolocalisation en direct. Si le pont Strava ne répond pas, les dernières courses enregistrées restent affichées et le défi Chess.com continue de fonctionner.
+Après déploiement des deux Workers : ouvrir `/admin/defi/`, regarder « Activités détectées » et vérifier que le total des copies privées R2 augmente. Un échec du pont privé ou une connexion sportive absente affiche une erreur, sans détruire les archives existantes.
