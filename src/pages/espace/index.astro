@@ -1,0 +1,89 @@
+---
+import Base from "../../layouts/Base.astro";
+import { chemin } from "../../lib/paths";
+---
+<Base title="Albums privés">
+  <section class="container area-private">
+    <div class="area-top">
+      <div>
+        <p class="eyebrow">ESPACE PRIVÉ</p>
+        <h1>Les souvenirs<br /><em>entre nous.</em></h1>
+        <p>Photos réservées aux proches autorisés.</p>
+      </div>
+      <a class="text-link" href={chemin("/")}>← Retour au voyage</a>
+    </div>
+    <div id="private-status" class="private-status" role="status">Chargement des albums privés…</div>
+    <div id="admin-link" hidden class="private-admin">
+      <a class="button button-primary" href={chemin("/admin/")}>Ouvrir mon espace administrateur ↗</a>
+    </div>
+    <div id="albums-container" class="private-albums"></div>
+  </section>
+  <script>
+    const status = document.querySelector<HTMLElement>("#private-status");
+    const container = document.querySelector<HTMLElement>("#albums-container");
+    const admin = document.querySelector<HTMLElement>("#admin-link");
+    async function init() {
+      try {
+        const [meResponse, photoResponse, stepsResponse] = await Promise.all([
+          fetch("/api/prive/moi", { credentials: "same-origin" }),
+          fetch("/api/prive/photos", { credentials: "same-origin" }),
+          fetch("/api/prive/etapes", { credentials: "same-origin" }),
+        ]);
+        if (!meResponse.ok || !photoResponse.ok || !stepsResponse.ok) throw Error("L'accès privé n'est pas encore configuré ou la session a expiré.");
+        const me = await meResponse.json();
+        const { photos } = await photoResponse.json();
+        const { etapes } = await stepsResponse.json();
+        if (me.isAdmin && admin) admin.hidden = false;
+        if (!container || !status) return;
+        status.textContent = photos.length ? photos.length + " photo(s) disponibles" : "Aucune photo privée pour le moment.";
+        const groups = new Map<string, typeof photos>();
+        for (const photo of photos) {
+          if (!groups.has(photo.etape)) groups.set(photo.etape, []);
+          groups.get(photo.etape)?.push(photo);
+        }
+        for (const [slug, images] of groups) {
+          const section = document.createElement("section");
+          section.className = "private-album";
+          const name = etapes.find((s: {slug: string}) => s.slug === slug)?.ville || slug;
+          const title = document.createElement("h2");
+          title.textContent = name;
+          section.append(title);
+          const grid = document.createElement("div");
+          grid.className = "private-photo-grid";
+          for (const photo of images) {
+            const link = document.createElement("a");
+            link.href = photo.src;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            const img = document.createElement("img");
+            img.src = photo.src;
+            img.alt = photo.alt;
+            img.loading = "lazy";
+            link.append(img);
+            grid.append(link);
+          }
+          section.append(grid);
+          container.append(section);
+        }
+      } catch (e) {
+        if (status) status.textContent = e instanceof Error ? e.message : "Impossible de récupérer les albums privés.";
+      }
+    }
+    init();
+  </script>
+  <style>
+    .area-private { padding-top: 64px; padding-bottom: 110px; min-height: 70vh; }
+    .area-top { display: flex; justify-content: space-between; gap: 26px; align-items: end; margin-bottom: 35px; }
+    .area-top h1 { font-size: clamp(2.6rem,5vw,4.8rem); line-height: 1.14; margin: 15px 0; }
+    .area-top h1 em { color: var(--orange); font-weight: 500; }
+    .area-top p:last-child { color: var(--muted); }
+    .private-status { border-top: 1px solid var(--line); padding: 18px 0; color: var(--muted); }
+    .private-admin { margin: 10px 0 35px; }
+    .private-admin[hidden] { display: none; }
+    .private-album { margin-top: 35px; }
+    .private-album h2 { font-size: 2rem; }
+    .private-photo-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+    .private-photo-grid img { width: 100%; height: 100%; aspect-ratio: 4/3; object-fit: cover; }
+    @media(max-width:680px) { .area-top { flex-direction: column; align-items: start; }.private-photo-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  </style>
+</Base>
