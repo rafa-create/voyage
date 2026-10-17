@@ -82,7 +82,14 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
     if(!record)continue;
     const existing=bySource.get(record.sourceId);
     const preview=decodeSummaryPolyline(item.summaryPolyline);
+    const position=Array.isArray(item.startLatlng)&&item.startLatlng.length===2&&
+      item.startLatlng.every(Number.isFinite)&&Math.abs(item.startLatlng[0])<=85&&
+      Math.abs(item.startLatlng[1])<=180?item.startLatlng:null;
     if(existing){
+      if(position&&!Number.isFinite(existing.latitude)){
+        existing.latitude=position[0];existing.longitude=position[1];
+        modified=true;
+      }
       // Si l'activité a changé de visibilité, remettre l'index à jour.
       const visibility=record.visibility;
       const changed=existing.visibility!==visibility;
@@ -109,6 +116,10 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
     }
     if(additions.length>=Math.max(0,maxImports))continue;
     record.id=crypto.randomUUID();
+    if(position){
+      record.latitude=position[0];
+      record.longitude=position[1];
+    }
     const hasPreview=preview.length>=2;
     if(hasPreview){
       const midpoint=preview[Math.floor(preview.length/2)];
