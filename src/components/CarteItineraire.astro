@@ -171,7 +171,15 @@ const points = etapes
         const dailyControls = document.querySelector<HTMLElement>(".daily-controls");
         if (dateElement && dailyControls) {
           const dayControl = document.createElement("div");
-          dayControl.className = "map-day-control";
+          // Le contrôle personnalisé doit intercepter les événements comme les
+          // contrôles natifs MapLibre, sinon les clics peuvent être captés par la carte.
+          dayControl.className = "map-day-control maplibregl-ctrl";
+          for (const eventName of ["pointerdown", "mousedown", "touchstart", "dblclick", "click", "wheel"]) {
+            dayControl.addEventListener(eventName, (event) => {
+              event.stopPropagation();
+              if (eventName === "dblclick") event.preventDefault();
+            });
+          }
           dayControl.append(dateElement, dailyControls);
           map.addControl({
             onAdd: () => dayControl,
