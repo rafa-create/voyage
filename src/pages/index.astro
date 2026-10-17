@@ -92,6 +92,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         empty.hidden = dayPhotos.length>0;
         previous.disabled = index>=ordered.length-1;
         next.disabled = index<=0;
+        document.documentElement.dataset.voyageDay = day;
         window.dispatchEvent(new CustomEvent("voyage:jour",{detail:{date:day}}));
       };
       previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
