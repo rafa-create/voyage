@@ -1,9 +1,9 @@
 name: Vérifier le site
 
+# Vérifications automatiques mises en pause tant que le quota GitHub Actions
+# du compte est épuisé. Le workflow reste disponible manuellement plus tard.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
