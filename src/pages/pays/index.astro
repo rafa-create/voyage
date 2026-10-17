@@ -3,7 +3,6 @@ import Base from "../../layouts/Base.astro";
 import { pays } from "../../lib/data";
 import { chemin } from "../../lib/paths";
 ---
-
 <Base title="Pays" active="pays">
   <section class="page-intro container">
     <p class="eyebrow">CARTE DES SOUVENIRS</p>
@@ -11,22 +10,33 @@ import { chemin } from "../../lib/paths";
     <p>À chaque destination ses étapes, ses photos et ses histoires.</p>
   </section>
   <section class="container section">
-    {pays.length ? (
-      <div class="country-grid">
-        {pays.map((paysItem, index) => (
-          <a class="country-card" href={chemin("/pays/" + paysItem.slug + "/")}>
-            <span class="country-index">{String(index + 1).padStart(2, "0")} / DESTINATION</span>
-            <h2>{paysItem.nom}</h2>
-            <span>{paysItem.etapes.length} {paysItem.etapes.length > 1 ? "étapes" : "étape"} <span aria-hidden="true">↗</span></span>
-          </a>
-        ))}
-      </div>
-    ) : (
-      <div class="empty-state">
-        <div class="empty-symbol" aria-hidden="true">◎</div>
-        <h2>La carte attend ses destinations</h2>
-        <p>Les pays se créeront automatiquement dès qu'une étape sera ajoutée au carnet.</p>
-      </div>
-    )}
+    <div id="countries-grid" class="country-grid">
+      {pays.map((item,i)=>(
+        <a class="country-card" href={chemin("/pays/"+item.slug+"/")}>
+          <span class="country-index">{String(i+1).padStart(2,"0")} / DESTINATION</span>
+          <h2>{item.nom}</h2>
+          <span>{item.etapes.length} étapes ↗</span>
+        </a>
+      ))}
+    </div>
   </section>
+  <script>
+    function slugify(x:string){return x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+    fetch("/api/public/etapes").then(r=>r.ok?r.json():null).then(data=>{
+      if(!data)return;
+      const grid=document.getElementById("countries-grid");
+      if(!grid)return;
+      const countries=new Map<string,number>();
+      for(const e of data.etapes)countries.set(e.pays,(countries.get(e.pays)||0)+1);
+      grid.replaceChildren();
+      for(const [index,[name,count]] of [...countries].sort((a,b)=>a[0].localeCompare(b[0],"fr")).entries()){
+        const link=document.createElement("a");link.className="country-card";
+        link.href="/pays/"+slugify(name)+"/";
+        const label=document.createElement("span");label.className="country-index";label.textContent=String(index+1).padStart(2,"0")+" / DESTINATION";
+        const h=document.createElement("h2");h.textContent=name;
+        const footer=document.createElement("span");footer.textContent=count+" étape(s) ↗";
+        link.append(label,h,footer);grid.append(link);
+      }
+    }).catch(()=>{});
+  </script>
 </Base>
