@@ -170,9 +170,12 @@ const points = etapes
               ? ["case", ["==", ["get", "date"], selectedDay], currentDayColor, "#df784a"]
               : "#df784a");
             map.setPaintProperty("trace-sportive", "line-width", selectedDay
-              ? ["case", ["==", ["get", "date"], selectedDay], 6, 4]
+              ? ["case", ["==", ["get", "date"], selectedDay], 7, 3]
               : 5);
           }
+          // Remonter les couches de tracés pour que le jour sélectionné soit au premier plan.
+          if (selectedDay && map.getLayer("tous-les-traces")) map.moveLayer("tous-les-traces");
+          if (selectedDay && map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
           const dateLabel = document.querySelector<HTMLElement>("#daily-date");
           if (dateLabel) {
             dateLabel.style.backgroundColor = selectedDay ? currentDayColor : "transparent";
