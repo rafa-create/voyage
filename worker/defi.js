@@ -11,9 +11,11 @@ export function dateInZone(value,timezone) {
   const date=value instanceof Date?value:new Date(value);
   if(Number.isNaN(date.getTime()))return null;
   try{
-    return new Intl.DateTimeFormat("en-CA",{
+    const parts=new Intl.DateTimeFormat("en-GB",{
       timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"
-    }).format(date);
+    }).formatToParts(date);
+    const part=type=>parts.find(p=>p.type===type)?.value;
+    return part("year")+"-"+part("month")+"-"+part("day");
   }catch{return null;}
 }
 function addDays(date,delta=1){
