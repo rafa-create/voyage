@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { galerie } from "../lib/data";
+import photosAClasser from "../data/photos-a-classer.json";
 import { chemin } from "../lib/paths";
 ---
 
@@ -8,34 +9,74 @@ import { chemin } from "../lib/paths";
   <section class="page-intro container">
     <p class="eyebrow">INSTANTS CAPTURÉS</p>
     <h1>La galerie photo<span class="heading-dot">.</span></h1>
-    <p>Les images du voyage, réunies au même endroit. Un clic pour les afficher en grand.</p>
+    <p>Les images du voyage, réunies au même endroit. Cliquez sur une photo pour l'afficher en grand.</p>
   </section>
+
   <section class="container section">
-    {galerie.length ? (
-      <div class="photo-grid gallery-grid">
-        {galerie.map((photo) => (
-          <figure class="photo-tile">
-            <button
-              type="button"
-              class="photo-open"
-              data-photo={chemin(photo.src)}
-              data-alt={photo.alt}
-              aria-label={"Afficher en grand : " + photo.alt}
-            >
-              <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="960" height="720" />
-            </button>
-            <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
-          </figure>
-        ))}
-      </div>
-    ) : (
+    {photosAClasser.length > 0 && (
+      <>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PREMIER ESSAI · CLOUDFLARE R2</p>
+            <h2>Album de test<span class="heading-dot">.</span></h2>
+            <p class="gallery-description">{photosAClasser.length} photos déjà hébergées dans R2, en attente de leur pays et de leur étape.</p>
+          </div>
+        </div>
+        <div class="photo-grid gallery-grid">
+          {photosAClasser.map((photo) => (
+            <figure class="photo-tile">
+              <button
+                type="button"
+                class="photo-open"
+                data-photo={chemin(photo.src)}
+                data-alt={photo.alt}
+                aria-label={"Afficher en grand : " + photo.alt}
+              >
+                <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
+              </button>
+              {photo.legende && <figcaption class="photo-caption">{photo.legende}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      </>
+    )}
+
+    {galerie.length > 0 && (
+      <>
+        <div class="section-heading" style={photosAClasser.length ? "margin-top: 5rem;" : undefined}>
+          <div>
+            <p class="eyebrow">PHOTOS CLASSÉES PAR ÉTAPE</p>
+            <h2>Le voyage en images<span class="heading-dot">.</span></h2>
+          </div>
+        </div>
+        <div class="photo-grid gallery-grid">
+          {galerie.map((photo) => (
+            <figure class="photo-tile">
+              <button
+                type="button"
+                class="photo-open"
+                data-photo={chemin(photo.src)}
+                data-alt={photo.alt}
+                aria-label={"Afficher en grand : " + photo.alt}
+              >
+                <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
+              </button>
+              <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </>
+    )}
+
+    {galerie.length === 0 && photosAClasser.length === 0 && (
       <div class="empty-state">
         <div class="empty-symbol" aria-hidden="true">▧</div>
         <h2>Une galerie à remplir</h2>
-        <p>Les photos apparaîtront ici automatiquement quand elles seront ajoutées aux étapes.</p>
+        <p>Les photos apparaîtront ici dès qu'elles seront ajoutées au carnet.</p>
       </div>
     )}
   </section>
+
   <dialog id="visionneuse" class="lightbox" aria-label="Photo agrandie">
     <button type="button" class="lightbox-close" aria-label="Fermer la photo">Fermer ✕</button>
     <img src="" alt="" />
@@ -54,6 +95,9 @@ import { chemin } from "../lib/paths";
     dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
     dialog?.addEventListener("click", (evenement) => {
       if (evenement.target === dialog) dialog.close();
+    });
+    dialog?.addEventListener("close", () => {
+      if (agrandissement) agrandissement.removeAttribute("src");
     });
   </script>
 </Base>

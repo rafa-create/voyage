@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { etapes, pays, galerie, dateFr } from "../lib/data";
+import photosAClasser from "../data/photos-a-classer.json";
 import { chemin } from "../lib/paths";
 
 const recentes = etapes.slice(0, 3);
@@ -31,7 +32,7 @@ const recentes = etapes.slice(0, 3);
       <span class="stat-dot">✳</span>
       <span>{pays.length} {pays.length > 1 ? "pays" : "pays"}</span>
       <span class="stat-dot">✳</span>
-      <span>{galerie.length} {galerie.length > 1 ? "photos" : "photo"}</span>
+      <span>{galerie.length + photosAClasser.length} {galerie.length + photosAClasser.length > 1 ? "photos" : "photo"}</span>
     </div>
   </section>
 
@@ -64,7 +65,14 @@ const recentes = etapes.slice(0, 3);
       <div class="empty-state">
         <div class="empty-symbol" aria-hidden="true">✺</div>
         <h3>La première page reste à écrire.</h3>
-        <p>Le carnet est prêt. Les premières photos, anecdotes et vidéos viendront bientôt remplir cet espace.</p>
+        {photosAClasser.length > 0 ? (
+          <>
+            <p>Les premières photos sont déjà dans la galerie. Le journal sera enrichi dès que les étapes du voyage seront renseignées.</p>
+            <a class="text-link" style="margin-top: 22px;" href={chemin("/galerie/")}>Voir les {photosAClasser.length} photos <span aria-hidden="true">↗</span></a>
+          </>
+        ) : (
+          <p>Le carnet est prêt. Les premières photos, anecdotes et vidéos viendront bientôt remplir cet espace.</p>
+        )}
       </div>
     )}
   </section>

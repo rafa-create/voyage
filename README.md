@@ -111,6 +111,18 @@ Le code `worker/index.js` n'autorise que la lecture des images publiques
 (`GET` et `HEAD`). Il ne permet ni d'écrire ni de lister les fichiers.
 Ne pas mettre de photo privée dans ce bucket. Conserver les originaux ailleurs.
 
+## Galerie de test et photos à classer
+
+Le fichier `src/data/photos-a-classer.json` contient les références vers les photos
+publiques téléversées dans le bucket `voyage-photos`. Elles apparaissent dans la
+galerie et dans le compteur de l'accueil, mais **ne créent aucune étape ni aucun pays fictif**.
+
+Chaque photo contient un chemin `/media/nom-du-fichier.jpeg`, un texte alternatif
+et une légende. Les noms de fichiers dans R2 sont sensibles aux majuscules.
+Lorsque l'on connaît la date, le pays et le lieu, déplacer la référence correspondante
+dans `src/data/etapes.json` et la retirer de `photos-a-classer.json` pour éviter
+les doublons. Les photos doivent être publiques et non sensibles.
+
 ## Évolutions prévues
 
 1. Publier des photos et des textes publics depuis ChatGPT, via des modifications du dépôt.
