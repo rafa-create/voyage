@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {archiveNewSports,decodeSummaryPolyline} from "../worker/archive-auto.js";
-import {archiveIndex,publicArchives,publicArchivedRoute,archiveMapPoints} from "../worker/parcours-archive.js";
+import {archiveIndex,publicArchives,publicArchivedRoute,archiveMapPoints,setAutoPublication,autoPublicationEnabled} from "../worker/parcours-archive.js";
 import {summarizeChallenge} from "../worker/defi.js";
 
 function fakeBucket(){
@@ -27,16 +27,32 @@ test("importe et conserve plusieurs sports personnels sans doublons",async()=>{
   assert.equal((await publicArchives(env)).length,2,"les activités déjà publiques peuvent être montrées dans le journal");
 });
 
-test("jamais d'activité réservée aux abonnés ou privée dans la page publique",async()=>{
+test("le propriétaire peut publier ses dix copies automatiquement même avec visibilité source inconnue",async()=>{
   const env={PHOTOS_PRIVEES:fakeBucket()};
-  const everyone={...sport(555,1792224000000,"Run"),visibility:"everyone"};
-  const onlyMe={...sport(556,1792228000000,"Kitesurf"),visibility:"only_me"};
-  const followers={...sport(557,1792230000000,"Run"),visibility:"followers_only"};
-  const unknown={...sport(558,1792232000000,"Run"),visibility:"unknown"};
-  await archiveNewSports(env,[everyone,onlyMe,followers,unknown],{maxRoutes:0});
-  assert.equal((await archiveIndex(env)).length,4);
-  assert.deepEqual((await publicArchives(env)).map(x=>x.titre),["Sortie du jour"]);
-  assert.equal((await publicArchives(env))[0].date,"2026-10-17");
+  const sports=Array.from({length:10},(_,i)=>({
+    ...sport(1000+i,1792224000000+i*60000,"Run"),
+    visibility:i%2===0?"unknown":"only_me"
+  }));
+  await archiveNewSports(env,sports,{maxImports:12,maxRoutes:0});
+  assert.equal((await archiveIndex(env)).length,10);
+  assert.equal(await autoPublicationEnabled(env),true);
+  assert.equal((await publicArchives(env)).length,10,
+    "la visibilité de l'archive appartient au propriétaire, pas au fournisseur");
+  await setAutoPublication(env,false);
+  assert.equal((await publicArchives(env)).length,0);
+  assert.equal((await archiveIndex(env)).length,10,"désactiver la publication ne supprime jamais R2");
+  await setAutoPublication(env,true);
+  assert.equal((await publicArchives(env)).length,10);
+});
+test("un GPX personnel privé reste privé quel que soit le réglage des imports automatiques",async()=>{
+  const env={PHOTOS_PRIVEES:fakeBucket()};
+  await env.PHOTOS_PRIVEES.put("__meta/parcours/index.json",JSON.stringify({items:[
+    {id:"a",source:"archive",public:false,date:"2026-10-17",fin:1792224000000},
+    {id:"b",source:"archive",public:true,date:"2026-10-17",fin:1792224000000},
+    {id:"c",source:"import_automatique",public:false,visibility:"unknown",
+      publicationBloquee:true,date:"2026-10-17",fin:1792224000000}
+  ]}));
+  assert.deepEqual((await publicArchives(env)).map(x=>x.id),["b"]);
 });
 test("les anciennes copies publiques remontent automatiquement dans le défi",async()=>{
   const bucket=fakeBucket();
