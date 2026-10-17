@@ -231,81 +231,27 @@ export async function deleteStravaActivity(env,url){
   if(!Array.isArray(items)||!items.some(a=>a.url===url))throw Error("Activité introuvable.");
   await putJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,items.filter(a=>a.url!==url));
 }
-const PUBLIC_RUNS_KEY="__meta/defi/strava-public-recent.json";
-const PUBLIC_HISTORY_KEY="__meta/defi/strava-public-history.json";
-const PUBLIC_RUNS_POLL_KEY="__meta/defi/strava-public-poll.json";
-const PUBLIC_ROUTE_PREFIX="__meta/defi/route-public/";
-const PUBLIC_RUNS_INTERVAL=10*60*1000;
-
+// Les données de l'API sportive sont temporaires : elles ne doivent pas devenir
+// une archive permanente. Les archives conservables proviennent des fichiers
+// GPX originaux fournis par le propriétaire, dans parcours-archive.js.
 export async function syncPublicRuns(env){
-  if(!env.PHOTOS_PRIVEES||!env.VOYAGE_BRIDGE_KEY)return {etat:"non_configure"};
-  const now=Date.now();
-  const last=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_POLL_KEY,null);
-  const elapsed=last?.at?now-Date.parse(last.at):Infinity;
-  if(Number.isFinite(elapsed)&&elapsed>=0&&elapsed<PUBLIC_RUNS_INTERVAL)return {etat:"cache"};
-  await putJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_POLL_KEY,{at:new Date(now).toISOString()});
-  try{
-    const {privateStravaFetch}=await import("./strava-bridge.js");
-    const response=await privateStravaFetch(env,"activities");
-    if(response.status!==200)throw Error(response.body?.error||"Synchronisation Strava impossible.");
-    // Seules les courses déjà explicitement publiques chez Strava
-    // sont projetées dans la page publique, jamais les courses privées.
-    const config=await getChallengeConfig(env);
-    const items=(response.body.items||[]).filter(a=>a.visibility==="everyone")
-      .map(a=>{
-        const startedAtMs=Number(a.startedAtMs);
-        const date=dateInZone(startedAtMs,config.timezone);
-        const meters=Number(a.distanceMeters);
-        const id=String(a.id||"");
-        if(!/^[1-9][0-9]{0,19}$/.test(id)||!validDate(date)||
-          !Number.isFinite(meters)||meters<=0)return null;
-        return {id,date,fin:startedAtMs,
-          km:Math.round(meters/10)/100,
-          minutes:Math.max(1,Math.round(Number(a.durationSeconds||0)/60)),
-          titre:String(a.name||"Course à pied").slice(0,120),
-          url:"https://www.strava.com/activities/"+id,source:"strava"};
-      }).filter(Boolean).sort((a,b)=>b.fin-a.fin).slice(0,10);
-    // Le journal quotidien ne doit pas perdre les réussites anciennes quand
-    // elles sortent des dix dernières activités de l'API.
-    const oldHistory=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_HISTORY_KEY,{items:[]});
-    const indexed=new Map((Array.isArray(oldHistory.items)?oldHistory.items:[])
-      .filter(item=>item?.url&&item?.date).map(item=>[item.url,item]));
-    // Révoquer du journal une activité devenue non publique lorsque Strava
-    // la renvoie encore dans la liste récente avec visibilité restreinte.
-    for(const item of response.body.items||[]){
-      if(item.visibility!=="everyone"&&/^[1-9][0-9]{0,19}$/.test(String(item.id||"")))
-        indexed.delete("https://www.strava.com/activities/"+item.id);
-    }
-    for(const item of items)indexed.set(item.url,item);
-    const historical=[...indexed.values()].sort((a,b)=>Number(b.fin||0)-Number(a.fin||0)).slice(0,900);
-    await putJSON(env.PHOTOS_PRIVEES,PUBLIC_HISTORY_KEY,{items:historical});
-    await putJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items,misAJour:new Date().toISOString()});
-    return {etat:"actualise",count:items.length};
-  }catch(e){return {etat:"erreur"};}
+  return {etat:"archives_personnelles"};
 }
-
 export async function publicRoute(env,id){
-  if(!/^[1-9][0-9]{0,19}$/.test(String(id)))return null;
-  const recent=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items:[]});
-  if(!recent.items?.some(item=>item.id===id))return null;
-  const key=PUBLIC_ROUTE_PREFIX+id+".json";
-  const existing=await getJSON(env.PHOTOS_PRIVEES,key,null);
-  if(existing&&Date.now()-Date.parse(existing.at)<24*3600*1000)return existing.route;
-  const {privateStravaFetch}=await import("./strava-bridge.js");
-  const response=await privateStravaFetch(env,"activities/"+id+"/route");
-  if(response.status!==200)return null;
-  const points=(Array.isArray(response.body?.geoRoute)?response.body.geoRoute:[])
-    .filter(p=>Array.isArray(p)&&p.length===2&&
-      Number.isFinite(p[0])&&Number.isFinite(p[1])&&
-      Math.abs(p[0])<=85&&Math.abs(p[1])<=180);
-  // Atténuation du risque d'exposer une adresse précise au début ou à la fin.
-  const trim=points.length>=20?Math.ceil(points.length*.07):0;
-  const route=points.slice(trim,points.length-trim).slice(0,110);
-  if(route.length<2)return null;
-  await putJSON(env.PHOTOS_PRIVEES,key,{at:new Date().toISOString(),route});
-  return route;
+  const {publicArchivedRoute}=await import("./parcours-archive.js");
+  return publicArchivedRoute(env,String(id));
 }
-
+export async function cleanupLegacyApiCache(env){
+  if(!env.PHOTOS_PRIVEES)return;
+  const bucket=env.PHOTOS_PRIVEES;
+  for(const key of [
+    "__meta/defi/strava-public-recent.json",
+    "__meta/defi/strava-public-history.json",
+    "__meta/defi/strava-public-poll.json"
+  ])await bucket.delete(key);
+  const listed=await bucket.list({prefix:"__meta/defi/route-public/",limit:1000});
+  if(listed.objects.length)await bucket.delete(listed.objects.map(item=>item.key));
+}
 export function summarizeChallenge(config,chess,activities,today){
   if(!config||!validDate(config.debut)||!validDate(today)||today<config.debut)return {configured:false};
   const games=Array.isArray(chess?.games)?chess.games:[];
@@ -362,19 +308,18 @@ export function summarizeChallenge(config,chess,activities,today){
 export async function publicChallenge(env){
   const config=await getChallengeConfig(env);
   if(!config)return {configured:false};
-  const [chess,manual,snapshot,history]=await Promise.all([
+  const {publicArchives}=await import("./parcours-archive.js");
+  const [chess,manual,auto,widgets]=await Promise.all([
     getJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games:[],lastSync:null}),
     getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[]),
-    getJSON(env.PHOTOS_PRIVEES,PUBLIC_RUNS_KEY,{items:[],misAJour:null}),
-    getJSON(env.PHOTOS_PRIVEES,PUBLIC_HISTORY_KEY,{items:[]})
+    publicArchives(env),
+    getPublicStravaWidgets(env)
   ]);
-  const recent=Array.isArray(snapshot.items)?snapshot.items:[];
-  const auto=Array.isArray(history.items)?history.items:recent;
-  const manualNotDuplicate=(Array.isArray(manual)?manual:[]).filter(a=>!auto.some(b=>b.url===a.url));
-  const result=summarizeChallenge(config,chess,[...manualNotDuplicate,...auto],dateInZone(new Date(),config.timezone));
-  const widgets=await getPublicStravaWidgets(env);
+  const own=Array.isArray(manual)?manual:[];
+  const activities=[...own,...auto].filter(a=>a?.date);
+  const result=summarizeChallenge(config,chess,activities,dateInZone(new Date(),config.timezone));
   return {...result,stravaFeed:widgets.feed,stravaSummary:widgets.summary,
-    coursesRecentes:recent,derniereCourseSynchro:snapshot.misAJour||null};
+    coursesRecentes:auto,derniereCourseSynchro:null};
 }
 export async function privateChallenge(env){
   const result=await publicChallenge(env);
