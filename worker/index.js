@@ -29,9 +29,9 @@ function validateStage(input){
   step.photos=[];step.videos=[];step.statut="future";
   return step;
 }
-async function readImage(request,bucket,key,priv=false){
+async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
   if(!bucket)return error("Bucket non configuré.",503);
-  if(!imageKey(key)||(priv&&!key.startsWith("etapes/")))return new Response("Introuvable",{status:404});
+  if(!imageKey(key)||(priv&&!allowUnclassified&&!key.startsWith("etapes/")))return new Response("Introuvable",{status:404});
   if(!["GET","HEAD"].includes(request.method))return new Response("Méthode non autorisée",{status:405});
   const object=request.method==="HEAD"?await bucket.head(key):await bucket.get(key);
   if(!object)return new Response("Introuvable",{status:404});
@@ -87,7 +87,7 @@ export default {
     const auth=await requireAccess(request,env,adminOnly);
     if(auth.error)return auth.error;
     if(!env.PHOTOS_PRIVEES)return error("Bucket privé non connecté.",503);
-    if(path.startsWith("/media-prive/"))return readImage(request,env.PHOTOS_PRIVEES,decode(path.slice("/media-prive/".length)),true);
+    if(path.startsWith("/media-prive/"))return readImage(request,env.PHOTOS_PRIVEES,decode(path.slice("/media-prive/".length)),true,auth.user.isAdmin);
     if(/^\/(?:espace|admin)(?:\/|$)/.test(path)){
       const page=await env.ASSETS.fetch(request);
       const headers=new Headers(page.headers);headers.set("Cache-Control","private, no-store");
