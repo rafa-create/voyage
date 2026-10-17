@@ -187,12 +187,15 @@ import { chemin } from "../../lib/paths";
       try{
         const data=await request("/api/prive/admin/defi/strava-recentes");
         const items=Array.isArray(data?.items)?data.items:[];
-        write("activities-sync-status",items.length+
-          " activités détectées · Garmin et enregistrements directs réunis.");
+        const archived=Number.isFinite(data.archives)?data.archives:0;
+        write("activities-sync-status",data.error
+          ?"Synchronisation momentanément indisponible : "+data.error
+          :items.length+" activités récentes détectées · "+archived+
+            " copies personnelles enregistrées dans R2.");
         if(!items.length){
           const empty=document.createElement("p");
           empty.className="fineprint";
-          empty.textContent="Aucune activité détectée. Vérifie la connexion de ton compte sportif dans BeatOnStep.";
+          empty.textContent=data.error?"Aucune nouvelle donnée reçue. Les copies déjà archivées restent conservées.":"Aucune activité récente détectée. Vérifie la connexion de ton compte sportif dans BeatOnStep.";
           list.append(empty);return;
         }
         for(const item of items.slice(0,30)){
