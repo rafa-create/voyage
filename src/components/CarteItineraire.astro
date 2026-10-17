@@ -372,7 +372,6 @@ const points = etapes
               when.textContent=memory.dateHeure
                 ?memory.dateHeure.slice(0,10)+" · "+memory.dateHeure.slice(11,16)
                 :memory.date+" · heure non renseignée";
-              const precision=document.createElement("span");precision.textContent=memory.precision;
               panel.append(title,when);
               if(memory.type==="sport"){
                 const metrics=document.createElement("div");
