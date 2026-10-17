@@ -71,6 +71,16 @@ export default {
       return env.ASSETS.fetch(new Request(new URL("/etape/",url.origin),request));
     }
 
+    if(request.method==="GET"&&/^\/pays\/[a-z0-9-]+\/?$/.test(path)){
+      const page=await env.ASSETS.fetch(request);
+      if(page.status!==404)return page;
+      const slug=path.split("/").filter(Boolean)[1];
+      const all=await steps(env);
+      const normalize=x=>x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+      if(!all.some(e=>normalize(e.pays)===slug))return page;
+      return env.ASSETS.fetch(new Request(new URL("/destination/",url.origin),request));
+    }
+
     const priv=/^\/(?:espace|admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
     if(!priv)return env.ASSETS.fetch(request);
     const adminOnly=/^\/admin(?:\/|$)/.test(path)||path.startsWith("/api/prive/admin/");
