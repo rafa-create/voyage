@@ -13,7 +13,7 @@ import { chemin } from "../../lib/paths";
       <div class="admin-quick-links">
         <a class="text-link" href={chemin("/admin/defi/")}>Gérer le défi quotidien</a>
         <a class="text-link" href={chemin("/espace/")}>Albums privés</a>
-        <a class="admin-secondary admin-logout" href="/cdn-cgi/access/logout">Déconnexion</a>
+        <a class="admin-logout" href="/cdn-cgi/access/logout" aria-label="Se déconnecter de Cloudflare Access"><span aria-hidden="true">↪</span> Se déconnecter</a>
       </div>
     </header>
     <div class="admin-topline">
@@ -485,6 +485,9 @@ import { chemin } from "../../lib/paths";
     .admin-journey{padding:40px 0 110px;max-width:1060px}
     .admin-head{display:flex;justify-content:space-between;gap:20px;align-items:end}
     .admin-quick-links{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .admin-logout{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 15px;border:1px solid var(--forest);border-radius:3px;background:var(--forest);color:#fff;font:700 .8rem "DM Sans",sans-serif;white-space:nowrap}
+    .admin-logout:hover{background:#24534f;color:#fff}
+    @media(max-width:680px){.admin-head{align-items:flex-start;flex-direction:column}.admin-quick-links{width:100%;gap:9px}.admin-logout{margin-left:auto}}
     .admin-head h1{font-size:clamp(2.4rem,5vw,4.3rem);margin:12px 0}
     .admin-head p:last-child{color:var(--muted)}
     .admin-topline{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:14px 0;margin:14px 0 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
