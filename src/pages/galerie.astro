@@ -165,6 +165,7 @@ import { chemin } from "../lib/paths";
     <button type="button" class="lightbox-edit" aria-label="Modifier cette photo" title="Modifier cette photo" hidden>✎</button>
     <button type="button" class="lightbox-prev" aria-label="Photo précédente">←</button>
     <img src="" alt="" />
+    <iframe class="lightbox-video" title="Vidéo YouTube" hidden allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     <button type="button" class="lightbox-next" aria-label="Photo suivante">→</button>
     <p class="lightbox-counter" aria-live="polite"></p>
     <p class="lightbox-details" id="lightbox-details"></p>
@@ -203,7 +204,14 @@ import { chemin } from "../lib/paths";
       if (!agrandissement || !photos.length) return;
       index = (next + photos.length) % photos.length;
       const bouton = photos[index];
-      agrandissement.src = bouton.dataset.photo || "";
+      const videoId = bouton.dataset.video;
+      if (videoPlayer) {
+        videoPlayer.hidden = !videoId;
+        videoPlayer.title = bouton.dataset.videoTitle || "Vidéo YouTube";
+        videoPlayer.src = videoId ? "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId) + "?autoplay=1&rel=0" : "";
+      }
+      agrandissement.hidden = !!videoId;
+      agrandissement.src = videoId ? "" : (bouton.dataset.photo || "");
       agrandissement.alt = bouton.dataset.alt || "";
       if (compteur) compteur.textContent = (index + 1) + " / " + photos.length;
       const item=selectedPhoto();
