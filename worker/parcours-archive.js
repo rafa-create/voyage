@@ -5,6 +5,7 @@ import { getJSON, putJSON, validDate } from "./content.js";
 const INDEX="__meta/parcours/index.json";
 const PREFIX="__meta/parcours/archive/";
 const SOURCE="__meta/parcours/originaux/";
+const POLICY_KEY="__meta/parcours/publication-auto.json";
 const MAX_BYTES=5*1024*1024;
 const MAX_POINTS=50000;
 const MAX_STORED_POINTS=1500;
@@ -59,17 +60,31 @@ export async function archiveIndex(env){
   const value=await getJSON(env.PHOTOS_PRIVEES,INDEX,{items:[]});
   return Array.isArray(value?.items)?value.items:[];
 }
-// Le propriétaire a choisi de publier ses propres activités déjà marquées
-// "everyone" sur le service source. Ne jamais exposer followers_only/only_me/unknown.
-export function isPublishedActivity(item){
+// Le propriétaire du carnet demande expressément un journal et des cartes
+// publics sans connexion. Ce choix appartient au carnet : la visibilité au
+// sein de la plateforme d'origine ne commande pas celle de son archive.
+// Une bascule admin permet néanmoins de masquer les imports automatiques
+// instantanément, sans supprimer aucun fichier de R2.
+export async function autoPublicationEnabled(env){
+  const settings=await getJSON(env.PHOTOS_PRIVEES,POLICY_KEY,null);
+  return settings?.enabled!==false;
+}
+export async function setAutoPublication(env,enabled){
+  if(typeof enabled!=="boolean")throw Error("Valeur de publication invalide.");
+  await putJSON(env.PHOTOS_PRIVEES,POLICY_KEY,{
+    enabled,modifieLe:new Date().toISOString()
+  });
+  return {enabled};
+}
+export function isPublishedActivity(item,automaticEnabled=true){
   if(!item||item.publicationBloquee===true)return false;
-  if(item.source==="import_automatique")
-    return item.visibility==="everyone";
+  if(item.source==="import_automatique")return automaticEnabled;
   return item.public===true;
 }
 export async function publicArchives(env){
-  const items=await archiveIndex(env);
-  return items.filter(isPublishedActivity).sort((a,b)=>b.fin-a.fin).map(publicItem);
+  const [items,enabled]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
+  return items.filter(item=>isPublishedActivity(item,enabled))
+    .sort((a,b)=>b.fin-a.fin).map(publicItem);
 }
 export async function importGpx(env,form){
   const file=form?.get("fichier");
@@ -120,8 +135,8 @@ export async function importGpx(env,form){
 }
 export async function publicArchivedRoute(env,id){
   if(!/^[a-f0-9-]{36}$/.test(id))return null;
-  const items=await archiveIndex(env);
-  if(!items.some(item=>item.id===id&&isPublishedActivity(item)))return null;
+  const [items,enabled]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
+  if(!items.some(item=>item.id===id&&isPublishedActivity(item,enabled)))return null;
   const record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
   if(!Array.isArray(record?.route)||record.route.length<2)return null;
   // Les premières et dernières portions ne sont jamais livrées au navigateur public.
@@ -130,8 +145,8 @@ export async function publicArchivedRoute(env,id){
   return points.slice(cut,points.length-cut);
 }
 export async function archiveMapPoints(env){
-  const items=await archiveIndex(env);
-  return items.filter(item=>isPublishedActivity(item)&&Number.isFinite(item.latitude)&&
+  const [items,enabled]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
+  return items.filter(item=>isPublishedActivity(item,enabled)&&Number.isFinite(item.latitude)&&
     Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,1500)
     .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
       titre:item.titre,sport:item.sport||"course",latitude:item.latitude,longitude:item.longitude,
