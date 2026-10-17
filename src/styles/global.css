@@ -387,3 +387,12 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 /* Carte de l'accueil sur toute la largeur de l'écran. */
 .home-full-width-map { width:100%; max-width:none; border-left:0; border-right:0; }
 .home-full-width-map .voyage-map-shell, .home-full-width-map .voyage-map { width:100%; }
+
+/* Accueil : donner davantage de hauteur à la carte d'itinéraire. */
+.home-full-width-map .voyage-map { height: 760px; }
+@media(max-width:900px) {
+  .home-full-width-map .voyage-map { height: 660px; }
+}
+@media(max-width:650px) {
+  .home-full-width-map .voyage-map { height: 560px; }
+}
