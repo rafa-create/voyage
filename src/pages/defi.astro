@@ -8,7 +8,7 @@ import Base from "../layouts/Base.astro";
       <div>
         <p class="eyebrow"><span class="eyebrow-line"></span> LE DÉFI DU VOYAGE</p>
         <h1>Un jour.<br /><em>Deux défis.</em></h1>
-        <p class="hero-lead">Une partie rapide aux échecs. Une course à pied. Chaque jour, une nouvelle occasion de réussir.</p>
+        <p class="hero-lead">Une partie rapide aux échecs. Une activité physique. Chaque jour, une nouvelle occasion de réussir.</p>
       </div>
       <div class="hero-today" aria-live="polite">
         <span class="hero-today-label">LE DÉFI D'AUJOURD'HUI</span>
@@ -62,8 +62,8 @@ import Base from "../layouts/Base.astro";
 
       <section id="courses" class="courses-section" aria-labelledby="courses-title">
         <div class="section-top">
-          <div><p class="eyebrow">LE VOYAGE EN MOUVEMENT</p><h2 id="courses-title">Où j'ai couru<span class="dot">.</span></h2></div>
-          <span class="section-hint">Dernières courses publiques</span>
+          <div><p class="eyebrow">LE VOYAGE EN MOUVEMENT</p><h2 id="courses-title">Où j'ai bougé<span class="dot">.</span></h2></div>
+          <span class="section-hint">Dernières activités publiées</span>
         </div>
         <p class="section-description">Choisis une date pour retrouver le parcours. Carte interactive, libre et zoomable.</p>
         <div class="map-layout">
@@ -88,7 +88,7 @@ import Base from "../layouts/Base.astro";
           <div><p class="eyebrow">UN DÉFI, CHAQUE JOUR</p><h2 id="journal-title">Jour après jour<span class="dot">.</span></h2></div>
           <button id="refresh-defi" class="refresh-button" type="button">↻ Actualiser</button>
         </div>
-        <p class="section-description">Une seule course et une seule partie rapide par jour : les plus récentes. Le résultat aux échecs n'a pas besoin d'être une victoire.</p>
+        <p class="section-description">Une activité et une seule partie rapide par jour : les plus récentes. Le résultat aux échecs n'a pas besoin d'être une victoire.</p>
         <div id="days-list" class="days-list" aria-live="polite"></div>
         <p id="source-line" class="data-note"></p>
       </section>
@@ -145,10 +145,10 @@ import Base from "../layouts/Base.astro";
       const symbol=el("span","task-symbol "+((kind==="chess"?day.echecs:day.activite)?"complete":"waiting"),
         (kind==="chess"?day.echecs:day.activite)?"✓":"·");
       const copy=el("div","task-copy");
-      copy.append(el("span","task-category",kind==="chess"?"ÉCHECS":"COURSE"));
+      copy.append(el("span","task-category",kind==="chess"?"ÉCHECS":"ACTIVITÉ"));
       const main=kind==="chess"
         ?day.echecs?(day.echecs.result+(day.echecs.rating?" · "+day.echecs.rating+" ELO":"")):"Pas encore jouée"
-        :day.activite?km(day.activite.km):"Pas encore couru";
+        :day.activite?km(day.activite.km):"Pas encore d'activité";
       copy.append(el("strong",undefined,main));
       if(kind==="chess"&&day.echecs?.eloDelta!=null){
         const delta=day.echecs.eloDelta;copy.append(el("small","task-extra "+(delta>0?"positive":delta<0?"negative":""),
@@ -190,8 +190,8 @@ import Base from "../layouts/Base.astro";
       write("today-date",fullDate(day.date));
       write("hero-today-status",day.resultat==="reussi"?"Défi réussi ✓":day.echecs||day.activite?"1 objectif sur 2":"Défi en cours");
       write("hero-today-description",day.resultat==="reussi"?"Les deux objectifs sont validés.":
-        day.echecs?"Échecs joués · course en attente":
-        day.activite?"Course faite · partie en attente":"Une partie et une course à accomplir.");
+        day.echecs?"Échecs joués · activité en attente":
+        day.activite?"Activité faite · partie en attente":"Une partie et une activité à accomplir.");
     }
     function rating(elo:Elo|undefined){
       write("elo-mode",elo?.mode?"ELO RAPIDE":"ELO CHESS.COM");
