@@ -257,7 +257,7 @@ export async function syncPublicRuns(env){
         const meters=Number(a.distanceMeters);
         const id=String(a.id||"");
         if(!/^[1-9][0-9]{0,19}$/.test(id)||!validDate(date)||
-          date<config.debut||!Number.isFinite(meters)||meters<=0)return null;
+          !Number.isFinite(meters)||meters<=0)return null;
         return {id,date,fin:startedAtMs,
           km:Math.round(meters/10)/100,
           minutes:Math.max(1,Math.round(Number(a.durationSeconds||0)/60)),
@@ -315,7 +315,10 @@ export function summarizeChallenge(config,chess,activities,today){
     const existing=activityByDay.get(a.date);
     const time=Number(a.fin||Date.parse(a.ajouteLe||"")||0);
     const oldTime=Number(existing?.fin||Date.parse(existing?.ajouteLe||"")||0);
-    if(!existing||time>oldTime||(time===oldTime&&String(a.url)>String(existing.url)))
+    const auto=Boolean(a.id&&a.source==="strava");
+    const existingAuto=Boolean(existing?.id&&existing?.source==="strava");
+    if(!existing||(auto&&!existingAuto)||
+      (auto===existingAuto&&(time>oldTime||(time===oldTime&&String(a.url)>String(existing.url)))))
       activityByDay.set(a.date,{...a,kmTotal:Number(a.km),count:1});
   }
   const days=[];
