@@ -7,6 +7,7 @@ export async function privateStravaFetch(env,action){
     status:503,body:{error:"Connexion BeatOnStep non activée : renseigne VOYAGE_BRIDGE_KEY sur les deux Workers."}
   };
   const path=action==="activities"?"activities":
+    /^activities\?page=(?:[1-9]|10)$/.test(action)?action:
     /^activities\/[1-9][0-9]{0,19}\/route$/.test(action)?action:null;
   if(!path)return {status:400,body:{error:"Action Strava invalide."}};
   try{
@@ -24,7 +25,7 @@ export async function privateStravaFetch(env,action){
     }};
     const body=await response.json();
     // Le pont ne doit jamais renvoyer des jetons, même par erreur.
-    if(action==="activities")return {status:200,body:{
+    if(action==="activities"||action.startsWith("activities?page="))return {status:200,body:{
       items:Array.isArray(body?.items)?body.items.slice(0,100):[]
     }};
     return {status:200,body:{
