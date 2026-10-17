@@ -9,12 +9,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 <Base title="Accueil" active="accueil">
   <section class="route-section home-map-only">
     <div class="container">
+      <div class="route-map-title">
+        <h1>Mon itinéraire</h1>
+      </div>
       <div class="route-map-card">
-        <div class="route-map-title">
-          <div>
-            <h1>Mon itinéraire</h1>
-          </div>
-        </div>
         <CarteItineraire etapes={etapes}/>
       </div>
     </div>
