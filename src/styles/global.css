@@ -292,3 +292,45 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   .lightbox-prev { left:10px; }
   .lightbox-next { right:10px; }
 }
+
+
+/* Commandes chronologiques discrètes intégrées au bas de la carte. */
+.map-day-control {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 10px 10px;
+  padding:7px 9px;
+  max-width:calc(100vw - 36px);
+  background:rgba(255,253,248,.92);
+  border:1px solid rgba(35,65,58,.18);
+  border-radius:4px;
+  box-shadow:0 1px 5px rgba(0,0,0,.12);
+  backdrop-filter:blur(6px);
+  color:var(--forest);
+  font-family:'DM Sans',sans-serif;
+}
+.map-day-control #daily-date {
+  margin:0;
+  color:var(--forest);
+  font-size:.72rem;
+  white-space:nowrap;
+}
+.map-day-control .daily-controls { gap:5px; flex-wrap:nowrap; }
+.map-day-control .daily-controls button {
+  padding:5px 7px;
+  border:0;
+  background:transparent;
+  color:var(--forest);
+  font-size:.68rem;
+  font-weight:600;
+  white-space:nowrap;
+}
+.map-day-control .daily-controls button:disabled { opacity:.32; }
+.map-day-control .daily-controls button:hover:not(:disabled) { text-decoration:underline; }
+@media(max-width:600px) {
+  .map-day-control { gap:5px; margin:0 0 7px 7px; padding:6px; flex-wrap:wrap; }
+  .map-day-control #daily-date { width:100%; font-size:.67rem; }
+  .map-day-control .daily-controls { width:100%; }
+  .map-day-control .daily-controls button { flex:1; font-size:.65rem; }
+}
