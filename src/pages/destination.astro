@@ -1,0 +1,40 @@
+---
+import Base from "../layouts/Base.astro";
+import { chemin } from "../lib/paths";
+---
+<Base title="Destination" active="pays">
+  <section class="page-intro container">
+    <p class="eyebrow"><a href={chemin("/pays/")}>TOUS LES PAYS</a> / DESTINATION</p>
+    <h1 id="country-name">Destination<span class="heading-dot">.</span></h1>
+    <p id="country-description">Chargement des étapes…</p>
+  </section>
+  <section class="container section"><div id="country-steps" class="cards-grid"></div></section>
+  <script>
+    function slugify(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+    const target=location.pathname.split("/").filter(Boolean)[1];
+    async function load(){
+      const response=await fetch("/api/public/etapes");
+      if(!response.ok)return;
+      const {etapes}=await response.json();
+      const all=etapes.filter((e:{pays:string})=>slugify(e.pays)===target);
+      const title=document.getElementById("country-name");
+      const description=document.getElementById("country-description");
+      const list=document.getElementById("country-steps");
+      if(!all.length){if(description)description.textContent="Aucune étape pour cette destination.";return;}
+      if(title)title.textContent=all[0].pays+".";
+      if(description)description.textContent=all.length+" étape(s).";
+      if(!list)return;
+      list.replaceChildren();
+      for(const e of all){
+        const link=document.createElement("a");link.className="step-card";
+        link.href="/etapes/"+encodeURIComponent(e.slug)+"/";
+        const card=document.createElement("div");card.className="card-body";
+        const label=document.createElement("span");label.className="card-meta";label.textContent=e.date+" · "+e.ville;
+        const heading=document.createElement("h2");heading.textContent=e.titre;
+        const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape ↗";
+        card.append(label,heading,more);link.append(card);list.append(link);
+      }
+    }
+    load().catch(()=>{});
+  </script>
+</Base>
