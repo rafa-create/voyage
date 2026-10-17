@@ -14,12 +14,19 @@ const dernieresPhotos = galerie.slice(0, 4);
 <Base title="Accueil" active="accueil">
   <section class="route-section">
     <div class="container">
-      <div class="route-heading">
-        <div>
-          <p class="eyebrow"><span class="eyebrow-line"></span> LE CARNET DE ROUTE</p>
-          <h1>Le voyage,<br /><em>étape après étape.</em></h1>
+      <div class="route-heading route-heading-personal">
+        <div class="route-heading-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> UN VOYAGE À RACONTER</p>
+          <h1>Sur la route.<br /><em id="home-current-city">Depuis ${actuelle?.ville || "La Ciotat"}.</em></h1>
+          <p class="lead">Une carte, des étapes, et les photos qui racontent le reste.</p>
+          <a class="text-link route-heading-link" href={chemin("/journal/")}>Parcourir le journal <span aria-hidden="true">↗</span></a>
         </div>
-        <p class="lead">La carte pour se repérer, le journal pour raconter et les photos pour se souvenir. Un carnet qui avance au rythme du voyage.</p>
+        {actuelle?.photos[0] && (
+          <a class="route-cover-photo" href={chemin("/etapes/" + actuelle.slug + "/")} aria-label={"Découvrir l'étape de " + actuelle.ville}>
+            <img src={chemin(actuelle.photos[0].src)} alt={actuelle.photos[0].alt} width="800" height="500" />
+            <span class="route-cover-caption"><span>ÉTAPE 01 / {actuelle.pays.toUpperCase()}</span><strong>{actuelle.ville} ↗</strong></span>
+          </a>
+        )}
       </div>
 
       <div class="route-layout">
@@ -41,14 +48,14 @@ const dernieresPhotos = galerie.slice(0, 4);
             <p>Sélectionner une destination pour découvrir ses photos, vidéos et récits.</p>
           </div>
           {actuelle && (
-            <a class="current-stop-card" href={chemin("/etapes/" + actuelle.slug + "/")}>
-              <span class="stop-overline"><span class="live-dot"></span> ÉTAPE ACTUELLE · MISE À JOUR LE {dateFr(actuelle.date).toUpperCase()}</span>
-              <span class="stop-title">{actuelle.ville}</span>
-              <span class="stop-country">{actuelle.pays}</span>
+            <a class="current-stop-card" id="current-stop-card" href={chemin("/etapes/" + actuelle.slug + "/")}>
+              <span class="stop-overline" id="current-stop-overline"><span class="live-dot"></span> ÉTAPE ACTUELLE · MISE À JOUR LE {dateFr(actuelle.date).toUpperCase()}</span>
+              <span class="stop-title" id="current-stop-city">{actuelle.ville}</span>
+              <span class="stop-country" id="current-stop-country">{actuelle.pays}</span>
               <span class="stop-cta">Voir l'étape et les photos <span aria-hidden="true">↗</span></span>
             </a>
           )}
-          <ol class="route-stop-list">
+          <ol class="route-stop-list" id="home-stop-list">
             {recentes.map((etape) => (
               <li>
                 <a href={chemin("/etapes/" + etape.slug + "/")}>
@@ -116,4 +123,46 @@ const dernieresPhotos = galerie.slice(0, 4);
       ))}
     </div>
   </section>
+
+  <script>
+    // Met à jour la carte ET la chronologie après ajout d'étapes dans l'admin.
+    async function hydrateJourney() {
+      try {
+        const r = await fetch("/api/public/etapes");
+        if (!r.ok) return;
+        const { etapes } = await r.json();
+        const current = etapes.find((e: { statut:string }) => e.statut === "actuelle");
+        const card = document.querySelector<HTMLAnchorElement>("#current-stop-card");
+        const city = document.querySelector<HTMLElement>("#current-stop-city");
+        const country = document.querySelector<HTMLElement>("#current-stop-country");
+        const headline = document.querySelector<HTMLElement>("#home-current-city");
+        if (current) {
+          if (card) card.href = "/etapes/" + encodeURIComponent(current.slug) + "/";
+          if (city) city.textContent = current.ville;
+          if (country) country.textContent = current.pays;
+          if (headline) headline.textContent = "Depuis " + current.ville + ".";
+        }
+        const list = document.querySelector<HTMLOListElement>("#home-stop-list");
+        if (!list) return;
+        list.replaceChildren();
+        for (const step of etapes.slice(0,5)) {
+          const li = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = "/etapes/" + encodeURIComponent(step.slug) + "/";
+          const time = document.createElement("span");
+          time.className = "stop-list-date";
+          time.textContent = step.date;
+          const title = document.createElement("strong");
+          title.textContent = step.titre;
+          const arrow = document.createElement("span");
+          arrow.setAttribute("aria-hidden", "true");
+          arrow.textContent = "↗";
+          link.append(time,title,arrow);
+          li.append(link);
+          list.append(li);
+        }
+      } catch { /* L'accueil précompilé reste fonctionnel. */ }
+    }
+    hydrateJourney();
+  </script>
 </Base>
