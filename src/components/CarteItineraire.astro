@@ -134,6 +134,17 @@ const points = etapes
             },
           });
         }
+        let selectedDay = "";
+        window.addEventListener("voyage:jour", (event) => {
+          const detail = (event as CustomEvent<{date?:string}>).detail;
+          selectedDay = detail?.date || "";
+          element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
+            const active = !selectedDay || marker.dataset.date === selectedDay;
+            marker.style.opacity = active ? "1" : ".38";
+            marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
+            marker.style.zIndex = active ? "2" : "1";
+          });
+        });
         // Frise de voyage : chacune des photos publiques et toutes les activités
         // GPX publiées sont positionnées selon l'heure de leur capture/départ.
         // Une position de ville/étape reste explicitement approximative.
@@ -226,6 +237,8 @@ const points = etapes
             for(const memory of memories.slice(-1500)){
               const marker=document.createElement("button");
               marker.type="button";
+              marker.classList.add("memory-map-marker");
+              marker.dataset.date=memory.date;
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
               marker.style.cssText=memory.type==="photo"&&memory.src
@@ -259,6 +272,9 @@ const points = etapes
                 const link=document.createElement("a");
                 link.href="/galerie/?photo="+encodeURIComponent(memory.src||"");
                 link.textContent="Voir dans la galerie ↗";panel.append(link);
+              }
+              if(selectedDay && selectedDay !== memory.date){
+                marker.style.opacity=".38";marker.style.transform="scale(.82)";
               }
               new maplibregl.Marker({element:marker,anchor:"center"})
                 .setLngLat([memory.longitude,memory.latitude])
