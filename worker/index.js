@@ -1,5 +1,5 @@
 import { requireAccess } from "./auth.js";
-import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity } from "./defi.js";
+import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
@@ -147,6 +147,11 @@ export default {
     if(path==="/api/prive/admin/defi/chess-synchroniser"){
       try{return json(await syncChess(env));}
       catch(e){return error("Synchronisation Chess.com impossible : "+e.message,502);}
+    }
+    if(path==="/api/prive/admin/defi/strava-flux"){
+      const input=await readBody(request);
+      try{return json({ok:true,url:await setPublicStravaFeed(env,input?.embed)});}
+      catch(e){return error(e.message);}
     }
     if(path==="/api/prive/admin/defi/strava-ajouter"){
       const input=await readBody(request);
