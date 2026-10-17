@@ -177,12 +177,20 @@ import { chemin } from "../lib/paths";
         const list=document.getElementById("strava-personal-list");
         if(!list)return;
         list.replaceChildren();
-        const today=currentDays.find(d=>d.date===new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",
-          year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
+        const dateParis=(value:number)=>{
+          const parts=new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",
+            year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(value));
+          const part=(type:string)=>parts.find(p=>p.type===type)?.value||"";
+          return part("year")+"-"+part("month")+"-"+part("day");
+        };
+        const todayDate=dateParis(Date.now());
+        const today=currentDays.find(d=>d.date===todayDate);
+        const todayRuns=items.filter(item=>dateParis(item.startedAtMs)===todayDate);
         const todayElement=document.getElementById("strava-personal-today");
-        if(todayElement)todayElement.textContent=today?.echecs
-          ?"Aujourd'hui : partie d'échecs enregistrée ✓ · sélectionne une course pour son tracé."
-          :"Aujourd'hui : partie d'échecs non encore enregistrée · consulte tes courses ci-dessous.";
+        if(todayElement)todayElement.textContent=
+          "Aujourd'hui · Échecs : "+(today?.echecs?"✓ joués":"en attente")+
+          " · Courses Strava : "+(todayRuns.length?todayRuns.length+" ✓":"en attente")+
+          (today?.echecs&&todayRuns.length?" · Les deux objectifs du jour sont remplis !":"");
         if(!items.length){personalStatus("Aucune course récente disponible dans BeatOnStep.");return;}
         for(const item of items){
           if(!/^[0-9]{1,20}$/.test(String(item.id)))continue;
@@ -192,7 +200,8 @@ import { chemin } from "../lib/paths";
           const distance=document.createElement("span");
           const km=Number.isFinite(item.distanceMeters)?(Number(item.distanceMeters)/1000).toFixed(2).replace(".",",")+" km":"Distance indisponible";
           const when=new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeZone:"Europe/Paris"}).format(new Date(item.startedAtMs));
-          distance.textContent=when+" · "+km;
+          const chessDay=currentDays.find(d=>d.date===dateParis(item.startedAtMs));
+          distance.textContent=when+" · "+km+(chessDay?.echecs?" · ♟ partie jouée":"");
           btn.append(name,distance);
           btn.addEventListener("click",()=>{
             list.querySelectorAll("button").forEach(b=>b.classList.toggle("selected",b===btn));
