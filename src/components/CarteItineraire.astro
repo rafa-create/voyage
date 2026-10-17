@@ -234,6 +234,61 @@ const points = etapes
                 map.fitBounds(bounds,{padding:60,maxZoom:16,duration:650});
               }catch{ /* Conserver la carte en cas d'indisponibilité. */ }
             };
+            const allTracesButton=document.createElement("button");
+            allTracesButton.type="button";
+            allTracesButton.textContent="Afficher tous les tracés";
+            allTracesButton.setAttribute("aria-pressed","false");
+            allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
+            let allTracesVisible=false;
+            let allTracesLoaded=false;
+            allTracesButton.addEventListener("click",async()=>{
+              allTracesButton.disabled=true;
+              try{
+                if(!allTracesLoaded){
+                  const activities=memories.filter(e=>e.type==="sport"&&e.id&&e.parcours);
+                  const routes=await Promise.all(activities.map(async activity=>{
+                    try{
+                      const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(activity.id!),{cache:"no-store"});
+                      if(!response.ok)return null;
+                      const result=await response.json();
+                      const route=(Array.isArray(result.route)?result.route:[]).filter(
+                        (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
+                      return route.length>=2?route.map(p=>[p[1],p[0]] as [number,number]):null;
+                    }catch{return null;}
+                  }));
+                  const features=routes.filter((route):route is [number,number][]=>route!==null).map((route,index)=>({
+                    type:"Feature" as const,properties:{index},
+                    geometry:{type:"LineString" as const,coordinates:route}
+                  }));
+                  if(!features.length){
+                    allTracesButton.textContent="Aucun tracé disponible";
+                    return;
+                  }
+                  const data={type:"FeatureCollection" as const,features};
+                  if(map.getSource("tous-les-traces")){
+                    (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(data);
+                  }else{
+                    map.addSource("tous-les-traces",{type:"geojson",data});
+                    map.addLayer({id:"tous-les-traces",type:"line",source:"tous-les-traces",
+                      layout:{"line-cap":"round","line-join":"round"},
+                      paint:{"line-color":"#df784a","line-width":3.5,"line-opacity":.85}});
+                  }
+                  const bounds=new maplibregl.LngLatBounds();
+                  for(const feature of features){
+                    for(const coordinate of feature.geometry.coordinates)bounds.extend(coordinate);
+                  }
+                  map.fitBounds(bounds,{padding:60,maxZoom:12,duration:650});
+                  allTracesLoaded=true;
+                }else if(map.getLayer("tous-les-traces")){
+                  map.setLayoutProperty("tous-les-traces","visibility",allTracesVisible?"visible":"none");
+                }
+                allTracesVisible=!allTracesVisible;
+                if(map.getLayer("tous-les-traces"))map.setLayoutProperty("tous-les-traces","visibility",allTracesVisible?"visible":"none");
+                allTracesButton.textContent=allTracesVisible?"Masquer les tracés":"Afficher tous les tracés";
+                allTracesButton.setAttribute("aria-pressed",String(allTracesVisible));
+              }finally{allTracesButton.disabled=false;}
+            });
+            map.addControl({onAdd:()=>allTracesButton,onRemove:()=>allTracesButton.remove()} as maplibregl.IControl,"top-left");
             for(const memory of memories.slice(-1500)){
               const marker=document.createElement("button");
               marker.type="button";
