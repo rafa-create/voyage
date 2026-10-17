@@ -58,11 +58,15 @@ function infoObject(obj,visibilite,stage,alt,legende,legacy=false){
     alt:obj.customMetadata?.alt||alt||"Photo de voyage",
     legende:obj.customMetadata?.legende||legende||"",
     ajouteLe:obj.uploaded?.toISOString()||null,
-    // Emplacement volontairement arrondi (~500 m) sur l'espace public.
-    latitude:Number.isFinite(Number(obj.customMetadata?.latitude))&&obj.customMetadata?.latitude
-      ?Math.round(Number(obj.customMetadata.latitude)*200)/200:null,
-    longitude:Number.isFinite(Number(obj.customMetadata?.longitude))&&obj.customMetadata?.longitude
-      ?Math.round(Number(obj.customMetadata.longitude)*200)/200:null,
+    dateHeure:typeof obj.customMetadata?.dateHeure==="string"&&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(obj.customMetadata.dateHeure)
+      ?obj.customMetadata.dateHeure:null,
+    latitude:obj.customMetadata?.latitude!==undefined&&Number.isFinite(Number(obj.customMetadata.latitude))
+      ?Number(obj.customMetadata.latitude):null,
+    longitude:obj.customMetadata?.longitude!==undefined&&Number.isFinite(Number(obj.customMetadata.longitude))
+      ?Number(obj.customMetadata.longitude):null,
+    precision:obj.customMetadata?.latitude!==undefined&&obj.customMetadata?.longitude!==undefined
+      ?(obj.customMetadata?.precision==="exact"?"exact":"approximative"):null,
     legacy};
 }
 export async function listedPhotos(env,visibility="public"){
