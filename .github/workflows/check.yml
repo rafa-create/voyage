@@ -1,0 +1,21 @@
+name: Vérifier le site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+      - name: Configurer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+      - name: Compiler Astro
+        run: npm run build
