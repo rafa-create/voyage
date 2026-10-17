@@ -46,7 +46,7 @@ import { chemin } from "../../lib/paths";
             <strong>+ Choisir des photos</strong>
             <span>JPEG, HEIC, PNG, WebP, AVIF · Plusieurs photos à la fois</span>
           </label>
-          <input id="upload-files" class="visually-hidden" type="file" accept="image/*,.heic,.heif" multiple />
+          <input id="upload-files" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.avif,.heic,.heif,image/jpeg,image/png,image/heic,image/heif" multiple />
           <div id="chosen-files" class="chosen-files"></div>
           <button class="admin-primary" type="submit">Envoyer les photos <span aria-hidden="true">↗</span></button>
           <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos sont converties en JPEG léger sans métadonnées GPS avant envoi. Conserve tes originaux sur ton appareil ou dans une sauvegarde.</p>
@@ -114,7 +114,7 @@ import { chemin } from "../../lib/paths";
 
     type Etape = { slug:string; titre:string; ville:string; pays:string; date:string; dateFin?:string; statut:string };
     type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;alt:string;legacy?:boolean};
-    type Chosen = { file:File; preview:string; date:string|null; prive:boolean };
+    type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null; prive:boolean };
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
     const status = $("admin-status");
     const selectors = ["active-select","upload-etape","video-etape"];
@@ -189,11 +189,27 @@ import { chemin } from "../../lib/paths";
       }
       return null;
     }
-    async function capturedDate(file:File):Promise<string|null>{
+    async function photoMetadata(file:File){
+      // Lire directement l'original avant toute conversion : le JPEG optimisé
+      // ne contient plus les EXIF.
+      let date:string|null=null,dateHeure:string|null=null;
+      let latitude:number|null=null,longitude:number|null=null;
       try{
-        const tags=await exifr.parse(file,["DateTimeOriginal","CreateDate","DateTimeDigitized"]);
-        return displayDate(tags?.DateTimeOriginal||tags?.CreateDate||tags?.DateTimeDigitized);
-      }catch{return null;}
+        const tags=await exifr.parse(file,{pick:["DateTimeOriginal","CreateDate","DateTimeDigitized"],reviveValues:false});
+        const value=tags?.DateTimeOriginal||tags?.CreateDate||tags?.DateTimeDigitized;
+        if(typeof value==="string"){
+          const m= /^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(value);
+          if(m){date=m[1]+"-"+m[2]+"-"+m[3];dateHeure=date+"T"+m[4]+":"+m[5]+":"+m[6];}
+        }else date=displayDate(value);
+      }catch{}
+      try{
+        const coords=await exifr.gps(file);
+        if(coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
+          Math.abs(coords.latitude)<=85&&Math.abs(coords.longitude)<=180){
+          latitude=coords.latitude;longitude=coords.longitude;
+        }
+      }catch{}
+      return {date,dateHeure,latitude,longitude};
     }
     function dateStep(date:string|null):Etape|null{
       if(!date)return null;
@@ -214,7 +230,9 @@ import { chemin } from "../../lib/paths";
         const image=document.createElement("img");image.src=item.preview;image.alt="";
         const details=document.createElement("div");details.className="chosen-details";
         const name=document.createElement("strong");name.textContent=item.file.name;
-        const date=document.createElement("span");date.textContent=item.date?"Prise le "+item.date+(dateStep(item.date)?" · "+dateStep(item.date)?.ville:" · étape à confirmer"):"Date de prise de vue absente : étape sélectionnée";
+        const date=document.createElement("span");
+        const lieu=item.latitude!==null&&item.longitude!==null?"GPS exact ✓":dateStep(item.date)?.ville?"Lieu estimé : "+dateStep(item.date)?.ville:"Lieu : étape choisie";
+        date.textContent=(item.dateHeure?"Prise le "+item.dateHeure.replace("T"," à ").slice(0,16):item.date?"Prise le "+item.date:"Date non renseignée")+" · "+lieu;
         details.append(name,date);
         const label=document.createElement("label");label.className="chosen-private";
         const check=document.createElement("input");check.type="checkbox";check.checked=item.prive;
@@ -229,7 +247,8 @@ import { chemin } from "../../lib/paths";
       selected=[];
       message("photo-progress","Lecture des dates EXIF…");
       for(const file of files){
-        selected.push({file,preview:URL.createObjectURL(file),date:await capturedDate(file),prive:false});
+        const metadata=await photoMetadata(file);
+        selected.push({file,preview:URL.createObjectURL(file),...metadata,prive:false});
       }
       renderChosen();message("photo-progress",selected.length+" fichier(s) sélectionné(s).");
     });
@@ -271,6 +290,10 @@ import { chemin } from "../../lib/paths";
             auto:$<HTMLInputElement>("auto-date")?.checked?"1":"0",
           });
           if(item.date)params.set("datePrise",item.date);
+          if(item.dateHeure)params.set("dateHeure",item.dateHeure);
+          if(item.latitude!==null&&item.longitude!==null){
+            params.set("latitude",String(item.latitude));params.set("longitude",String(item.longitude));
+          }
           const res=await api("/api/prive/admin/upload?"+params.toString(),{
             method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body
           });
