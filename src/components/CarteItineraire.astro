@@ -245,7 +245,7 @@ const points = etapes
               allTracesButton.disabled=true;
               try{
                 if(!allTracesLoaded){
-                  const activities=memories.filter(e=>e.type==="sport"&&e.id&&e.parcours);
+                  const activities=memories.filter(e=>e.type==="sport"&&e.id);
                   const routes=await Promise.all(activities.map(async activity=>{
                     try{
                       const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(activity.id!),{cache:"no-store"});
