@@ -89,7 +89,7 @@ const dernieresPhotos = galerie.slice(0, 4);
       <a class="text-link" href={chemin("/galerie/")}>Toutes les photos <span aria-hidden="true">↗</span></a>
     </div>
     {dernieresPhotos.length > 0 ? (
-      <div class="home-photo-grid">
+      <div class="home-photo-grid" id="home-photo-grid">
         {dernieresPhotos.map((photo) => (
           <a class="home-photo" href={chemin("/etapes/" + photo.etape.slug + "/")} title={"Voir " + photo.etape.titre}>
             <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="600" height="450" />
@@ -108,7 +108,7 @@ const dernieresPhotos = galerie.slice(0, 4);
       </div>
       <a class="text-link" href={chemin("/journal/")}>Tout le journal <span aria-hidden="true">↗</span></a>
     </div>
-    <div class="cards-grid">
+    <div class="cards-grid" id="home-steps-grid">
       {recentes.map((etape) => (
         <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
           {etape.photos[0] ? (
@@ -141,6 +141,48 @@ const dernieresPhotos = galerie.slice(0, 4);
           if (city) city.textContent = current.ville;
           if (country) country.textContent = current.pays;
           if (headline) headline.textContent = "Depuis " + current.ville + ".";
+        }
+        // Inventaire en direct : une photo supprimée de R2 disparaît de l'accueil.
+        const imagesResponse = await fetch("/api/public/photos", {cache:"no-store"});
+        if(imagesResponse.ok){
+          const {photos} = await imagesResponse.json();
+          const cover = document.querySelector<HTMLAnchorElement>(".route-cover-photo");
+          const coverImg = cover?.querySelector("img");
+          const currentPhoto = current && photos.find((p: {etape:string})=>p.etape===current.slug);
+          if(cover){
+            cover.hidden=!currentPhoto;
+            if(current && currentPhoto){
+              cover.href="/etapes/"+encodeURIComponent(current.slug)+"/";
+              if(coverImg){coverImg.src=currentPhoto.src;coverImg.alt=currentPhoto.alt||"Photo de voyage";}
+              const caption=cover.querySelector<HTMLElement>(".route-cover-caption strong");
+              if(caption)caption.textContent=current.ville+" ↗";
+            }
+          }
+          const grid=document.querySelector<HTMLElement>("#home-photo-grid");
+          if(grid){
+            grid.replaceChildren();
+            for(const photo of photos.slice(-4).reverse()){
+              const e=etapes.find((x:{slug:string})=>x.slug===photo.etape);
+              if(!e)continue;
+              const link=document.createElement("a");
+              link.className="home-photo";
+              link.href="/etapes/"+encodeURIComponent(e.slug)+"/";
+              const image=document.createElement("img");
+              image.src=photo.src;image.alt=photo.alt||"Photo de voyage";image.loading="lazy";
+              const caption=document.createElement("span");
+              caption.textContent=e.ville+" ↗";
+              link.append(image,caption);grid.append(link);
+            }
+          }
+          const stats=document.querySelector<HTMLElement>(".route-section .stat-line");
+          if(stats){
+            const values=stats.querySelectorAll("span:not(.stat-dot)");
+            if(values.length===3){
+              values[0].textContent=etapes.length+" étape(s)";
+              values[1].textContent=new Set(etapes.map((e:{pays:string})=>e.pays)).size+" pays";
+              values[2].textContent=photos.length+" photos";
+            }
+          }
         }
         const list = document.querySelector<HTMLOListElement>("#home-stop-list");
         if (!list) return;
