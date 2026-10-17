@@ -1,5 +1,6 @@
 import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
+import {importGpx,publicArchives,archiveMapPoints} from "./parcours-archive.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
@@ -71,13 +72,25 @@ export default {
     // Chaque jour, examiner les nouveaux objets R2 non classés (sans connexion humaine).
     ctx.waitUntil(synchroniserR2(env));
     ctx.waitUntil(syncChess(env).catch(e=>console.warn("Synchronisation Chess.com:",String(e))));
+    ctx.waitUntil((async()=>{
+      const marker="__meta/defi/cache-api-nettoye.json";
+      const already=await getJSON(env.PHOTOS_PRIVEES,marker,null);
+      if(already)return;
+      const {cleanupLegacyApiCache}=await import("./defi.js");
+      await cleanupLegacyApiCache(env);
+      await putJSON(env.PHOTOS_PRIVEES,marker,{at:new Date().toISOString()});
+    })().catch(e=>console.warn("Nettoyage du cache:",String(e))));
   },
   async fetch(request,env){
     const url=new URL(request.url),path=url.pathname;
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
     if(path==="/api/public/defi"&&request.method==="GET")return json(await freshPublicChallenge(env));
-    const publicGps=/^\/api\/public\/defi\/parcours\/([1-9][0-9]{0,19})$/.exec(path);
+    if(path==="/api/public/parcours"&&request.method==="GET")return json({parcours:await publicArchives(env)});
+    if(path==="/api/public/carte-evenements"&&request.method==="GET"){
+      return json({courses:await archiveMapPoints(env)});
+    }
+    const publicGps=/^\/api\/public\/defi\/parcours\/([a-f0-9-]{36})$/.exec(path);
     if(publicGps&&request.method==="GET"){
       const points=await publicRoute(env,publicGps[1]);
       return points?json({route:points}):error("Parcours public indisponible.",404);
@@ -154,6 +167,12 @@ export default {
     }
     if(request.method!=="POST"||!mutationOk(request))return error("Action non autorisée.",403);
 
+    if(path==="/api/prive/admin/defi/import-gpx"){
+      try{
+        const form=await request.formData();
+        return json({ok:true,parcours:await importGpx(env,form)},201);
+      }catch(e){return error(e instanceof Error?e.message:"Import du GPX impossible.");}
+    }
     if(path==="/api/prive/admin/defi/config"){
       const input=await readBody(request);
       try{return json({ok:true,config:await setChallengeConfig(env,input)});}
