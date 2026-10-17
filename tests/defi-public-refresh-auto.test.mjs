@@ -72,3 +72,40 @@ test("la page publique archive la sortie et valide le défi au même rafraîchis
     assert.equal(fetches,1,"la seconde ouverture utilise le cache sans appel redondant");
   }finally{globalThis.fetch=original;}
 });
+
+test("le bouton Actualiser importe une deuxième course sans attendre le rafraîchissement normal",async()=>{
+  const original=globalThis.fetch;
+  const date=dateInZone(Date.now(),"Europe/Paris");
+  const env={PHOTOS_PRIVEES:bucket(),VOYAGE_BRIDGE_KEY:"z".repeat(50)};
+  await env.PHOTOS_PRIVEES.put("__meta/defi/config.json",JSON.stringify({
+    debut:date,chessUsername:"rafaelorset",timezone:"Europe/Paris"
+  }));
+  await env.PHOTOS_PRIVEES.put("__meta/defi/chess.json",JSON.stringify({
+    lastSync:new Date().toISOString(),games:[],ratingStats:{rapid:1000}
+  }));
+  const mk=(id,seconds)=>({
+    id:String(id),startedAtMs:Date.now()-seconds*1000,durationSeconds:900,
+    sportType:"Run",name:"Activité "+id,visibility:"everyone",
+    distanceMeters:2600
+  });
+  let count=0;
+  globalThis.fetch=async url=>{
+    if(!String(url).endsWith("/api/voyage/strava/activities"))
+      return new Response("",{status:404});
+    count++;
+    return new Response(JSON.stringify({items:count===1?[mk(100,90)]:
+      [mk(200,30),mk(100,90)]}),{status:200});
+  };
+  try{
+    let data=await freshPublicChallenge(env);
+    assert.equal(data.coursesRecentes.length,1);
+    await env.PHOTOS_PRIVEES.put("__meta/defi/activites-sportives-api-poll.json",
+      JSON.stringify({at:new Date(Date.now()-40000).toISOString()}));
+    data=await freshPublicChallenge(env,{forceSports:true});
+    assert.equal(data.coursesRecentes.length,2);
+    assert.equal((await archiveIndex(env)).length,2);
+    assert.equal(count,2);
+    assert.equal(data.stats.joursActivites,1,
+      "deux courses le même jour ne comptent que pour un objectif");
+  }finally{globalThis.fetch=original;}
+});
