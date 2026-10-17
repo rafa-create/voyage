@@ -139,7 +139,7 @@ const points = etapes
             const active = !selectedDay || marker.dataset.date === selectedDay;
             marker.style.opacity = active ? "1" : ".38";
             marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
-            marker.style.zIndex = active ? "2" : "1";
+            marker.style.zIndex = marker.classList.contains("memory-map-photo-marker") ? "3" : "2";
           });
           if (!dailyMarkers.length) return;
           const bounds = new maplibregl.LngLatBounds();
@@ -355,7 +355,7 @@ const points = etapes
               const marker=document.createElement("button");
               marker.type="button";
               marker.classList.add("memory-map-marker");
-              marker.style.zIndex = memory.type==="photo" && memory.src ? "3" : "2";
+              if(memory.type==="photo" && memory.src) marker.classList.add("memory-map-photo-marker");
               marker.dataset.date=memory.date;
               marker.dataset.latitude=String(memory.latitude);
               marker.dataset.longitude=String(memory.longitude);
@@ -367,6 +367,7 @@ const points = etapes
                   "box-shadow:0 2px 8px #0005;"
                 :"width:16px;height:16px;cursor:pointer;border:2px solid #fff;border-radius:50%;"+
                   "background:#c86f4d;box-shadow:0 1px 5px #0005;";
+              marker.style.zIndex = marker.classList.contains("memory-map-photo-marker") ? "3" : "2";
               const panel=document.createElement("div");
               panel.className="map-popup-content";
               const title=document.createElement("strong");title.textContent=memory.titre;
