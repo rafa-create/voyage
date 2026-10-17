@@ -337,10 +337,12 @@ import { chemin } from "../../lib/paths";
           catch(e){message("sync-result",String(e));del.disabled=false;}
         });
         actions.append(privateLabel,del);
-        if(!photo.etape){
-          const select=document.createElement("select");select.setAttribute("aria-label","Attribuer l'étape");
+        {
+          const select=document.createElement("select");select.setAttribute("aria-label","Étape de destination");
           for(const e of etapes)select.add(new Option(e.ville+" · "+e.pays,e.slug));
-          const assign=document.createElement("button");assign.type="button";assign.className="admin-secondary";assign.textContent="Classer";
+          if(photo.etape)select.value=photo.etape;
+          const assign=document.createElement("button");assign.type="button";assign.className="admin-secondary";
+          assign.textContent=photo.etape?"Déplacer":"Classer";
           assign.addEventListener("click",async()=>{
             try{await post("/api/prive/admin/assigner",{key:photo.key,visibilite:photo.visibilite,etape:select.value});await refresh();}
             catch(e){message("sync-result",String(e));}
