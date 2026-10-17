@@ -202,7 +202,7 @@ import { chemin } from "../../lib/paths";
           list.append(empty);return;
         }
         for(const item of items.slice(0,30)){
-          const row=document.createElement("div");row.className="strava-item";
+          const row=document.createElement("div");row.className="strava-item connected-activity";
           const body=document.createElement("div");
           const title=document.createElement("strong");title.textContent=item.name||"Activité";
           const when=document.createElement("small");
@@ -347,6 +347,21 @@ import { chemin } from "../../lib/paths";
     .strava-item strong{font-size:.86rem}.strava-item small{color:var(--muted)}
     .strava-item a{font-size:.78rem;text-decoration:underline}
     .strava-item button{background:none;border:0;color:#9d4b37;text-decoration:underline;cursor:pointer}
+    #activities-sync-list{margin-top:14px;display:grid;gap:8px}
+    #activities-sync-list .connected-activity{display:grid;grid-template-columns:minmax(0,1fr) auto;
+      gap:12px;align-items:center;padding:15px 17px;border:1px solid var(--line);
+      background:var(--white);min-width:0}
+    #activities-sync-list .connected-activity>div{min-width:0;display:flex;flex-direction:column;gap:5px}
+    #activities-sync-list .connected-activity strong{display:block;font-size:.9rem;line-height:1.4;
+      overflow-wrap:anywhere;font-weight:700}
+    #activities-sync-list .connected-activity small{display:block;color:var(--muted);
+      font-size:.76rem;line-height:1.45}
+    #activities-sync-list .connected-activity a{display:inline-flex;align-items:center;
+      white-space:nowrap;font-size:.76rem;font-weight:700;color:var(--forest);padding:8px}
+    @media(max-width:560px){
+      #activities-sync-list .connected-activity{grid-template-columns:minmax(0,1fr);gap:3px;padding:13px}
+      #activities-sync-list .connected-activity a{justify-self:start;padding:3px 0 0}
+    }
     .preview-link{margin-top:30px}
     @media(max-width:720px){.defi-admin-grid{grid-template-columns:1fr}.admin-heading{flex-direction:column;align-items:start}.two-col{grid-template-columns:1fr}}
   </style>
