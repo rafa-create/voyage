@@ -107,7 +107,7 @@ export async function publicArchivedRoute(env,id){
 export async function archiveMapPoints(env){
   const items=await archiveIndex(env);
   return items.filter(item=>item.public===true&&Number.isFinite(item.latitude)&&
-    Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,160)
+    Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,1500)
     .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
       titre:item.titre,sport:item.sport||"course",latitude:item.latitude,longitude:item.longitude,
       distance:item.km}));
