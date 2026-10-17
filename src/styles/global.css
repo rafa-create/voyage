@@ -372,3 +372,8 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 @media(max-width:600px) {
   .map-today-control { margin: 0 7px 7px 0; padding: 7px 9px; font-size: .7rem; }
 }
+
+
+/* Carte de l'accueil sur toute la largeur de l'écran. */
+.home-full-width-map { width:100%; max-width:none; border-left:0; border-right:0; }
+.home-full-width-map .voyage-map-shell, .home-full-width-map .voyage-map { width:100%; }
