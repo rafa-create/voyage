@@ -6,7 +6,7 @@ Site de carnet de voyage en français, déployé sur Cloudflare Workers à https
 ## Règles impératives
 - Ne jamais lancer, relancer ou déclencher GitHub Actions à la demande : le quota peut être épuisé. Vérifier les workflows et privilégier les contrôles locaux qui n'appellent pas d'actions distantes.
 - Ne jamais déployer automatiquement en production. Le déploiement touche le site public et doit être fait séparément, après vérification et accord explicite.
-- Travailler sur une branche dédiée, préserver les changements existants et ouvrir une PR plutôt que pousser directement sur `main`.
+- Travailler directement sur la branche `main` pour toutes les modifications du dépôt. Ne pas créer de branches de fonctionnalité et ne pas ouvrir de pull requests / merge requests. Vérifier les fichiers et changements existants avant d'écrire, puis committer directement sur `main`.
 - Ne jamais exposer de secrets, de jetons, ni de données privées. Les photos privées et l'authentification sont gérées par le Worker.
 - Ne pas ajouter de dépendance ou modifier le lockfile sans nécessité vérifiée.
 
