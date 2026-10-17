@@ -1,0 +1,204 @@
+---
+import Base from "../../layouts/Base.astro";
+import { chemin } from "../../lib/paths";
+---
+<Base title="Gérer le défi">
+  <section class="container challenge-admin">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">ADMINISTRATION / DÉFI</p>
+        <h1>Le défi du voyage<span class="heading-dot">.</span></h1>
+        <p>Une partie d'échecs et une activité physique par jour. Un seul endroit pour tout suivre.</p>
+      </div>
+      <a href={chemin("/admin/")} class="text-link">← Administration</a>
+    </div>
+    <div class="toolbar">
+      <p id="defi-status" role="status">Vérification de ton accès…</p>
+      <button type="button" id="defi-reload" disabled>↻ Actualiser</button>
+    </div>
+    <div id="defi-admin-content" hidden>
+      <div class="defi-admin-grid">
+        <section class="challenge-admin-panel">
+          <p class="eyebrow">01 / PARAMÈTRES</p>
+          <h2>Configurer le défi</h2>
+          <p>Le défi commence à la date choisie. Un jour compte lorsqu'il y a une partie terminée et une activité enregistrée.</p>
+          <form id="defi-config-form" class="admin-form">
+            <label for="defi-start">Date de début du voyage</label>
+            <input id="defi-start" type="date" required />
+            <label for="defi-chess">Pseudo Chess.com</label>
+            <input id="defi-chess" required maxlength="30" placeholder="Ton pseudo Chess.com" autocomplete="off" />
+            <label for="defi-zone">Fuseau horaire de référence</label>
+            <select id="defi-zone">
+              <option value="Europe/Paris">France (Europe/Paris)</option>
+              <option value="Europe/Istanbul">Turquie (Europe/Istanbul)</option>
+              <option value="Africa/Tunis">Tunisie (Africa/Tunis)</option>
+              <option value="UTC">UTC</option>
+            </select>
+            <p class="fineprint">La date d'une partie est déterminée selon ce fuseau. Le changer peut déplacer des parties entre deux journées.</p>
+            <button type="submit" class="primary">Enregistrer les paramètres</button>
+            <p id="config-message" role="status" class="feedback"></p>
+          </form>
+        </section>
+
+        <section class="challenge-admin-panel">
+          <p class="eyebrow">02 / CHESS.COM</p>
+          <h2>Parties automatiques</h2>
+          <p>Une synchronisation récupère les parties terminées depuis l'API publique Chess.com, gratuitement et sans mot de passe.</p>
+          <button type="button" id="sync-chess" class="primary">↻ Synchroniser les échecs</button>
+          <p class="fineprint">Une synchronisation est également programmée chaque jour. Le résultat d'une partie (victoire, nulle ou défaite) apparaît dans le journal.</p>
+          <p id="chess-message" class="feedback" role="status"></p>
+        </section>
+
+        <section class="challenge-admin-panel full">
+          <p class="eyebrow">03 / ACTIVITÉS STRAVA</p>
+          <h2>Ajouter une activité</h2>
+          <p>Pour rester à 0 €, copie simplement le lien de ton activité Strava et indique sa distance. Le site fera automatiquement le bilan quotidien.</p>
+          <form id="strava-form" class="admin-form">
+            <div class="two-col">
+              <div><label for="strava-date">Date de l'activité</label><input id="strava-date" type="date" required /></div>
+              <div><label for="strava-km">Distance (km)</label><input id="strava-km" type="number" min="0.01" max="1000" step="0.01" placeholder="5,40" required /></div>
+            </div>
+            <label for="strava-title">Nom de l'activité</label>
+            <input id="strava-title" placeholder="Ex. Footing au bord de la mer" required maxlength="120" />
+            <label for="strava-url">Lien Strava de l'activité</label>
+            <input id="strava-url" type="url" placeholder="https://www.strava.com/activities/..." required />
+            <p class="fineprint">Ajoute uniquement des liens d'activités que tu acceptes de rendre publics. Le site n'expose pas ta trace GPS ni ton historique privé.</p>
+            <button type="submit" class="primary">+ Ajouter au défi</button>
+            <p id="strava-message" role="status" class="feedback"></p>
+          </form>
+          <div id="strava-records" class="strava-records"></div>
+        </section>
+      </div>
+      <div class="preview-link"><a class="text-link" href={chemin("/defi/")}>Voir ma page Défi publique ↗</a></div>
+    </div>
+  </section>
+  <script>
+    type Entry = {date:string;km:number;titre:string;url:string};
+    type Summary = {configured:boolean;debut?:string;username?:string;timezone?:string;stats?:{jours:number;joursComplets:number};activitesEnregistrees?:Entry[];misAJour?:string|null};
+
+    const get=(id:string)=>document.getElementById(id);
+    const value=(id:string)=>(get(id) as HTMLInputElement|HTMLSelectElement).value.trim();
+    const write=(id:string,text:string)=>{const el=get(id);if(el)el.textContent=text;};
+    async function request(path:string,options?:RequestInit){
+      const response=await fetch(path,{cache:"no-store",credentials:"same-origin",...options});
+      const data=await response.json().catch(()=>({error:"Service indisponible."}));
+      if(!response.ok)throw Error(data.error||"Accès refusé. Reconnecte-toi avec Cloudflare Access.");
+      return data;
+    }
+    function post(path:string,body:object){
+      return request(path,{method:"POST",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify(body)});
+    }
+    let entries:Entry[]=[];
+    function renderEntries(){
+      const list=get("strava-records");
+      if(!list)return;
+      list.replaceChildren();
+      if(!entries.length){const empty=document.createElement("p");empty.className="fineprint";empty.textContent="Aucune activité enregistrée pour le moment.";list.append(empty);return;}
+      for(const item of [...entries].reverse()){
+        const row=document.createElement("div");row.className="strava-item";
+        const left=document.createElement("div");
+        const strong=document.createElement("strong");strong.textContent=item.titre;
+        const span=document.createElement("small");span.textContent=item.date+" · "+item.km.toFixed(2).replace(".",",")+" km";
+        const url=document.createElement("a");url.textContent="Ouvrir sur Strava ↗";url.href=item.url;url.target="_blank";url.rel="noopener noreferrer";
+        left.append(strong,span,url);
+        const del=document.createElement("button");del.type="button";del.textContent="Supprimer";del.setAttribute("aria-label","Retirer "+item.titre);
+        del.addEventListener("click",async()=>{
+          if(!window.confirm("Retirer cette activité du défi ?"))return;
+          del.disabled=true;
+          try{await post("/api/prive/admin/defi/strava-supprimer",{url:item.url});await reload();write("strava-message","Activité retirée.");}
+          catch(e){write("strava-message",e instanceof Error?e.message:"Erreur.");del.disabled=false;}
+        });
+        row.append(left,del);list.append(row);
+      }
+    }
+    async function reload(){
+      const state:Summary=await request("/api/prive/admin/defi");
+      if(state.configured){
+        (get("defi-start") as HTMLInputElement).value=state.debut||"";
+        (get("defi-chess") as HTMLInputElement).value=state.username||"";
+        const zone=get("defi-zone") as HTMLSelectElement;
+        if(!Array.from(zone.options).some(option=>option.value===state.timezone) && state.timezone)
+          zone.add(new Option(state.timezone,state.timezone));
+        zone.value=state.timezone||"Europe/Paris";
+        entries=state.activitesEnregistrees||[];
+      }
+      renderEntries();
+      write("defi-status",state.configured?("Défi configuré · "+state.stats?.jours+" jours · "+state.stats?.joursComplets+" jours complets"):"Défi non configuré.");
+    }
+    async function init(){
+      try{
+        const me=await request("/api/prive/moi");
+        if(!me.isAdmin)throw Error("Accès réservé à l'administrateur.");
+        await reload();
+        const area=get("defi-admin-content");if(area)area.hidden=false;
+        (get("defi-reload") as HTMLButtonElement).disabled=false;
+      }catch(e){write("defi-status",e instanceof Error?e.message:"Connexion nécessaire.");}
+    }
+    init();
+    get("defi-reload")?.addEventListener("click",async()=>{try{write("defi-status","Actualisation…");await reload();}catch(e){write("defi-status",String(e));}});
+    get("defi-config-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      try{
+        await post("/api/prive/admin/defi/config",{debut:value("defi-start"),chessUsername:value("defi-chess"),timezone:value("defi-zone")});
+        write("config-message","Paramètres enregistrés. Lance maintenant la synchronisation Chess.com.");
+        await reload();
+      }catch(err){write("config-message",err instanceof Error?err.message:"Erreur d'enregistrement.");}
+    });
+    get("sync-chess")?.addEventListener("click",async e=>{
+      const button=e.currentTarget as HTMLButtonElement;button.disabled=true;
+      write("chess-message","Synchronisation en cours…");
+      try{
+        const data=await post("/api/prive/admin/defi/chess-synchroniser",{});
+        if(!data.ok)throw Error(data.message);
+        write("chess-message",data.parties+" parties récupérées. "+(data.historiquePartiel?"Historique ancien partiel.":""));
+        await reload();
+      }catch(err){write("chess-message",err instanceof Error?err.message:"Erreur.");}
+      finally{button.disabled=false;}
+    });
+    get("strava-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const form=e.currentTarget as HTMLFormElement;
+      try{
+        await post("/api/prive/admin/defi/strava-ajouter",{
+          date:value("strava-date"),titre:value("strava-title"),km:Number(value("strava-km")),url:value("strava-url")
+        });
+        form.reset();
+        write("strava-message","Activité enregistrée.");
+        await reload();
+      }catch(err){write("strava-message",err instanceof Error?err.message:"Erreur.");}
+    });
+  </script>
+  <style>
+    .challenge-admin{padding:48px 0 100px;max-width:970px}
+    .admin-heading{display:flex;justify-content:space-between;align-items:end;gap:25px}
+    .admin-heading h1{font-size:clamp(2.5rem,5vw,4.6rem);margin:15px 0}
+    .admin-heading p:last-child{color:var(--muted);max-width:500px;line-height:1.7}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 0;border-block:1px solid var(--line);margin:30px 0}
+    .toolbar p{font-size:.85rem;color:var(--muted);margin:0}
+    .toolbar button{background:none;border:1px solid var(--line);padding:10px 14px;cursor:pointer}
+    #defi-admin-content[hidden]{display:none}
+    .defi-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .challenge-admin-panel{min-width:0;background:var(--white);border:1px solid var(--line);padding:clamp(22px,3vw,30px)}
+    .challenge-admin-panel.full{grid-column:1/-1}
+    .challenge-admin-panel h2{font-size:1.95rem;margin:13px 0}
+    .challenge-admin-panel>p:not(.eyebrow){color:var(--muted);line-height:1.7;font-size:.86rem}
+    .admin-form{display:flex;flex-direction:column;gap:12px;margin-top:25px}
+    .admin-form label{font-weight:700;font-size:.8rem}
+    .admin-form input,.admin-form select{width:100%;min-height:43px;border:1px solid #bdc5bb;border-radius:3px;padding:10px;background:#fff;color:var(--ink);font:inherit}
+    .primary{border:none;background:var(--forest);color:white;padding:13px 20px;border-radius:3px;cursor:pointer;font:700 .85rem 'DM Sans',sans-serif}
+    .primary:disabled{opacity:.5}
+    .admin-form>.primary{align-self:flex-start}
+    .fineprint{font-size:.75rem;color:var(--muted);line-height:1.65}
+    .feedback{font-size:.82rem;color:var(--forest)}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .two-col>div{display:flex;flex-direction:column;gap:10px}
+    .strava-records{margin-top:30px}
+    .strava-item{display:flex;justify-content:space-between;align-items:center;gap:20px;border-top:1px solid var(--line);padding:15px 0}
+    .strava-item>div{display:flex;flex-direction:column;gap:5px}
+    .strava-item strong{font-size:.86rem}.strava-item small{color:var(--muted)}
+    .strava-item a{font-size:.78rem;text-decoration:underline}
+    .strava-item button{background:none;border:0;color:#9d4b37;text-decoration:underline;cursor:pointer}
+    .preview-link{margin-top:30px}
+    @media(max-width:720px){.defi-admin-grid{grid-template-columns:1fr}.admin-heading{flex-direction:column;align-items:start}.two-col{grid-template-columns:1fr}}
+  </style>
+</Base>
