@@ -67,7 +67,8 @@ const points = etapes
       });
       map.doubleClickZoom.disable();
       // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
-      let voyageLinksHidden = false;
+      // Masquer les liens entre les étapes dès l'ouverture de la carte.
+      let voyageLinksHidden = true;
       const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs"];
       const syncVoyageLinkVisibility = () => {
         for (const id of voyageLinkLayers) {
@@ -323,7 +324,7 @@ const points = etapes
             }
             allTracesButton.textContent="Masquer tous les liens entre les étapes";
             allTracesButton.setAttribute("aria-label","Masquer tous les liens entre les étapes");
-            allTracesButton.setAttribute("aria-pressed","false");
+            allTracesButton.setAttribute("aria-pressed","true");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
             const loadAllTraces=async()=>{
               const activities=memories.filter(e=>e.type==="sport"&&e.id);
