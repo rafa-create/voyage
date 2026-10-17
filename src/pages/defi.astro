@@ -338,6 +338,11 @@ import Base from "../layouts/Base.astro";
     get("sport-widgets")?.addEventListener("toggle",loadWidgets);
     let backgroundChecks=0;
     async function load(force=false,statusOnly=false){
+      // Ne pas reconstruire les cartes pendant que l'utilisateur consulte un détail ouvert.
+      if(statusOnly&&document.querySelector("details.goal[open]")){
+        set("defi-loading","Actualisation automatique en pause pendant la consultation.");
+        return;
+      }
       const button=get("refresh-defi") as HTMLButtonElement|null;
       if(button)button.disabled=true;
       set("defi-loading","Synchronisation…");
