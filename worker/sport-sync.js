@@ -19,7 +19,9 @@ function normalized(item){
   const startedAtMs=Number(item?.startedAtMs);
   if(!/^[1-9][0-9]{0,19}$/.test(id)||!Number.isFinite(startedAtMs)||
     startedAtMs<946684800000||startedAtMs>Date.now()+300000)return null;
-  const sportType=String(item.sportType||"Workout").slice(0,36);
+  // Les versions antérieures de la passerelle ne renvoyaient que des courses
+  // sans le champ sportType.
+  const sportType=String(item.sportType||"Run").slice(0,36);
   const distanceMeters=item?.distanceMeters==null?null:Number(item.distanceMeters);
   return {
     id,startedAtMs,date:new Intl.DateTimeFormat("fr-FR",{
