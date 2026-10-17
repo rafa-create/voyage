@@ -82,13 +82,18 @@ export function normalizeChessGame(game,username,timezone){
   if(!date)return null;
   return {date,result,url:game.url,fin:Number(game.end_time)};
 }
-export async function syncChess(env){
+export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
   const config=await getChallengeConfig(env);
   if(!config)return {ok:false,message:"Configure d'abord le défi depuis l'administration."};
   const today=dateInZone(new Date(),config.timezone);
   const months=monthList(config.debut,today);
-  const toFetch=months.slice(-MAX_MONTHS_PER_SYNC);
   const old=await getJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games:[]});
+  if(minIntervalMs>0 && old.lastSync && Date.now()-new Date(old.lastSync).getTime()<minIntervalMs){
+    return {ok:true,skipped:true,parties:(old.games||[]).length,misAJour:old.lastSync};
+  }
+  // Sur la page publique, lire uniquement le mois actuel et le précédent :
+  // pas besoin de recharger tout l'historique à chaque visite.
+  const toFetch=months.slice(recentOnly?-2:-MAX_MONTHS_PER_SYNC);
   const all=new Map((old.games||[]).filter(x=>x.url).map(x=>[x.url,x]));
   let fetched=0;
   for(const month of toFetch){
@@ -106,6 +111,34 @@ export async function syncChess(env){
   await putJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games,username:config.chessUsername,lastSync:new Date().toISOString(),partial:months.length>MAX_MONTHS_PER_SYNC});
   return {ok:true,parties:games.length,moisSynchronises:fetched,historiquePartiel:months.length>MAX_MONTHS_PER_SYNC};
 }
+// L'actualisation publique synchronise les parties récentes avec un délai anti-abus.
+// Le délai s'applique aussi aux appels en échec, pour ne pas saturer Chess.com.
+const PUBLIC_POLL_KEY="__meta/defi/chess-public-poll.json";
+const PUBLIC_POLL_MIN_MS=120000;
+
+export async function freshPublicChallenge(env){
+  const config=await getChallengeConfig(env);
+  if(!config)return {configured:false};
+  let sync={etat:"cache",prochaineVerification:null};
+  const now=Date.now();
+  const previous=await getJSON(env.PHOTOS_PRIVEES,PUBLIC_POLL_KEY,null);
+  const elapsed=previous?.at?now-new Date(previous.at).getTime():Infinity;
+  if(Number.isFinite(elapsed)&&elapsed>=0&&elapsed<PUBLIC_POLL_MIN_MS){
+    sync={etat:"cache",prochaineVerification:Math.ceil((PUBLIC_POLL_MIN_MS-elapsed)/1000)};
+  }else{
+    // Marquer la tentative avant tout appel réseau (y compris si Chess.com échoue).
+    await putJSON(env.PHOTOS_PRIVEES,PUBLIC_POLL_KEY,{at:new Date(now).toISOString()});
+    try{
+      const response=await syncChess(env,{recentOnly:true,minIntervalMs:PUBLIC_POLL_MIN_MS});
+      sync={etat:response.skipped?"cache":"actualise",prochaineVerification:PUBLIC_POLL_MIN_MS/1000};
+    }catch(e){
+      sync={etat:"erreur",prochaineVerification:PUBLIC_POLL_MIN_MS/1000};
+    }
+  }
+  const current=await publicChallenge(env);
+  return {...current,synchronisation:sync};
+}
+
 export function normalizeStravaActivity(input){
   if(!input||!validDate(input.date)||typeof input.titre!=="string"||!input.titre.trim()||input.titre.length>120)return null;
   const km=Number(input.km);
