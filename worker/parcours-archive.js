@@ -57,9 +57,17 @@ export async function archiveIndex(env){
   const value=await getJSON(env.PHOTOS_PRIVEES,INDEX,{items:[]});
   return Array.isArray(value?.items)?value.items:[];
 }
+// Le propriétaire a choisi de publier ses propres activités déjà marquées
+// "everyone" sur le service source. Ne jamais exposer followers_only/only_me/unknown.
+export function isPublishedActivity(item){
+  if(!item||item.publicationBloquee===true)return false;
+  if(item.source==="import_automatique")
+    return item.visibility==="everyone";
+  return item.public===true;
+}
 export async function publicArchives(env){
   const items=await archiveIndex(env);
-  return items.filter(x=>x.public===true).sort((a,b)=>b.fin-a.fin).map(publicItem);
+  return items.filter(isPublishedActivity).sort((a,b)=>b.fin-a.fin).map(publicItem);
 }
 export async function importGpx(env,form){
   const file=form?.get("fichier");
@@ -111,7 +119,7 @@ export async function importGpx(env,form){
 export async function publicArchivedRoute(env,id){
   if(!/^[a-f0-9-]{36}$/.test(id))return null;
   const items=await archiveIndex(env);
-  if(!items.some(item=>item.id===id&&item.public===true))return null;
+  if(!items.some(item=>item.id===id&&isPublishedActivity(item)))return null;
   const record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
   if(!record?.route||!Array.isArray(record.route))return null;
   // Les premières et dernières portions ne sont jamais livrées au navigateur public.
@@ -121,7 +129,7 @@ export async function publicArchivedRoute(env,id){
 }
 export async function archiveMapPoints(env){
   const items=await archiveIndex(env);
-  return items.filter(item=>item.public===true&&Number.isFinite(item.latitude)&&
+  return items.filter(item=>isPublishedActivity(item)&&Number.isFinite(item.latitude)&&
     Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,1500)
     .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
       titre:item.titre,sport:item.sport||"course",latitude:item.latitude,longitude:item.longitude,
