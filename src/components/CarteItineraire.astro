@@ -213,7 +213,7 @@ const points = etapes
         void (async()=>{
           type Event={type:"photo"|"sport"|"etape";date:string;dateHeure?:string|null;
             order:string|null;latitude:number;longitude:number;titre:string;
-            src?:string;etape?:string;id?:string;distance?:number;sport?:string;precision:string;parcours?:boolean};
+            src?:string;etape?:string;id?:string;distance?:number;km?:number;minutes?:number;sport?:string;precision:string;parcours?:boolean};
           const valid=(lat:unknown,lon:unknown)=>
             typeof lat==="number"&&typeof lon==="number"&&Number.isFinite(lat)&&
             Number.isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180;
@@ -259,8 +259,8 @@ const points = etapes
               memories.push({type:"sport",date,dateHeure:clock,
                 order:clock||date+"T23:59",latitude:sport.latitude,longitude:sport.longitude,
                 precision:"Tracé de l'activité",titre:sport.titre||"Activité sportive",
-                id:sport.id,distance:sport.distance,sport:sport.sport||"autre",
-                parcours:sport.parcours===true});
+                id:sport.id,km:sport.km,minutes:sport.minutes,
+                sport:sport.sport||"autre",parcours:sport.parcours===true});
             }
             // Les étapes structurent les dates sans heure ; elles ancrent
             // l'itinéraire avant les événements détaillés de la même journée.
@@ -376,10 +376,15 @@ const points = etapes
               if(memory.type==="sport"){
                 const metrics=document.createElement("div");
                 metrics.style.cssText="display:flex;flex-wrap:wrap;gap:6px 12px;margin:5px 0;color:#274c41;font-size:.82rem;";
-                if(typeof memory.distance==="number"&&Number.isFinite(memory.distance)&&memory.distance>0){
+                if(typeof memory.km==="number"&&Number.isFinite(memory.km)&&memory.km>0){
                   const distance=document.createElement("strong");
-                  distance.textContent=(memory.distance>=1000?(memory.distance/1000).toLocaleString("fr-FR",{maximumFractionDigits:1})+" km":Math.round(memory.distance)+" m");
+                  distance.textContent=memory.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km";
                   metrics.append(distance);
+                }
+                if(typeof memory.minutes==="number"&&Number.isFinite(memory.minutes)&&memory.minutes>0){
+                  const duration=document.createElement("span");
+                  duration.textContent=memory.minutes+" min";
+                  metrics.append(duration);
                 }
                 if(memory.sport){
                   const kind=document.createElement("span");
