@@ -25,7 +25,7 @@ export async function privateStravaFetch(env,action){
     const body=await response.json();
     // Le pont ne doit jamais renvoyer des jetons, même par erreur.
     if(action==="activities")return {status:200,body:{
-      items:Array.isArray(body?.items)?body.items.slice(0,10):[]
+      items:Array.isArray(body?.items)?body.items.slice(0,100):[]
     }};
     return {status:200,body:{
       geoRoute:Array.isArray(body?.geoRoute)?body.geoRoute.slice(0,120):null,
