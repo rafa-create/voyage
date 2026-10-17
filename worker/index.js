@@ -78,14 +78,21 @@ async function enrichirPositionsPhotos(env){
     const photo=await env.PHOTOS_PUBLIQUES.get(item.key);
     if(!photo)continue;
     const buffer=await photo.arrayBuffer();
-    let coords=null;
+    let coords=null,dateHeure=null;
     try{coords=await exifr.gps(buffer);}catch{}
+    try{
+      const data=await exifr.parse(buffer,{pick:["DateTimeOriginal","CreateDate","DateTimeDigitized"],reviveValues:false});
+      const value=data?.DateTimeOriginal||data?.CreateDate||data?.DateTimeDigitized;
+      const m=typeof value==="string"?/^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(value):null;
+      if(m)dateHeure=m[1]+"-"+m[2]+"-"+m[3]+"T"+m[4]+":"+m[5]+":"+m[6];
+    }catch{}
     const valid=coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
       Math.abs(coords.latitude)<=85&&Math.abs(coords.longitude)<=180;
     await env.PHOTOS_PUBLIQUES.put(item.key,buffer,{
       httpMetadata:photo.httpMetadata,
       customMetadata:{...(photo.customMetadata||{}),geoScanned:"1",
-        ...(valid?{latitude:String(coords.latitude),longitude:String(coords.longitude)}:{})}
+        ...(dateHeure?{datePrise:dateHeure.slice(0,10),dateHeure}:{}),
+        ...(valid?{latitude:String(coords.latitude),longitude:String(coords.longitude),precision:"exact"}:{})}
     });
   }
 }
@@ -263,10 +270,25 @@ export default {
       try{coords=await exifr.gps(body);}catch{}
       const valid=coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
         Math.abs(coords.latitude)<=85&&Math.abs(coords.longitude)<=180;
+      // Le navigateur transmet les EXIF de l'original car la compression
+      // côté iPhone supprime GPS et date de capture.
+      const gpsLat=Number(url.searchParams.get("latitude"));
+      const gpsLon=Number(url.searchParams.get("longitude"));
+      const suppliedGps=url.searchParams.has("latitude")&&url.searchParams.has("longitude")&&
+        Number.isFinite(gpsLat)&&Number.isFinite(gpsLon)&&Math.abs(gpsLat)<=85&&Math.abs(gpsLon)<=180;
+      const latitude=valid?coords.latitude:suppliedGps?gpsLat:null;
+      const longitude=valid?coords.longitude:suppliedGps?gpsLon:null;
+      const dateHeure=url.searchParams.get("dateHeure");
+      const hasTime=typeof dateHeure==="string"&&
+        /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(dateHeure)&&
+        validDate(dateHeure.slice(0,10))&&
+        (!captured||dateHeure.slice(0,10)===captured);
+      if(hasTime&&!captured)captured=dateHeure.slice(0,10);
       await bucket.put(key,body,{httpMetadata:{contentType:type},
         customMetadata:{alt,etape:slug,geoScanned:"1",
           ...(captured?{datePrise:captured}:{}),
-          ...(valid?{latitude:String(coords.latitude),longitude:String(coords.longitude)}:{})}});
+          ...(hasTime?{dateHeure}:{ }),
+          ...(latitude!==null?{latitude:String(latitude),longitude:String(longitude),precision:"exact"}:{})}});
       return json({ok:true,etape:slug,visibilite,datePrise:captured,src:photoPath(key,visibilite)},201);
     }
     if(path==="/api/prive/admin/video-ajouter"){
