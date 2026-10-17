@@ -240,6 +240,14 @@ const points = etapes
             };
             const allTracesButton=document.createElement("button");
             allTracesButton.type="button";
+            // MapLibre désactive les interactions sur les contrôles personnalisés
+            // qui n'ont pas la classe maplibregl-ctrl : sans elle, le clic atteint
+            // le canvas et déclenche le zoom de la carte.
+            allTracesButton.className="maplibregl-ctrl";
+            allTracesButton.addEventListener("pointerdown",(event)=>event.stopPropagation());
+            allTracesButton.addEventListener("mousedown",(event)=>event.stopPropagation());
+            allTracesButton.addEventListener("touchstart",(event)=>event.stopPropagation(),{passive:true});
+            allTracesButton.addEventListener("dblclick",(event)=>event.stopPropagation());
             allTracesButton.textContent="Afficher tous les tracés";
             allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
