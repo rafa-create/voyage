@@ -69,6 +69,40 @@ const { etape } = Astro.props;
         </div>
       </section>
     )}
+    <section class="container section" id="photos-r2-direct" data-etape={etape.slug} hidden>
+      <div class="section-heading"><div><p class="eyebrow">NOUVELLES PHOTOS</p><h2>Ajoutées depuis l'administration</h2></div></div>
+      <div class="photo-grid" id="photos-r2-grid"></div>
+    </section>
+    <script>
+      const area = document.querySelector<HTMLElement>("#photos-r2-direct");
+      const grid = document.querySelector<HTMLElement>("#photos-r2-grid");
+      if (area && grid) {
+        fetch("/api/public/photos?etape=" + encodeURIComponent(area.dataset.etape || ""))
+          .then(r => r.ok ? r.json() : { photos: [] })
+          .then(({ photos }) => {
+            if (!photos.length) return;
+            for (const photo of photos) {
+              const figure = document.createElement("figure");
+              figure.className = "photo-tile";
+              const a = document.createElement("a");
+              a.href = photo.src;
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+              const img = document.createElement("img");
+              img.src = photo.src;
+              img.alt = photo.alt || "Photo de voyage";
+              img.loading = "lazy";
+              img.width = 960;
+              img.height = 720;
+              a.append(img);
+              figure.append(a);
+              grid.append(figure);
+            }
+            area.hidden = false;
+          })
+          .catch(() => {});
+      }
+    </script>
     <div class="container story-end"><a class="text-link" href={chemin("/journal/")}>← Retour au journal</a></div>
   </article>
 </Base>
