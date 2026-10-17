@@ -48,3 +48,29 @@ test("après 40 jours : le cache dure sept jours, les anciennes activités sont 
     assert.ok(archives.some(x=>x.date<cached.items.at(-1).date));
   }finally{globalThis.fetch=original;}
 });
+
+test("les activités de 31 jours sont archivées même si le cache récent est vide",async()=>{
+  const original=globalThis.fetch;
+  const activity=record(5001,31);
+  globalThis.fetch=async input=>{
+    const url=String(input);
+    if(url.endsWith("/activities"))
+      return new Response(JSON.stringify({items:[activity]}),{status:200,
+        headers:{"content-type":"application/json"}});
+    if(url.includes("/route"))
+      return new Response(JSON.stringify({geoRoute:[]}),{status:200,
+        headers:{"content-type":"application/json"}});
+    return new Response("",{status:404});
+  };
+  try{
+    const env={PHOTOS_PRIVEES:memoryBucket(),VOYAGE_BRIDGE_KEY:"b".repeat(48)};
+    const sync=await syncRecentSports(env,{force:true});
+    assert.equal(sync.etat,"actualise");
+    assert.equal(sync.items.length,0,"aucune activité de plus d'une semaine dans le cache récent");
+    const records=await archiveIndex(env);
+    assert.equal(records.length,1);
+    assert.equal(records[0].sourceId,"strava:5001");
+    assert.equal(records[0].public,true);
+    assert.equal(records[0].routeState,"absent");
+  }finally{globalThis.fetch=original;}
+});
