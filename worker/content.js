@@ -1,4 +1,4 @@
-import etapesInitiales from "../src/data/etapes.json";
+import etapesInitiales from "../src/data/etapes.json" with { type: "json" };
 import * as exifr from "exifr";
 
 export const types = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp", avif:"image/avif", gif:"image/gif", heic:"image/heic", heif:"image/heif" };
