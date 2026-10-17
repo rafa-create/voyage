@@ -10,7 +10,8 @@ const BACKFILL_CURSOR="__meta/defi/activites-sportives-api-backfill.json";
 const BACKFILL_DAYS=90;
 const MAX_PAGE=10;
 const EXPIRE_MS=7*24*60*60*1000;
-const POLL_MS=10*60*1000;
+const POLL_MS=2*60*1000;
+const FORCE_POLL_MS=30000;
 const sports={
   Run:"course",TrailRun:"course",VirtualRun:"course",
   Ride:"velo",MountainBikeRide:"velo",GravelRide:"velo",EBikeRide:"velo",
@@ -34,7 +35,9 @@ function normalized(item){
     name:String(item.name||"Activité physique").slice(0,100),
     distanceMeters:distanceMeters!==null&&Number.isFinite(distanceMeters)&&distanceMeters>=0?distanceMeters:null,
     durationSeconds:Number.isFinite(item.durationSeconds)?Math.round(item.durationSeconds):null,
-    visibility:item.visibility||"unknown"
+    visibility:item.visibility||"unknown",
+    summaryPolyline:typeof item.summaryPolyline==="string"&&item.summaryPolyline.length<=16000
+      ?item.summaryPolyline:null
   };
 }
 function publicDate({date,...item}){
@@ -63,7 +66,7 @@ export async function syncRecentSports(env,{force=false}={}){
   const now=Date.now();
   const last=await getJSON(env.PHOTOS_PRIVEES,POLL,null);
   const elapsed=now-Date.parse(last?.at||"");
-  if(!force&&elapsed>=0&&elapsed<POLL_MS){
+  if(elapsed>=0&&elapsed<(force?FORCE_POLL_MS:POLL_MS)){
     const cached=await getCachedSports(env);
     return {etat:"cache",items:cached.items,lastSync:cached.syncedAt};
   }
