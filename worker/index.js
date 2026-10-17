@@ -102,8 +102,8 @@ export default {
     if (pathname === "/api/public/etapes" && request.method === "GET") return json({ etapes: await stages(env) });
     if (pathname === "/api/public/photos" && request.method === "GET") {
       const slug = url.searchParams.get("etape");
-      if (!slugOk(slug)) return error("Étape invalide.");
-      const photos = await mediaList(env.PHOTOS_PUBLIQUES, "etapes/" + slug + "/");
+      if (slug !== null && !slugOk(slug)) return error("Étape invalide.");
+      const photos = await mediaList(env.PHOTOS_PUBLIQUES, slug ? "etapes/" + slug + "/" : "etapes/");
       return json({ photos: photos.map(({ key, ...photo }) => ({ ...photo, src: "/media/" + key })) });
     }
 
