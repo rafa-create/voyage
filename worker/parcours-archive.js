@@ -152,6 +152,6 @@ export async function archiveMapPoints(env){
     Number.isFinite(item.longitude)).sort((a,b)=>b.fin-a.fin).slice(0,1500)
     .map(item=>({id:item.id,type:"course",date:item.date,fin:item.fin,
       titre:item.titre,sport:item.sport||"course",latitude:item.latitude,longitude:item.longitude,
-      distance:item.km,parcours:item.source!=="import_automatique"||
+      km:item.km,minutes:item.minutes,parcours:item.source!=="import_automatique"||
         ["resume","disponible"].includes(item.routeState)}));
 }
