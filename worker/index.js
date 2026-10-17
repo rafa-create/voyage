@@ -51,7 +51,7 @@ async function synchroniserR2(env) {
   for(const visibility of ["public","prive"]){
     const bucket=bucketFor(env,visibility);
     const photos=await listedPhotos(env,visibility);
-    for(const photo of photos.filter(p=>!p.etape).sort((a,b)=>(b.ajouteLe||"").localeCompare(a.ajouteLe||"")).slice(0,30)){
+    for(const photo of photos.filter(p=>!p.etape).sort((a,b)=>(b.ajouteLe||"").localeCompare(a.ajouteLe||"")).slice(0,4)){
       examined++;
       const date=photo.datePrise||await getCaptureDate(bucket,photo.key);
       const stage=matchStep(date,all);
