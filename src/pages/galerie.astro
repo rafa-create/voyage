@@ -242,6 +242,7 @@ import { chemin } from "../lib/paths";
     }
   </script>
   <style>
+    .lightbox:not([open]){display:none}
     .lightbox{box-sizing:border-box;width:min(96vw,1100px);max-width:96vw;max-height:96dvh;overflow:auto;padding:3.5rem 1rem 1rem;position:relative}
     .lightbox img{display:block;max-height:60vh;max-width:90vw;width:auto;height:auto;object-fit:contain;margin:0 auto}
     .lightbox-close,.lightbox-edit{position:sticky;top:0;z-index:5;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#222;box-shadow:0 2px 12px #0002;font-size:1.35rem;cursor:pointer}
