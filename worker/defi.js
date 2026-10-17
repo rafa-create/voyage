@@ -99,9 +99,9 @@ export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
   if(minIntervalMs>0 && old.lastSync && Date.now()-new Date(old.lastSync).getTime()<minIntervalMs){
     return {ok:true,skipped:true,parties:(old.games||[]).length,misAJour:old.lastSync};
   }
-  // Sur la page publique, lire uniquement le mois actuel et le précédent :
-  // pas besoin de recharger tout l'historique à chaque visite.
-  const toFetch=months.slice(recentOnly?-2:-MAX_MONTHS_PER_SYNC);
+  // Un voyage de 30 jours peut couvrir trois mois calendaires (31/01→01/03).
+  // Lire les trois derniers mois garantit la récupération des parties Rapid.
+  const toFetch=months.slice(recentOnly?-3:-MAX_MONTHS_PER_SYNC);
   const all=new Map((old.games||[]).filter(x=>x.url).map(x=>[x.url,x]));
   let fetched=0;
   for(const month of toFetch){
