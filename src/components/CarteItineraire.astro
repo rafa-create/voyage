@@ -135,16 +135,47 @@ const points = etapes
           });
         }
         let selectedDay = document.documentElement.dataset.voyageDay || "";
-        window.addEventListener("voyage:jour", (event) => {
-          const detail = (event as CustomEvent<{date?:string}>).detail;
-          selectedDay = detail?.date || "";
+        const updateSelectedDay = (date:string) => {
+          selectedDay = date;
+          const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
+            .filter((marker) => marker.dataset.date === selectedDay);
           element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
             const active = !selectedDay || marker.dataset.date === selectedDay;
             marker.style.opacity = active ? "1" : ".38";
             marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
             marker.style.zIndex = active ? "2" : "1";
           });
+          if (!dailyMarkers.length) return;
+          const bounds = new maplibregl.LngLatBounds();
+          for (const marker of dailyMarkers) {
+            const lat = Number(marker.dataset.latitude);
+            const lon = Number(marker.dataset.longitude);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
+          }
+          if (bounds.isEmpty()) return;
+          if (dailyMarkers.length === 1) {
+            map.easeTo({center: bounds.getCenter(), zoom: 10, duration: 650});
+          } else {
+            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: 13, duration: 650});
+          }
+        };
+        window.addEventListener("voyage:jour", (event) => {
+          const detail = (event as CustomEvent<{date?:string}>).detail;
+          updateSelectedDay(detail?.date || "");
         });
+        // Réutiliser les commandes du journal quotidien dans un contrôle discret
+        // au bas de la carte : les boutons gardent ainsi leur comportement existant.
+        const dateElement = document.querySelector<HTMLElement>("#daily-date");
+        const dailyControls = document.querySelector<HTMLElement>(".daily-controls");
+        if (dateElement && dailyControls) {
+          const dayControl = document.createElement("div");
+          dayControl.className = "map-day-control";
+          dayControl.append(dateElement, dailyControls);
+          map.addControl({
+            onAdd: () => dayControl,
+            onRemove: () => dayControl.remove()
+          } as maplibregl.IControl, "bottom-left");
+        }
         // Frise de voyage : chacune des photos publiques et toutes les activités
         // GPX publiées sont positionnées selon l'heure de leur capture/départ.
         // Une position de ville/étape reste explicitement approximative.
@@ -314,6 +345,8 @@ const points = etapes
               marker.type="button";
               marker.classList.add("memory-map-marker");
               marker.dataset.date=memory.date;
+              marker.dataset.latitude=String(memory.latitude);
+              marker.dataset.longitude=String(memory.longitude);
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
               marker.style.cssText=memory.type==="photo"&&memory.src
@@ -355,6 +388,7 @@ const points = etapes
                 .setLngLat([memory.longitude,memory.latitude])
                 .setPopup(new maplibregl.Popup({offset:14}).setDOMContent(panel)).addTo(map);
             }
+            if (selectedDay) updateSelectedDay(selectedDay);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
         if (points.length > 1) {
