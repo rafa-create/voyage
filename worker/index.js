@@ -116,11 +116,17 @@ export default {
       await putJSON(env.PHOTOS_PRIVEES,marker,{at:new Date().toISOString()});
     })().catch(e=>console.warn("Nettoyage du cache:",String(e))));
   },
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url),path=url.pathname;
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
-    if(path==="/api/public/defi"&&request.method==="GET")return json(await freshPublicChallenge(env,{forceSports:url.searchParams.get("actualiser")==="1"}));
+    if(path==="/api/public/defi"&&request.method==="GET"){
+      if(url.searchParams.get("statut")==="1")return json(await publicChallenge(env));
+      const snapshot=await publicChallenge(env);
+      ctx.waitUntil(freshPublicChallenge(env,{forceSports:url.searchParams.get("actualiser")==="1"})
+        .catch(e=>console.warn("Synchronisation publique du défi:",String(e))));
+      return json({...snapshot,synchronisation:{etat:"arriere_plan"},stravaSynchronisation:{etat:"arriere_plan"}});
+    }
     if(path==="/api/public/parcours"&&request.method==="GET")return json({parcours:await publicArchives(env)});
     if(path==="/api/public/carte-evenements"&&request.method==="GET"){
       return json({courses:await archiveMapPoints(env)});
