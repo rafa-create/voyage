@@ -26,7 +26,7 @@ import { chemin } from "../lib/paths";
               <span class="eyebrow">{etape.pays} · {etape.ville}</span>
               <h2>{etape.titre}</h2>
               <p>{etape.texte.slice(0, 180)}{etape.texte.length > 180 ? "…" : ""}</p>
-              <span class="card-more">Lire cette étape ↗</span>
+              <span class="card-more">Lire cette étape</span>
             </a>
           </li>
         ))}
@@ -48,7 +48,7 @@ import { chemin } from "../lib/paths";
         const label=document.createElement("span");label.className="eyebrow";label.textContent=e.pays+" · "+e.ville;
         const h=document.createElement("h2");h.textContent=e.titre;
         const text=document.createElement("p");text.textContent=e.texte?.slice(0,150)||"Découvrir cette étape";
-        const more=document.createElement("span");more.className="card-more";more.textContent="Lire cette étape ↗";
+        const more=document.createElement("span");more.className="card-more";more.textContent="Lire cette étape";
         link.append(label,h,text,more);li.append(date,link);list.append(li);
       }
     }).catch(()=>{});
