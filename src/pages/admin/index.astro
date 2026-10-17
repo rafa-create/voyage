@@ -50,7 +50,7 @@ import { chemin } from "../../lib/paths";
           <input id="upload-files" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.avif,.heic,.heif,image/jpeg,image/png,image/heic,image/heif" multiple />
           <div id="chosen-files" class="chosen-files"></div>
           <button class="admin-primary" type="submit">Envoyer les photos <span aria-hidden="true">↗</span></button>
-          <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos sont converties en JPEG léger sans métadonnées GPS avant envoi. Conserve tes originaux sur ton appareil ou dans une sauvegarde.</p>
+          <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos sont envoyées en pleine résolution, en JPEG de qualité maximale, sans métadonnées GPS. Conserve tes originaux sur ton appareil ou dans une sauvegarde.</p>
           <p id="photo-progress" role="status" class="admin-feedback"></p>
         </form>
       </section>
@@ -264,20 +264,19 @@ import { chemin } from "../../lib/paths";
       renderChosen();message("photo-progress",selected.length+" fichier(s) sélectionné(s).");
     });
     async function optimizedPublic(file:File):Promise<Blob>{
-      // Réencodage : retire la plupart des métadonnées EXIF, GPS et limite à 2048 px.
+      // Réencodage en pleine résolution : retire les métadonnées EXIF/GPS sans réduire les dimensions.
       const objectURL=URL.createObjectURL(file);
       try{
         const image=new Image();
         image.src=objectURL;
         await image.decode();
-        const ratio=Math.min(1,2048/Math.max(image.naturalWidth,image.naturalHeight));
         const canvas=document.createElement("canvas");
-        canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));
-        canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+        canvas.width=image.naturalWidth;
+        canvas.height=image.naturalHeight;
         const ctx=canvas.getContext("2d");
         if(!ctx)throw Error("Conversion de l'image impossible.");
         ctx.drawImage(image,0,0,canvas.width,canvas.height);
-        const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",.86));
+        const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",1));
         if(!blob)throw Error("Conversion JPEG impossible.");
         return blob;
       }finally{URL.revokeObjectURL(objectURL);}
@@ -294,7 +293,7 @@ import { chemin } from "../../lib/paths";
           message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
           const publicPhoto=!item.prive;
           const body=await optimizedPublic(item.file);
-          if(body.size>12*1024*1024)throw Error(item.file.name+" dépasse 12 Mo.");
+          if(body.size>30*1024*1024)throw Error(item.file.name+" dépasse 30 Mo.");
           const params=new URLSearchParams({
             etape:$<HTMLSelectElement>("upload-etape")?.value||"",
             visibilite:publicPhoto?"public":"prive",
