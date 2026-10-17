@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "validate": "node scripts/validate-etapes.mjs",
+    "prebuild": "npm run validate"
   },
   "dependencies": {
     "astro": "^7.3.0"
@@ -15,6 +17,6 @@
     "node": ">=22.12.0"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.135.0"
   }
 }
