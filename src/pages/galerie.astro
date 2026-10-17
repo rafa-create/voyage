@@ -181,7 +181,8 @@ import { chemin } from "../lib/paths";
   </dialog>
   <script>
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
-    const agrandissement = dialog?.querySelector("img");\n    const videoPlayer = dialog?.querySelector<HTMLIFrameElement>(".lightbox-video");
+    const agrandissement = dialog?.querySelector("img");
+    const videoPlayer = dialog?.querySelector<HTMLIFrameElement>(".lightbox-video");
     const compteur = dialog?.querySelector<HTMLElement>(".lightbox-counter");
     const details = dialog?.querySelector<HTMLElement>("#lightbox-details");
     let photos: HTMLButtonElement[] = [];
@@ -244,7 +245,8 @@ import { chemin } from "../lib/paths";
       if (evenement.target === dialog) dialog.close();
     });
     dialog?.addEventListener("close", () => {
-      if (agrandissement) { agrandissement.removeAttribute("src"); agrandissement.hidden=false; }\n      if(videoPlayer){videoPlayer.src="";videoPlayer.hidden=true;}
+      if (agrandissement) { agrandissement.removeAttribute("src"); agrandissement.hidden=false; }
+      if(videoPlayer){videoPlayer.src="";videoPlayer.hidden=true;}
       if(details){details.textContent="";details.hidden=true;}
       if(editor)editor.hidden=true;
       index = -1;
