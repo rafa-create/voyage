@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {archiveNewSports} from "../worker/archive-auto.js";
-import {archiveIndex,publicArchives} from "../worker/parcours-archive.js";
+import {archiveNewSports,decodeSummaryPolyline} from "../worker/archive-auto.js";
+import {archiveIndex,publicArchives,publicArchivedRoute,archiveMapPoints} from "../worker/parcours-archive.js";
 import {summarizeChallenge} from "../worker/defi.js";
 
 function fakeBucket(){
@@ -58,4 +58,36 @@ test("une course récupérée automatiquement complète le défi du jour avec le
   assert.equal(result.stats.joursEchecs,1);
   assert.equal(result.jours[0].resultat,"reussi");
   assert.equal(result.jours[0].activite.km,4.9);
+});
+
+test("un tracé résumé est conservé immédiatement dans R2 et zoomable sur la carte",async()=>{
+  const env={PHOTOS_PRIVEES:fakeBucket()};
+  const item={...sport(1234,1792224000000,"Run"),
+    summaryPolyline:"_p~iF~ps|U_ulLnnqC_mqNvxq\x60@"};
+  const decoded=decodeSummaryPolyline(item.summaryPolyline);
+  assert.equal(decoded.length,3);
+  const result=await archiveNewSports(env,[item],{maxRoutes:0});
+  assert.equal(result.imported,1);
+  const publicRuns=await publicArchives(env);
+  assert.equal(publicRuns.length,1);
+  assert.equal(publicRuns[0].parcours,true);
+  const route=await publicArchivedRoute(env,publicRuns[0].id);
+  assert.deepEqual(route,decoded);
+  const markers=await archiveMapPoints(env);
+  assert.equal(markers.length,1);
+  assert.ok(Number.isFinite(markers[0].latitude));
+});
+test("une ancienne copie R2 sans GPS est enrichie au passage suivant",async()=>{
+  const env={PHOTOS_PRIVEES:fakeBucket()};
+  const first=sport(5000,1792224000000,"Run");
+  await archiveNewSports(env,[first],{maxRoutes:0});
+  assert.equal((await publicArchives(env))[0].parcours,false);
+  await archiveNewSports(env,[{
+    ...first,summaryPolyline:"_p~iF~ps|U_ulLnnqC_mqNvxq\x60@"
+  }],{maxRoutes:0});
+  const archives=await publicArchives(env);
+  assert.equal(archives.length,1);
+  assert.equal(archives[0].parcours,true);
+  assert.equal((await archiveMapPoints(env)).length,1);
+  assert.ok((await publicArchivedRoute(env,archives[0].id)).length>1);
 });
