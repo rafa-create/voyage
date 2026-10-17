@@ -1,9 +1,9 @@
 import etapesInitiales from "../src/data/etapes.json";
 import * as exifr from "exifr";
 
-export const types = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp", avif:"image/avif", gif:"image/gif" };
+export const types = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp", avif:"image/avif", gif:"image/gif", heic:"image/heic", heif:"image/heif" };
 export const slugOk = value => typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length < 90;
-export const imageKey = key => Boolean(key && key.length < 700 && !key.split("/").some(x=>!x||x==="."||x==="..") && /\.(?:jpe?g|png|webp|avif|gif)$/i.test(key));
+export const imageKey = key => Boolean(key && key.length < 700 && !key.split("/").some(x=>!x||x==="."||x==="..") && /\.(?:jpe?g|png|webp|avif|gif|heic|heif)$/i.test(key));
 export const validDate = x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x) && !Number.isNaN(Date.parse(x+"T12:00:00Z")) && new Date(x+"T12:00:00Z").toISOString().slice(0,10) === x;
 export const photoPath = (key, visibilite) => (visibilite==="prive"?"/media-prive/":"/media/") + key;
 export async function getJSON(bucket,key,fallback) {
