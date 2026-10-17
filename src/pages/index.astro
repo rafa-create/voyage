@@ -81,7 +81,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const figure=document.createElement("figure");figure.className="photo-tile";
           const button=document.createElement("button");button.type="button";button.className="photo-open";
           button.dataset.photo=photo.src;button.dataset.alt=photo.alt||"Photo du voyage";
-          button.setAttribute("aria-label","Afficher en grand : "+(photo.alt||"photo du voyage"));
+          button.setAttribute("aria-label","Afficher dans la galerie : "+(photo.alt||"photo du voyage"));
+          button.addEventListener("click",()=>{ location.href="/galerie/?photo="+encodeURIComponent(photo.src); });
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
           const caption=document.createElement("figcaption");
