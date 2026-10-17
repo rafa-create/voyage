@@ -77,7 +77,7 @@ export default {
     const auth=await requireAccess(request,env,adminOnly);
     if(auth.error)return auth.error;
     if(!env.PHOTOS_PRIVEES)return error("Bucket privé non connecté.",503);
-    if(path.startsWith("/media-prive/"))return readImage(request,env.PHOTOS_PRIVEES,decode(path.slice(14)),true);
+    if(path.startsWith("/media-prive/"))return readImage(request,env.PHOTOS_PRIVEES,decode(path.slice("/media-prive/".length)),true);
     if(/^\/(?:espace|admin)(?:\/|$)/.test(path)){
       const page=await env.ASSETS.fetch(request);
       const headers=new Headers(page.headers);headers.set("Cache-Control","private, no-store");
