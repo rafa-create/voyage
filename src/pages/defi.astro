@@ -49,7 +49,7 @@ import { chemin } from "../lib/paths";
     type Game = {date:string;result:string;url:string;count?:number};
     type Activity = {date:string;km:number;kmTotal:number;url:string;titre:string;count?:number};
     type Day = {date:string;echecs:Game|null;activite:Activity|null;resultat:"reussi"|"en_cours"|"manque"};
-    type Summary = {configured:boolean;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];username?:string;misAJour?:string|null;historiquePartiel?:boolean};
+    type Summary = {configured:boolean;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];username?:string;misAJour?:string|null;historiquePartiel?:boolean;synchronisation?:{etat:"cache"|"actualise"|"erreur";prochaineVerification:number|null}};
 
     function dateLabel(value:string) {
       return new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
@@ -111,9 +111,24 @@ import { chemin } from "../lib/paths";
         set("c-strava",String(stats.joursActivites));
         set("c-reussite",stats.reussite===null?"—":String(stats.reussite)+" %");
         set("c-reussite-note",stats.joursComplets+" journées complètes · "+stats.joursTermines+" jours terminés");
-        set("challenge-source",(data.historiquePartiel?"Historique des échecs partiel. ":"")+"Chess.com : "+data.username+" · Strava : activités renseignées depuis l'admin");
+        const checked=data.misAJour ? new Intl.DateTimeFormat("fr-FR",{
+          dateStyle:"short",timeStyle:"short",timeZone:"Europe/Paris"
+        }).format(new Date(data.misAJour)) : "jamais";
+        set("challenge-source",
+          (data.historiquePartiel?"Historique des échecs partiel · ":"")+
+          "Chess.com : "+data.username+" · Dernière synchro : "+checked+
+          " · Strava : activités renseignées depuis l'admin");
         render(data.jours||[]);
-        if(message)message.textContent="Défi en cours · données rafraîchies";
+        if(message){
+          const sync=data.synchronisation;
+          message.textContent=sync?.etat==="erreur"
+            ? "Chess.com est momentanément indisponible : les dernières données enregistrées restent affichées."
+            : sync?.etat==="cache"
+              ? "Données chargées · prochaine vérification Chess.com dans "+Math.max(0,sync.prochaineVerification||0)+" s"
+              : sync?.etat==="actualise"
+                ? "Chess.com vérifié à l'instant · nouvelles parties prises en compte lorsqu'elles sont publiées"
+                : "Défi en cours · données rafraîchies";
+        }
       }catch(e){if(message)message.textContent=e instanceof Error?e.message:"Chargement impossible";}
       finally{if(button)button.disabled=false;}
     }
