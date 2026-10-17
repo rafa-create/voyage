@@ -27,3 +27,25 @@ Les activités sont enregistrées soit avec une montre Garmin, puis synchronisé
 ## Validation
 
 Après déploiement des deux Workers : ouvrir `/admin/defi/`, regarder « Activités détectées » pour vérifier « N archivées dans R2 · N dans le journal public · N parcours GPS disponibles ». Par défaut les N archives auto doivent toutes être publiées. Ouvrir ensuite `/defi/` et appuyer sur « Actualiser » : une partie rapide et la dernière activité de la même date doivent donner 2/2 ; la carte affiche toutes les activités avec les traces GPS disponibles. Les copies R2 ne sont pas effacées lors des visites. Un échec du pont privé ne détruit pas les archives existantes.
+
+
+## Isolation de BeatOnStep
+
+Dans le dépôt `rafa-create/beatonstep-website`, seuls les deux fichiers du Worker sont concernés :
+- `worker/index.js` reconnaît le chemin réservé `/api/voyage/strava/*` ;
+- `worker/strava.js` fournit la passerelle `voyageStravaInternal`, avec vérification du secret commun, lecture des activités et de leurs tracés, et pagination autorisée.
+
+Aucune page, bouton, nom de Voyage ou fonctionnalité visible n'a été ajouté à l'interface BeatOnStep. La méthode historique `recentRuns` et la méthode normale de lecture des parcours conservent leur contrat ; la tolérance aux flux GPS sans temps est réservée au pont privé.
+
+## Interface publique Voyage
+
+Dans `/defi/`, on voit directement uniquement le bilan, la journée du jour et les autres journées. Chaque objectif dispose d'un volet replié :
+- un clic sur « Échecs » affiche la partie rapide, la progression ELO **jusqu'à la journée sélectionnée** et le lien vers la partie originale ;
+- un clic sur « Activité physique » affiche toutes les activités de cette journée, les liens d'origine et le parcours GPS zoomable ou plein écran s'il existe ;
+- les widgets restent facultatifs et repliés.
+
+Le classement et les traces ne sont pas chargés dans une grande section séparée en permanence.
+
+## GitHub Actions
+
+Le workflow `.github/workflows/check.yml` est temporairement limité à `workflow_dispatch` : il ne consomme plus automatiquement de minutes à chaque commit sur `main`. Lorsqu'un quota sera à nouveau disponible, on pourra réactiver le contrôle automatique à chaque push.
