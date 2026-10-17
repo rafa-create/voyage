@@ -1,91 +1,119 @@
 ---
 import Base from "../layouts/Base.astro";
+import CarteItineraire from "../components/CarteItineraire.astro";
 import { etapes, pays, galerie, dateFr } from "../lib/data";
 import photosAClasser from "../data/photos-a-classer.json";
 import { chemin } from "../lib/paths";
 
 const recentes = etapes.slice(0, 3);
+const actuelle = etapes.find((etape) => etape.statut === "actuelle");
+const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
+const dernieresPhotos = galerie.slice(0, 4);
 ---
 
 <Base title="Accueil" active="accueil">
-  <section class="hero">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-line"></span> LE CARNET DE ROUTE</p>
-        <h1>Des kilomètres.<br />Des rencontres.<br /><em>Des souvenirs.</em></h1>
-        <p class="lead">Un endroit pour garder les traces du voyage : les paysages, les histoires, les petits instants et tout ce qu'on ne veut pas oublier.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href={chemin("/journal/")}>Explorer le journal <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href={chemin("/galerie/")}>Voir la galerie <span aria-hidden="true">→</span></a>
+  <section class="route-section">
+    <div class="container">
+      <div class="route-heading">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> LE CARNET DE ROUTE</p>
+          <h1>Le voyage,<br /><em>étape après étape.</em></h1>
         </div>
+        <p class="lead">La carte pour se repérer, le journal pour raconter et les photos pour se souvenir. Un carnet qui avance au rythme du voyage.</p>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <span class="art-coordinates">SOUVENIRS / EN MOUVEMENT</span>
-        <div class="sun"></div>
-        <div class="ridge ridge-back"></div>
-        <div class="ridge ridge-front"></div>
-        <span class="art-stamp">01<br /><small>LE DÉPART</small></span>
+
+      <div class="route-layout">
+        <div class="route-map-card">
+          <div class="route-map-title">
+            <div>
+              <p class="eyebrow">LE PARCOURS</p>
+              <h2>Mon itinéraire</h2>
+            </div>
+            <span class="route-map-counter">{points.length} {points.length > 1 ? "étapes" : "étape"} sur la carte</span>
+          </div>
+          <CarteItineraire etapes={etapes}/>
+        </div>
+
+        <aside class="route-journal">
+          <div class="route-journal-header">
+            <p class="eyebrow">JOURNAL DE ROUTE</p>
+            <h2>Les grandes étapes<span class="heading-dot">.</span></h2>
+            <p>Sélectionner une destination pour découvrir ses photos, vidéos et récits.</p>
+          </div>
+          {actuelle && (
+            <a class="current-stop-card" href={chemin("/etapes/" + actuelle.slug + "/")}>
+              <span class="stop-overline"><span class="live-dot"></span> ÉTAPE ACTUELLE · MISE À JOUR LE {dateFr(actuelle.date).toUpperCase()}</span>
+              <span class="stop-title">{actuelle.ville}</span>
+              <span class="stop-country">{actuelle.pays}</span>
+              <span class="stop-cta">Voir l'étape et les photos <span aria-hidden="true">↗</span></span>
+            </a>
+          )}
+          <ol class="route-stop-list">
+            {recentes.map((etape) => (
+              <li>
+                <a href={chemin("/etapes/" + etape.slug + "/")}>
+                  <span class="stop-list-date">{dateFr(etape.date)}</span>
+                  <strong>{etape.titre}</strong>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          <a class="text-link" href={chemin("/journal/")}>Voir le journal complet <span aria-hidden="true">→</span></a>
+        </aside>
       </div>
-    </div>
-    <div class="container stat-line">
-      <span>{etapes.length} {etapes.length > 1 ? "étapes" : "étape"}</span>
-      <span class="stat-dot">✳</span>
-      <span>{pays.length} {pays.length > 1 ? "pays" : "pays"}</span>
-      <span class="stat-dot">✳</span>
-      <span>{galerie.length + photosAClasser.length} {galerie.length + photosAClasser.length > 1 ? "photos" : "photo"}</span>
+
+      <div class="stat-line">
+        <span>{etapes.length} {etapes.length > 1 ? "étapes" : "étape"}</span>
+        <span class="stat-dot">✳</span>
+        <span>{pays.length} {pays.length > 1 ? "pays" : "pays"}</span>
+        <span class="stat-dot">✳</span>
+        <span>{galerie.length + photosAClasser.length} {galerie.length + photosAClasser.length > 1 ? "photos" : "photo"}</span>
+      </div>
     </div>
   </section>
 
   <section class="section container">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">LE FIL DU VOYAGE</p>
-        <h2>Les dernières étapes<span class="heading-dot">.</span></h2>
+        <p class="eyebrow">IMAGES EN CHEMIN</p>
+        <h2>Les derniers souvenirs<span class="heading-dot">.</span></h2>
       </div>
-      <a class="text-link" href={chemin("/journal/")}>Tout le journal <span aria-hidden="true">↗</span></a>
+      <a class="text-link" href={chemin("/galerie/")}>Toutes les photos <span aria-hidden="true">↗</span></a>
     </div>
-    {recentes.length > 0 ? (
-      <div class="cards-grid">
-        {recentes.map((etape, index) => (
-          <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
-            {etape.photos[0] ? (
-              <img src={chemin(etape.photos[0].src)} alt={etape.photos[0].alt} loading="lazy" width="720" height="480" />
-            ) : (
-              <div class="card-illustration"><span>✳</span></div>
-            )}
-            <div class="card-body">
-              <span class="card-meta">{dateFr(etape.date)} · {etape.pays}</span>
-              <h3>{etape.titre}</h3>
-              <span class="card-more">Découvrir l'étape <span aria-hidden="true">↗</span></span>
-            </div>
+    {dernieresPhotos.length > 0 ? (
+      <div class="home-photo-grid">
+        {dernieresPhotos.map((photo) => (
+          <a class="home-photo" href={chemin("/etapes/" + photo.etape.slug + "/")} title={"Voir " + photo.etape.titre}>
+            <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="600" height="450" />
+            <span>{photo.etape.ville} ↗</span>
           </a>
         ))}
       </div>
-    ) : (
-      <div class="empty-state">
-        <div class="empty-symbol" aria-hidden="true">✺</div>
-        <h3>La première page reste à écrire.</h3>
-        {photosAClasser.length > 0 ? (
-          <>
-            <p>Les premières photos sont déjà dans la galerie. Le journal sera enrichi dès que les étapes du voyage seront renseignées.</p>
-            <a class="text-link" style="margin-top: 22px;" href={chemin("/galerie/")}>Voir les {photosAClasser.length} photos <span aria-hidden="true">↗</span></a>
-          </>
-        ) : (
-          <p>Le carnet est prêt. Les premières photos, anecdotes et vidéos viendront bientôt remplir cet espace.</p>
-        )}
-      </div>
-    )}
+    ) : <div class="empty-state"><h3>Les souvenirs arrivent bientôt.</h3></div>}
   </section>
 
-  <section class="feature-band">
-    <div class="container feature-inner">
-      <p class="eyebrow">AUTRE MANIÈRE D'EXPLORER</p>
-      <h2>Un endroit, mille histoires.</h2>
-      <p>Retrouver chaque souvenir par pays, par étape ou simplement en parcourant les images.</p>
-      <div class="feature-links">
-        <a class="button button-light" href={chemin("/pays/")}>Explorer les pays <span aria-hidden="true">↗</span></a>
-        <a class="button button-outline" href={chemin("/galerie/")}>Parcourir les photos <span aria-hidden="true">↗</span></a>
+  <section class="section container journal-home">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">LE FIL DU VOYAGE</p>
+        <h2>Dernières étapes<span class="heading-dot">.</span></h2>
       </div>
+      <a class="text-link" href={chemin("/journal/")}>Tout le journal <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="cards-grid">
+      {recentes.map((etape) => (
+        <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
+          {etape.photos[0] ? (
+            <img src={chemin(etape.photos[0].src)} alt={etape.photos[0].alt} loading="lazy" width="720" height="480" />
+          ) : <div class="card-illustration"><span>✳</span></div>}
+          <div class="card-body">
+            <span class="card-meta">{dateFr(etape.date)} · {etape.pays}</span>
+            <h3>{etape.titre}</h3>
+            <span class="card-more">Découvrir l'étape <span aria-hidden="true">↗</span></span>
+          </div>
+        </a>
+      ))}
     </div>
   </section>
 </Base>
