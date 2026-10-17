@@ -373,7 +373,24 @@ const points = etapes
                 ?memory.dateHeure.slice(0,10)+" · "+memory.dateHeure.slice(11,16)
                 :memory.date+" · heure non renseignée";
               const precision=document.createElement("span");precision.textContent=memory.precision;
-              panel.append(title,when,precision);
+              panel.append(title,when);
+              if(memory.type==="sport"){
+                const metrics=document.createElement("div");
+                metrics.style.cssText="display:flex;flex-wrap:wrap;gap:6px 12px;margin:5px 0;color:#274c41;font-size:.82rem;";
+                if(typeof memory.distance==="number"&&Number.isFinite(memory.distance)&&memory.distance>0){
+                  const distance=document.createElement("strong");
+                  distance.textContent=(memory.distance>=1000?(memory.distance/1000).toLocaleString("fr-FR",{maximumFractionDigits:1})+" km":Math.round(memory.distance)+" m");
+                  metrics.append(distance);
+                }
+                if(memory.sport){
+                  const kind=document.createElement("span");
+                  kind.textContent=memory.sport;
+                  metrics.append(kind);
+                }
+                if(metrics.childNodes.length)panel.append(metrics);
+              }
+              const precision=document.createElement("span");precision.textContent=memory.precision;
+              panel.append(precision);
               if(memory.type==="photo"&&memory.src){
                 const image=document.createElement("img");image.src=memory.src;
                 image.alt=memory.titre;image.loading="lazy";
