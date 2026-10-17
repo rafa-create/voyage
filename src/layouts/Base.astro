@@ -5,7 +5,7 @@ import { chemin } from "../lib/paths";
 interface Props {
   title: string;
   description?: string;
-  active?: "accueil" | "journal" | "pays" | "galerie";
+  active?: "accueil" | "journal" | "pays" | "galerie" | "defi";
 }
 
 const { title, description = "Un carnet de voyage en images, en mots et en vidéos.", active } = Astro.props;
@@ -14,6 +14,7 @@ const nav = [
   { label: "Journal", href: "/journal/", id: "journal" },
   { label: "Pays", href: "/pays/", id: "pays" },
   { label: "Galerie", href: "/galerie/", id: "galerie" },
+  { label: "Défi", href: "/defi/", id: "defi" },
   { label: "Connexion", href: "/connexion/", id: "connexion" },
 ];
 ---
