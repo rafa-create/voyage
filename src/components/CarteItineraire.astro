@@ -376,27 +376,24 @@ const points = etapes
                 :memory.date+" · heure non renseignée";
               panel.append(title,when);
               if(memory.type==="sport"){
-                const metrics=document.createElement("div");
-                metrics.style.cssText="display:flex;flex-wrap:wrap;gap:6px 12px;margin:5px 0;color:#274c41;font-size:.82rem;";
+                const metrics=document.createElement("span");
+                metrics.style.cssText="display:block;margin:5px 0;color:#274c41;font-size:.82rem;";
+                const details:string[]=[];
+                if(memory.sport){
+                  details.push(memory.sport.charAt(0).toLocaleUpperCase("fr-FR")+memory.sport.slice(1));
+                }
                 if(typeof memory.km==="number"&&Number.isFinite(memory.km)&&memory.km>0){
-                  const distance=document.createElement("strong");
-                  distance.textContent=memory.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km";
-                  metrics.append(distance);
+                  details.push(memory.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km");
                 }
                 if(typeof memory.minutes==="number"&&Number.isFinite(memory.minutes)&&memory.minutes>0){
-                  const duration=document.createElement("span");
-                  duration.textContent=memory.minutes+" min";
-                  metrics.append(duration);
+                  details.push(memory.minutes+" min");
                 }
-                if(memory.sport){
-                  const kind=document.createElement("span");
-                  kind.textContent=memory.sport;
-                  metrics.append(kind);
-                }
-                if(metrics.childNodes.length)panel.append(metrics);
+                metrics.textContent=details.join(" · ");
+                if(details.length)panel.append(metrics);
+              }else{
+                const precision=document.createElement("span");precision.textContent=memory.precision;
+                panel.append(precision);
               }
-              const precision=document.createElement("span");precision.textContent=memory.precision;
-              panel.append(precision);
               if(memory.type==="photo"&&memory.src){
                 const image=document.createElement("img");image.src=memory.src;
                 image.alt=memory.titre;image.loading="lazy";
