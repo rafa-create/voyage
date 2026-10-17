@@ -140,7 +140,7 @@ const points = etapes
         void (async()=>{
           type Event={type:"photo"|"sport"|"etape";date:string;dateHeure?:string|null;
             order:string|null;latitude:number;longitude:number;titre:string;
-            src?:string;etape?:string;id?:string;distance?:number;sport?:string;precision:string};
+            src?:string;etape?:string;id?:string;distance?:number;sport?:string;precision:string;parcours?:boolean};
           const valid=(lat:unknown,lon:unknown)=>
             typeof lat==="number"&&typeof lon==="number"&&Number.isFinite(lat)&&
             Number.isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180;
@@ -182,7 +182,8 @@ const points = etapes
               memories.push({type:"sport",date,dateHeure:clock,
                 order:clock||date+"T23:59",latitude:sport.latitude,longitude:sport.longitude,
                 precision:"Tracé de l'activité",titre:sport.titre||"Activité sportive",
-                id:sport.id,distance:sport.distance,sport:sport.sport||"autre"});
+                id:sport.id,distance:sport.distance,sport:sport.sport||"autre",
+                parcours:sport.parcours===true});
             }
             // Les étapes structurent les dates sans heure ; elles ancrent
             // l'itinéraire avant les événements détaillés de la même journée.
@@ -245,7 +246,7 @@ const points = etapes
                 image.style.cssText="width:100%;max-width:230px;max-height:160px;object-fit:cover;border-radius:6px;margin:6px 0;";
                 panel.append(image);
               }
-              if(memory.type==="sport"&&memory.id){
+              if(memory.type==="sport"&&memory.id&&memory.parcours){
                 const action=document.createElement("button");
                 action.type="button";action.textContent="Zoomer sur le parcours ↗";
                 action.style.cssText="cursor:pointer;border:0;background:none;color:#274c41;font-weight:700;text-decoration:underline;padding:6px 0;";
