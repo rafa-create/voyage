@@ -28,7 +28,7 @@ function details(item){
     minutes:Number.isFinite(minutes)&&minutes>=0?Math.round(minutes/60):null,
     titre:String(item.name||"Activité sportive").slice(0,120),
     sport:MAP[sportType]||"autre",visibility:item.visibility||"unknown",
-    public:false,source:"import_automatique",routeState:"en_attente",
+    public:item.visibility==="everyone",source:"import_automatique",routeState:"en_attente",
     importedAt:new Date().toISOString()};
 }
 
