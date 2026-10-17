@@ -45,11 +45,25 @@ import { chemin } from "../lib/paths";
     </div>
   </section>
 
+  <section class="container strava-live-section" id="strava-live-section" hidden>
+    <div class="strava-live-title">
+      <div>
+        <p class="eyebrow">LES SORTIES LES PLUS RÉCENTES</p>
+        <h2>Sur Strava<span class="heading-dot">.</span></h2>
+      </div>
+      <span class="strava-live-label">Flux officiel · actualisé par Strava</span>
+    </div>
+    <div class="strava-frame-wrap">
+      <iframe id="strava-live-frame" title="Mes activités récentes sur Strava" loading="lazy" referrerpolicy="no-referrer" allow="fullscreen"></iframe>
+    </div>
+    <p class="challenge-method">Ce flux est affiché directement par Strava. Il peut être mis à jour indépendamment du journal quotidien ci-dessus, qui ne compte que les activités enregistrées dans le carnet.</p>
+  </section>
+
   <script>
     type Game = {date:string;result:string;url:string;count?:number};
     type Activity = {date:string;km:number;kmTotal:number;url:string;titre:string;count?:number};
     type Day = {date:string;echecs:Game|null;activite:Activity|null;resultat:"reussi"|"en_cours"|"manque"};
-    type Summary = {configured:boolean;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];username?:string;misAJour?:string|null;historiquePartiel?:boolean;synchronisation?:{etat:"cache"|"actualise"|"erreur";prochaineVerification:number|null}};
+    type Summary = {configured:boolean;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];username?:string;misAJour?:string|null;historiquePartiel?:boolean;synchronisation?:{etat:"cache"|"actualise"|"erreur";prochaineVerification:number|null};stravaFeed?:string};
 
     function dateLabel(value:string) {
       return new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
@@ -119,6 +133,15 @@ import { chemin } from "../lib/paths";
           "Chess.com : "+data.username+" · Dernière synchro : "+checked+
           " · Strava : activités renseignées depuis l'admin");
         render(data.jours||[]);
+        const live=document.getElementById("strava-live-section");
+        const frame=document.querySelector<HTMLIFrameElement>("#strava-live-frame");
+        if(live)live.hidden=!data.stravaFeed;
+        if(frame&&data.stravaFeed){
+          // Recharger le widget officiel à chaque actualisation demandée.
+          frame.src=data.stravaFeed;
+        }else if(frame){
+          frame.removeAttribute("src");
+        }
         if(message){
           const sync=data.synchronisation;
           message.textContent=sync?.etat==="erreur"
@@ -136,6 +159,14 @@ import { chemin } from "../lib/paths";
     load();
   </script>
   <style>
+    .strava-live-section{padding-bottom:100px}
+    .strava-live-title{display:flex;align-items:end;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding-top:30px;margin-bottom:22px}
+    .strava-live-title h2{margin:8px 0 0}
+    .strava-live-label{color:var(--muted);font-size:.76rem}
+    .strava-frame-wrap{border:1px solid var(--line);background:var(--white);padding:12px;max-width:570px}
+    .strava-frame-wrap iframe{border:0;width:100%;height:440px;display:block}
+    #strava-live-section[hidden]{display:none}
+    @media(max-width:650px){.strava-live-title{align-items:start;flex-direction:column;gap:10px}.strava-frame-wrap{padding:4px}.strava-frame-wrap iframe{height:470px}}
     .challenge-intro{background:var(--forest);color:white;padding:72px 0 62px}
     .challenge-intro .eyebrow{color:#d89d77}
     .challenge-heading{display:flex;justify-content:space-between;align-items:end;gap:40px}
