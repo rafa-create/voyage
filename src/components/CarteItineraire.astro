@@ -140,6 +140,7 @@ const points = etapes
           });
           syncVoyageLinkVisibility();
         }
+        const currentDayColor = "#c2704b";
         let selectedDay = document.documentElement.dataset.voyageDay || "";
         const updateSelectedDay = (date:string) => {
           selectedDay = date;
@@ -372,10 +373,12 @@ const points = etapes
                   return route.length>=2?route.map(p=>[p[1],p[0]] as [number,number]):null;
                 }catch{return null;}
               }));
-              const features=routes.filter((route):route is [number,number][]=>route!==null).map((route,index)=>({
-                type:"Feature" as const,properties:{index},
-                geometry:{type:"LineString" as const,coordinates:route}
-              }));
+              const features=routes.map((route,index)=>({route,activity:activities[index]}))
+                .filter((item):item is {route:[number,number][];activity:Event}=>item.route!==null)
+                .map(({route,activity},index)=>({
+                  type:"Feature" as const,properties:{index,date:activity.date},
+                  geometry:{type:"LineString" as const,coordinates:route}
+                }));
               if(!features.length)return;
               const data={type:"FeatureCollection" as const,features};
               if(map.getSource("tous-les-traces")){
