@@ -51,7 +51,34 @@ import { chemin } from "../../lib/paths";
         </section>
 
         <section class="challenge-admin-panel full">
-          <p class="eyebrow">03 / FLUX STRAVA AUTOMATIQUE</p>
+          <p class="eyebrow">03 / MES ARCHIVES PERSONNELLES</p>
+          <h2>Garder mes courses pour toujours</h2>
+          <p>Ajoute ici un fichier GPX depuis ta montre, ton téléphone ou un export personnel. Le fichier original et le parcours restent sauvegardés dans le stockage de ce site : il n'y a aucune dépendance à un service sportif extérieur.</p>
+          <form id="gpx-import-form" class="admin-form">
+            <label for="gpx-title">Nom de la course</label>
+            <input id="gpx-title" name="titre" required maxlength="120" placeholder="Course au bord de la mer" />
+            <div class="two-col">
+              <div>
+                <label for="gpx-date">Date</label>
+                <input id="gpx-date" name="date" type="date" required />
+              </div>
+              <div>
+                <label for="gpx-visibilite">Visibilité</label>
+                <select id="gpx-visibilite" name="visibilite">
+                  <option value="prive">Privé (non visible aux visiteurs)</option>
+                  <option value="public">Public (carte et défi)</option>
+                </select>
+              </div>
+            </div>
+            <label for="gpx-file">Fichier du parcours (.gpx)</label>
+            <input id="gpx-file" type="file" name="fichier" accept=".gpx,application/gpx+xml,application/xml,text/xml" required />
+            <p class="fineprint">L'original est archivé en privé. Si tu choisis « Public », le site montre seulement le parcours après masquage de son début et de sa fin.</p>
+            <button class="primary" type="submit">Archiver ma course</button>
+            <p id="gpx-feedback" class="feedback" role="status"></p>
+          </form>
+        </section>
+        <section class="challenge-admin-panel full">
+          <p class="eyebrow">04 / FLUX SPORTIF AUTOMATIQUE</p>
           <h2>Mes dernières activités, sans saisie</h2>
           <p>Copie une seule fois le code « Partager vos activités » depuis ton profil Strava sur ordinateur. Les sorties récentes seront ensuite affichées directement par Strava sur la page Défi, sans connexion API supplémentaire.</p>
           <p class="fineprint"><a href="https://www.strava.com/dashboard" target="_blank" rel="noopener noreferrer">Ouvrir mon compte Strava ↗</a> · Sur ton profil, choisis « Partager vos activités », puis le flux des dernières sorties (ou le résumé). Il ne faut pas copier le code d'une seule activité.</p>
@@ -66,7 +93,7 @@ import { chemin } from "../../lib/paths";
           <p class="fineprint">Le flux se met à jour sur Strava et ne donne pas directement les totaux du calendrier jour par jour. Les activités manuelles ci-dessous restent disponibles pour ce bilan.</p>
         </section>
         <section class="challenge-admin-panel full">
-          <p class="eyebrow">04 / JOURNAL DU DÉFI STRAVA</p>
+          <p class="eyebrow">05 / SAISIE MANUELLE DES COURSES</p>
           <h2>Ajouter une activité</h2>
           <p>Pour rester à 0 €, copie simplement le lien de ton activité Strava et indique sa distance. Le site fera automatiquement le bilan quotidien.</p>
           <form id="strava-form" class="admin-form">
@@ -172,6 +199,27 @@ import { chemin } from "../../lib/paths";
         await reload();
       }catch(err){write("chess-message",err instanceof Error?err.message:"Erreur.");}
       finally{button.disabled=false;}
+    });
+    get("gpx-import-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const form=e.currentTarget as HTMLFormElement;
+      const submit=form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if(submit)submit.disabled=true;
+      write("gpx-feedback","Archivage du parcours en cours…");
+      try{
+        const response=await fetch("/api/prive/admin/defi/import-gpx",{
+          method:"POST",
+          credentials:"same-origin",
+          headers:{"X-Voyage-Admin":"1"},
+          body:new FormData(form)
+        });
+        const data=await response.json();
+        if(!response.ok)throw Error(data?.error||"Import impossible.");
+        write("gpx-feedback","Course conservée dans le carnet ! "+data.parcours.km.toLocaleString("fr-FR")+" km.");
+        form.reset();
+        await reload();
+      }catch(err){write("gpx-feedback",err instanceof Error?err.message:"Import impossible.");}
+      finally{if(submit)submit.disabled=false;}
     });
     get("strava-embed-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
