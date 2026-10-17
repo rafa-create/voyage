@@ -3,7 +3,6 @@ import Base from "../layouts/Base.astro";
 import CarteItineraire from "../components/CarteItineraire.astro";
 import { etapes } from "../lib/data";
 
-
 const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
 ---
 
@@ -23,4 +22,81 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     </div>
   </section>
 
+  <section class="container section daily-view" aria-labelledby="daily-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">LE VOYAGE AU FIL DES JOURS</p>
+        <h2 id="daily-heading">Les souvenirs du jour<span class="heading-dot">.</span></h2>
+        <p id="daily-date" aria-live="polite">Chargement des souvenirs…</p>
+      </div>
+      <div class="daily-controls" aria-label="Choisir une journée">
+        <button type="button" id="day-previous" disabled>← Jour précédent</button>
+        <button type="button" id="day-next" disabled>Jour suivant →</button>
+      </div>
+    </div>
+    <div id="daily-photos" class="photo-grid gallery-grid" aria-live="polite"></div>
+    <p id="daily-empty" hidden>Aucune photo n'est encore associée à cette journée.</p>
+    <p class="daily-all"><a class="text-link" href="/galerie/">Parcourir toute la galerie ↗</a></p>
+  </section>
+
+  <script>
+    type DailyPhoto = {src:string;alt?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
+    const dateLabel = (value:string) => new Intl.DateTimeFormat("fr-FR",{dateStyle:"full",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
+    const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
+    const grid = document.querySelector<HTMLElement>("#daily-photos");
+    const dateText = document.querySelector<HTMLElement>("#daily-date");
+    const empty = document.querySelector<HTMLElement>("#daily-empty");
+    const previous = document.querySelector<HTMLButtonElement>("#day-previous");
+    const next = document.querySelector<HTMLButtonElement>("#day-next");
+    async function initDailyView() {
+      if (!grid || !dateText || !empty || !previous || !next) return;
+      const [photoResponse, eventResponse] = await Promise.all([
+        fetch("/api/public/photos",{cache:"no-store"}),
+        fetch("/api/public/carte-evenements",{cache:"no-store"})
+      ]);
+      const photos:DailyPhoto[] = photoResponse.ok ? (await photoResponse.json()).photos || [] : [];
+      const courses = eventResponse.ok ? (await eventResponse.json()).courses || [] : [];
+      const dates = new Set<string>();
+      for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
+      for (const course of courses) {
+        const d=String(course.date || (course.fin ? new Date(Number(course.fin)).toISOString().slice(0,10) : "")).slice(0,10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
+      }
+      const ordered = Array.from(dates).sort((a,b)=>b.localeCompare(a));
+      if (!ordered.length) {
+        dateText.textContent = "Les photos apparaîtront ici dès qu'elles seront ajoutées.";
+        empty.hidden = false; return;
+      }
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+      const yesterdayKey = new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(yesterday);
+      let index = Math.max(0, ordered.findIndex(d=>d<=yesterdayKey));
+      if (ordered[index] > yesterdayKey) index = ordered.length-1;
+      const render = () => {
+        const day = ordered[index];
+        dateText.textContent = dateLabel(day);
+        grid.replaceChildren();
+        const dayPhotos = photos.filter(p=>dateKey(p)===day)
+          .sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||"")));
+        for (const photo of dayPhotos) {
+          const figure=document.createElement("figure");figure.className="photo-tile";
+          const button=document.createElement("button");button.type="button";button.className="photo-open";
+          button.dataset.photo=photo.src;button.dataset.alt=photo.alt||"Photo du voyage";
+          button.setAttribute("aria-label","Afficher en grand : "+(photo.alt||"photo du voyage"));
+          const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
+          button.append(img);figure.append(button);
+          const caption=document.createElement("figcaption");
+          const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
+          caption.textContent=(photo.etape||"Souvenir du voyage")+time;figure.append(caption);grid.append(figure);
+        }
+        empty.hidden = dayPhotos.length>0;
+        previous.disabled = index>=ordered.length-1;
+        next.disabled = index<=0;
+        window.dispatchEvent(new CustomEvent("voyage:jour",{detail:{date:day}}));
+      };
+      previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
+      next.addEventListener("click",()=>{if(index>0){index--;render();}});
+      render();
+    }
+    initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
+  </script>
 </Base>
