@@ -12,10 +12,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       <div class="route-map-card">
         <div class="route-map-title">
           <div>
-            <p class="eyebrow">LE PARCOURS</p>
             <h1>Mon itinéraire</h1>
           </div>
-          <span class="route-map-counter">{points.length} {points.length > 1 ? "étapes" : "étape"} sur la carte</span>
         </div>
         <CarteItineraire etapes={etapes}/>
       </div>
