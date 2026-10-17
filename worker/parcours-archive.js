@@ -63,18 +63,29 @@ export async function publicArchives(env){
 }
 export async function importGpx(env,form){
   const file=form?.get("fichier");
-  const title=String(form?.get("titre")||"Course à pied").trim().slice(0,120);
-  const date=String(form?.get("date")||"");
+  const name=String(form?.get("titre")||"").trim().slice(0,120);
+  const givenDate=String(form?.get("date")||"");
   const visibility=String(form?.get("visibilite")||"prive");
   const sport=String(form?.get("sport")||"course");
   if(!file||typeof file.text!=="function"||file.size>MAX_BYTES||file.size===0)
     throw Error("Choisis un fichier GPX de 5 Mo maximum.");
-  if(!title||!validDate(date)||!["public","prive"].includes(visibility)||
+  if(!["public","prive"].includes(visibility)||
     !["course","kitesurf","football","velo","marche","autre"].includes(sport))
-    throw Error("Renseigne un titre, une date et la visibilité.");
+    throw Error("Type d'activité ou visibilité invalide.");
   const xml=await file.text();
   const parsed=parseGpx(xml);
   if(!parsed)throw Error("Impossible de lire ce tracé GPX.");
+  // L'heure de départ contenue dans l'original est prioritaire.
+  const date=parsed.start!==null?(()=>{
+    const parts=new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",
+      year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(parsed.start));
+    const read=(key)=>parts.find(p=>p.type===key)?.value||"";
+    return read("year")+"-"+read("month")+"-"+read("day");
+  })():givenDate;
+  if(!validDate(date))throw Error("Le GPX ne contient pas d'heure de départ : renseigne une date manuellement.");
+  const trackName=/<(?:\w+:)?name[^>]*>([^<]{1,120})<\/(?:\w+:)?name>/i.exec(xml)?.[1]||"";
+  const baseName=typeof file.name==="string"?file.name.replace(/\.gpx$/i,"").replace(/[_-]+/g," "):"";
+  const title=(name||trackName||baseName||"Activité sportive").trim().slice(0,120);
   const dateTime=parsed.start??Date.parse(date+"T12:00:00Z");
   if(!Number.isFinite(dateTime))throw Error("Date invalide.");
   const id=crypto.randomUUID();
