@@ -45,6 +45,24 @@ import { chemin } from "../lib/paths";
     </div>
   </section>
 
+  <section class="container strava-personal-section">
+    <details id="strava-personal" class="strava-personal">
+      <summary><span>Mes courses et tracés GPS</span><small>Carte libre et zoomable · connexion administrateur</small></summary>
+      <div class="personal-inner">
+        <p id="strava-personal-status" role="status">Ouvre ce volet pour charger tes dernières courses depuis BeatOnStep.</p>
+        <p class="personal-connexion"><a href="/admin/defi/">Me connecter à mon espace personnel ↗</a></p>
+        <p id="strava-personal-today" class="personal-today"></p>
+        <div class="strava-personal-grid">
+          <div id="strava-personal-list" class="strava-personal-list" aria-live="polite"></div>
+          <div class="strava-personal-mapcol">
+            <div id="strava-personal-map" class="strava-personal-map" role="region" aria-label="Carte interactive de la course choisie"></div>
+            <p id="strava-map-status" class="challenge-method">Sélectionne une course pour afficher son tracé GPS.</p>
+          </div>
+        </div>
+      </div>
+    </details>
+  </section>
+
   <section class="container strava-live-section" id="strava-live-section" hidden>
     <div class="strava-live-title">
       <div>
@@ -53,7 +71,9 @@ import { chemin } from "../lib/paths";
       </div>
       <span class="strava-live-label">Flux officiel · actualisé par Strava</span>
     </div>
-    <div class="strava-widgets">
+    <details id="strava-widgets-details" class="strava-widgets-details">
+      <summary>Voir les activités et le résumé sur Strava <span aria-hidden="true">⌄</span></summary>
+      <div class="strava-widgets">
       <div class="strava-widget-column">
         <h3>Dernières activités</h3>
         <div class="strava-frame-wrap">
@@ -67,14 +87,130 @@ import { chemin } from "../lib/paths";
         </div>
       </div>
     </div>
+    </details>
     <p class="challenge-method">Ce flux est affiché directement par Strava. Il peut être mis à jour indépendamment du journal quotidien ci-dessus, qui ne compte que les activités enregistrées dans le carnet.</p>
   </section>
 
   <script>
+    import "maplibre-gl/dist/maplibre-gl.css";
     type Game = {date:string;result:string;url:string;count?:number};
     type Activity = {date:string;km:number;kmTotal:number;url:string;titre:string;count?:number};
     type Day = {date:string;echecs:Game|null;activite:Activity|null;resultat:"reussi"|"en_cours"|"manque"};
     type Summary = {configured:boolean;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];username?:string;misAJour?:string|null;historiquePartiel?:boolean;synchronisation?:{etat:"cache"|"actualise"|"erreur";prochaineVerification:number|null};stravaFeed?:string;stravaSummary?:string};
+    type StravaRun = {id:string;name:string;startedAtMs:number;distanceMeters:number|null;durationSeconds:number};
+    let currentDays:Day[]=[];
+    let currentWidgets={feed:"",summary:""};
+    let mapLib:any=null;
+    let runMap:any=null;
+    let mapGeneration=0;
+    function updateWidgets(){
+      const details=document.querySelector<HTMLDetailsElement>("#strava-widgets-details");
+      const first=document.querySelector<HTMLIFrameElement>("#strava-live-frame");
+      const second=document.querySelector<HTMLIFrameElement>("#strava-summary-frame");
+      const assign=(frame:HTMLIFrameElement|null,url:string)=>{
+        if(!frame)return;
+        if(details?.open && url){if(frame.src!==url)frame.src=url;}
+        else if(frame.hasAttribute("src"))frame.removeAttribute("src");
+      };
+      assign(first,currentWidgets.feed);
+      assign(second,currentWidgets.summary);
+    }
+    document.getElementById("strava-widgets-details")?.addEventListener("toggle",updateWidgets);
+
+    async function adminRequest(path:string){
+      const response=await fetch(path,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}});
+      const contentType=response.headers.get("content-type")||"";
+      if(!contentType.includes("application/json"))throw Error("Connecte-toi d'abord à l'administration pour consulter tes courses.");
+      const data=await response.json();
+      if(!response.ok)throw Error(data?.error||"L'historique Strava est indisponible.");
+      return data;
+    }
+    function personalStatus(value:string){const el=document.getElementById("strava-personal-status");if(el)el.textContent=value;}
+    async function showRunRoute(run:StravaRun){
+      const status=document.getElementById("strava-map-status");
+      const node=document.getElementById("strava-personal-map");
+      if(!status||!node)return;
+      const generation=++mapGeneration;
+      status.textContent="Chargement du parcours GPS…";
+      try{
+        const data=await adminRequest("/api/prive/admin/defi/strava-parcours/"+encodeURIComponent(run.id));
+        if(generation!==mapGeneration)return;
+        const coords=(Array.isArray(data.geoRoute)?data.geoRoute:[]).filter((pt:unknown):pt is [number,number]=>
+          Array.isArray(pt)&&pt.length===2&&typeof pt[0]==="number"&&typeof pt[1]==="number"&&
+          Number.isFinite(pt[0])&&Number.isFinite(pt[1])&&Math.abs(pt[0])<=85&&Math.abs(pt[1])<=180);
+        if(coords.length<2){
+          status.textContent="Aucun tracé GPS disponible pour cette activité.";
+          return;
+        }
+        if(!mapLib){
+          const module=await import("maplibre-gl");
+          mapLib=module.default;
+        }
+        if(generation!==mapGeneration)return;
+        if(runMap){runMap.remove();runMap=null;}
+        const center:[number,number]=[coords[0][1],coords[0][0]];
+        runMap=new mapLib.Map({container:node,style:"https://tiles.openfreemap.org/styles/liberty",
+          center,zoom:12,attributionControl:true});
+        runMap.addControl(new mapLib.NavigationControl({showCompass:false}),"top-right");
+        const lngLat=coords.map(pt=>[pt[1],pt[0]]);
+        runMap.on("load",()=>{
+          if(generation!==mapGeneration)return;
+          runMap.addSource("course",{type:"geojson",data:{type:"Feature",properties:{},geometry:{type:"LineString",coordinates:lngLat}}});
+          runMap.addLayer({id:"course",type:"line",source:"course",layout:{"line-join":"round","line-cap":"round"},
+            paint:{"line-color":"#d17048","line-width":5}});
+          const bounds=new mapLib.LngLatBounds();
+          for(const coord of lngLat)bounds.extend(coord);
+          runMap.fitBounds(bounds,{padding:50,maxZoom:15,duration:0});
+          runMap.resize();
+        });
+        status.textContent="Parcours "+run.name+" · molette ou doigts pour zoomer et déplacer la carte.";
+      }catch(e){
+        if(generation===mapGeneration)status.textContent=e instanceof Error?e.message:"Carte indisponible.";
+      }
+    }
+    let personalLoaded=false;
+    async function loadPersonalRuns(){
+      personalStatus("Récupération des activités Strava…");
+      try{
+        const data=await adminRequest("/api/prive/admin/defi/strava-recentes");
+        const items:StravaRun[]=Array.isArray(data.items)?data.items:[];
+        const list=document.getElementById("strava-personal-list");
+        if(!list)return;
+        list.replaceChildren();
+        const today=currentDays.find(d=>d.date===new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",
+          year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
+        const todayElement=document.getElementById("strava-personal-today");
+        if(todayElement)todayElement.textContent=today?.echecs
+          ?"Aujourd'hui : partie d'échecs enregistrée ✓ · sélectionne une course pour son tracé."
+          :"Aujourd'hui : partie d'échecs non encore enregistrée · consulte tes courses ci-dessous.";
+        if(!items.length){personalStatus("Aucune course récente disponible dans BeatOnStep.");return;}
+        for(const item of items){
+          if(!/^[0-9]{1,20}$/.test(String(item.id)))continue;
+          const btn=document.createElement("button");
+          btn.type="button";btn.className="strava-run-button";
+          const name=document.createElement("strong");name.textContent=item.name||"Course";
+          const distance=document.createElement("span");
+          const km=Number.isFinite(item.distanceMeters)?(Number(item.distanceMeters)/1000).toFixed(2).replace(".",",")+" km":"Distance indisponible";
+          const when=new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeZone:"Europe/Paris"}).format(new Date(item.startedAtMs));
+          distance.textContent=when+" · "+km;
+          btn.append(name,distance);
+          btn.addEventListener("click",()=>{
+            list.querySelectorAll("button").forEach(b=>b.classList.toggle("selected",b===btn));
+            showRunRoute(item);
+          });
+          list.append(btn);
+        }
+        personalStatus(items.length+" dernières courses · sélectionne-en une pour voir sa carte.");
+        if(items.length && list.querySelector("button"))(list.querySelector("button") as HTMLButtonElement).click();
+        personalLoaded=true;
+      }catch(e){personalStatus(e instanceof Error?e.message:"Impossible de charger les courses.");}
+    }
+    document.getElementById("strava-personal")?.addEventListener("toggle",e=>{
+      const details=e.currentTarget as HTMLDetailsElement;
+      if(details.open&&!personalLoaded)loadPersonalRuns();
+      if(details.open&&runMap)requestAnimationFrame(()=>runMap.resize());
+    });
+
 
     function dateLabel(value:string) {
       return new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
@@ -143,21 +279,14 @@ import { chemin } from "../lib/paths";
           (data.historiquePartiel?"Historique des échecs partiel · ":"")+
           "Chess.com : "+data.username+" · Dernière synchro : "+checked+
           " · Strava : activités renseignées depuis l'admin");
-        render(data.jours||[]);
+        currentDays=data.jours||[];
+        render(currentDays);
         const live=document.getElementById("strava-live-section");
         const summaryColumn=document.getElementById("strava-summary-column");
-        const frame=document.querySelector<HTMLIFrameElement>("#strava-live-frame");
-        const summaryFrame=document.querySelector<HTMLIFrameElement>("#strava-summary-frame");
         if(live)live.hidden=!(data.stravaFeed||data.stravaSummary);
         if(summaryColumn)summaryColumn.hidden=!data.stravaSummary;
-        if(frame){
-          if(data.stravaFeed)frame.src=data.stravaFeed;
-          else frame.removeAttribute("src");
-        }
-        if(summaryFrame){
-          if(data.stravaSummary)summaryFrame.src=data.stravaSummary;
-          else summaryFrame.removeAttribute("src");
-        }
+        currentWidgets={feed:data.stravaFeed||"",summary:data.stravaSummary||""};
+        updateWidgets();
         if(message){
           const sync=data.synchronisation;
           message.textContent=sync?.etat==="erreur"
@@ -175,6 +304,32 @@ import { chemin } from "../lib/paths";
     load();
   </script>
   <style>
+    .strava-personal-section{padding-bottom:55px}
+    .strava-personal,.strava-widgets-details{border:1px solid var(--line);background:var(--white)}
+    .strava-personal>summary,.strava-widgets-details>summary{cursor:pointer;padding:22px 24px;color:var(--forest);font-weight:700;list-style-position:inside}
+    .strava-personal>summary span,.strava-personal>summary small{display:block}
+    .strava-personal>summary small{font-size:.75rem;font-weight:400;color:var(--muted);margin:5px 0 0 18px}
+    .personal-inner{padding:0 24px 24px}
+    .personal-inner>p{font-size:.83rem;color:var(--muted)}
+    .personal-connexion a{color:var(--forest);text-decoration:underline}
+    .strava-personal-grid{display:grid;grid-template-columns:minmax(190px,300px) 1fr;gap:24px;margin-top:20px}
+    .strava-personal-list{max-height:410px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+    .strava-run-button{width:100%;border:1px solid var(--line);background:transparent;text-align:left;padding:12px;cursor:pointer}
+    .strava-run-button.selected{border-color:var(--forest);background:#e8efe8}
+    .strava-run-button strong,.strava-run-button span{display:block}
+    .strava-run-button strong{font-size:.84rem}
+    .strava-run-button span{font-size:.75rem;color:var(--muted);margin-top:5px}
+    .strava-personal-map{height:375px;border:1px solid var(--line);background:#e8efed}
+    .strava-personal-mapcol .challenge-method{margin:8px 0 0}
+    .strava-widgets-details>summary{display:list-item}
+    .strava-widgets-details>.strava-widgets{padding:8px 24px 24px}
+    @media(max-width:750px){
+      .strava-personal-grid{grid-template-columns:1fr;gap:12px}
+      .strava-personal-list{max-height:220px}
+      .strava-personal-map{height:320px}
+      .personal-inner{padding:0 12px 14px}
+      .strava-personal>summary{padding:17px 12px}
+    }
     .strava-live-section{padding-bottom:100px}
     .strava-live-title{display:flex;align-items:end;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding-top:30px;margin-bottom:22px}
     .strava-live-title h2{margin:8px 0 0}
