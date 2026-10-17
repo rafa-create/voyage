@@ -2,104 +2,71 @@
 import Base from "../layouts/Base.astro";
 ---
 
-<Base title="Le défi quotidien" description="Chaque jour, une course et une partie d'échecs. Le journal du voyage, les parcours récents et l'évolution de l'ELO." active="defi">
+<Base title="Le défi quotidien" description="Une partie rapide et une activité par jour : consulte le résultat quotidien, l'évolution ELO et les cartes à la demande." active="defi">
   <section class="defi-hero">
-    <div class="container hero-grid">
+    <div class="container hero-inner">
       <div>
-        <p class="eyebrow"><span class="eyebrow-line"></span> LE DÉFI DU VOYAGE</p>
-        <h1>Un jour.<br /><em>Deux défis.</em></h1>
-        <p class="hero-lead">Une partie rapide aux échecs. Une activité physique. Chaque jour, une nouvelle occasion de réussir.</p>
+        <p class="eyebrow">LE DÉFI DU VOYAGE</p>
+        <h1>Un jour.<br /><em>Deux objectifs.</em></h1>
+        <p class="hero-subtitle">Une partie rapide aux échecs. Une activité physique. Tous les jours.</p>
       </div>
-      <div class="hero-today" aria-live="polite">
-        <span class="hero-today-label">LE DÉFI D'AUJOURD'HUI</span>
-        <strong id="hero-today-status">Chargement…</strong>
-        <span id="hero-today-description">On regarde les activités du jour.</span>
-        <a href="#aujourdhui">Voir aujourd'hui <span aria-hidden="true">↘</span></a>
+      <div class="hero-progress">
+        <span>AUJOURD'HUI</span>
+        <strong id="hero-status">Synchronisation…</strong>
+        <a href="#aujourdhui">Voir le défi du jour ↘</a>
       </div>
     </div>
   </section>
 
-  <main class="container defi-main">
-    <p id="defi-loading" class="source-line" role="status">Synchronisation des échecs et des courses…</p>
-    <div id="defi-empty" class="empty-state" hidden>Le défi sera bientôt disponible.</div>
+  <main class="container defi-page">
+    <p id="defi-loading" class="update-note" role="status">Actualisation du carnet…</p>
+    <div id="defi-empty" hidden>Le défi sera bientôt disponible.</div>
     <div id="defi-content" hidden>
-      <div class="kpi-grid" aria-label="Statistiques du défi">
-        <div class="kpi"><small>JOURS ÉCOULÉS</small><strong id="kpi-days">—</strong><span>depuis le départ</span></div>
-        <div class="kpi"><small>ÉCHECS</small><strong id="kpi-chess">—</strong><span>jours joués</span></div>
-        <div class="kpi"><small>ACTIVITÉS</small><strong id="kpi-runs">—</strong><span>jours actifs</span></div>
-        <div class="kpi kpi-accent"><small>DÉFIS RÉUSSIS</small><strong id="kpi-success">—</strong><span id="kpi-success-note">journées complètes</span></div>
+      <div class="score-grid" aria-label="Bilan du voyage">
+        <div class="score"><small>JOURS</small><strong id="score-days">—</strong></div>
+        <div class="score"><small>ÉCHECS</small><strong id="score-chess">—</strong></div>
+        <div class="score"><small>ACTIVITÉS</small><strong id="score-activities">—</strong></div>
+        <div class="score score-highlight"><small>RÉUSSITE</small><strong id="score-success">—</strong></div>
       </div>
 
-      <section id="aujourdhui" class="today-section" aria-labelledby="today-title">
-        <div class="section-top">
-          <div><p class="eyebrow">LE POINT DU JOUR</p><h2 id="today-title">Aujourd'hui<span class="dot">.</span></h2></div>
-          <span id="today-date" class="muted-date"></span>
+      <section id="aujourdhui" class="today-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">LE POINT DU JOUR</p>
+            <h2>Aujourd'hui<span class="period">.</span></h2>
+          </div>
+          <span id="today-date" class="section-date"></span>
         </div>
-        <div id="today-panel" class="today-panel" aria-live="polite"></div>
+        <div id="today-panel" class="day-panel today-panel"></div>
       </section>
 
-      <section id="elo" class="elo-section" aria-labelledby="elo-title">
-        <div class="section-top">
-          <div><p class="eyebrow">LE CLASSEMENT RAPIDE</p><h2 id="elo-title">Mon ELO<span class="dot">.</span></h2></div>
-          <a id="chess-profile" href="https://www.chess.com/member/rafaelorset" target="_blank" rel="noopener noreferrer" class="quiet-link">Chess.com ↗</a>
-        </div>
-        <div class="elo-panel">
-          <div class="elo-numbers">
-            <span id="elo-mode" class="eyebrow">ELO RAPIDE</span>
-            <strong id="elo-current">—</strong>
-            <span id="elo-change" class="elo-change">En attente des parties classées</span>
-            <p class="panel-note">Évolution du classement pour une même cadence, sans mélanger blitz et rapid.</p>
+      <section id="journal" class="journal-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">LE CARNET</p>
+            <h2>Jour après jour<span class="period">.</span></h2>
           </div>
-          <div class="elo-chart">
-            <svg id="elo-spark" viewBox="0 0 540 180" preserveAspectRatio="none" role="img" aria-label="Évolution du classement ELO dans les dernières parties">
-              <path id="elo-path" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-              <g id="elo-dots"></g>
-            </svg>
-            <div class="chart-range"><span id="elo-first">Première partie</span><span id="elo-last">Dernière partie</span></div>
-          </div>
+          <button id="refresh-defi" type="button" class="refresh-button">↻ Actualiser</button>
         </div>
+        <div id="days-list" class="day-list"></div>
+        <p id="source-note" class="update-note"></p>
       </section>
 
-      <section id="courses" class="courses-section" aria-labelledby="courses-title">
-        <div class="section-top">
-          <div><p class="eyebrow">LE VOYAGE EN MOUVEMENT</p><h2 id="courses-title">Où j'ai bougé<span class="dot">.</span></h2></div>
-          <span class="section-hint">Dernières activités publiées</span>
-        </div>
-        <p class="section-description">Choisis une date pour retrouver le parcours. Carte interactive, libre et zoomable.</p>
-        <div class="map-layout">
-          <div class="map-sidebar">
-            <div id="recent-runs" class="recent-runs" aria-label="Courses récentes classées par date"></div>
-            <a class="quiet-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Voir toutes mes sorties ↗</a>
-          </div>
-          <div class="map-area">
-            <div id="run-map" class="run-map" role="region" aria-label="Carte interactive des derniers parcours de course"></div>
-            <div id="map-placeholder" class="map-placeholder">
-              <span class="map-placeholder-icon" aria-hidden="true">⌁</span>
-              <p id="map-help">Choisis une activité pour afficher son parcours.</p>
-            </div>
-            <div class="map-caption" aria-live="polite"><span id="map-caption-title">Parcours récent</span><span id="map-caption-detail">Carte OpenFreeMap</span></div>
-          </div>
-        </div>
-        <p id="runs-note" class="data-note"></p>
+      <section id="older-section" class="older-section" hidden>
+        <details class="archive-details">
+          <summary>Activités avant le début du défi <span aria-hidden="true">⌄</span></summary>
+          <div id="older-list" class="day-list"></div>
+        </details>
       </section>
 
-      <section id="journal" class="journal-section" aria-labelledby="journal-title">
-        <div class="section-top">
-          <div><p class="eyebrow">UN DÉFI, CHAQUE JOUR</p><h2 id="journal-title">Jour après jour<span class="dot">.</span></h2></div>
-          <button id="refresh-defi" class="refresh-button" type="button">↻ Actualiser</button>
-        </div>
-        <p class="section-description">Une activité et une seule partie rapide par jour : les plus récentes. Le résultat aux échecs n'a pas besoin d'être une victoire.</p>
-        <div id="days-list" class="days-list" aria-live="polite"></div>
-        <p id="source-line" class="data-note"></p>
-      </section>
-
-      <section class="widgets-section">
-        <details id="strava-widgets" class="widgets-details">
-          <summary>Voir les activités et le résumé <span aria-hidden="true">⌄</span></summary>
+      <section class="widget-section">
+        <details id="sport-widgets" class="archive-details">
+          <summary>Afficher les widgets sportifs <span aria-hidden="true">⌄</span></summary>
           <div class="widget-grid">
-            <div><h3>Dernières sorties</h3><iframe id="strava-feed" title="Dernières activités sportives" loading="lazy" scrolling="no"></iframe></div>
-            <div><h3>Résumé des sorties</h3><iframe id="strava-summary" title="Résumé des activités de course" loading="lazy" scrolling="no"></iframe></div>
+            <div><p>Dernières sorties</p><iframe id="sport-feed" title="Dernières sorties sportives" loading="lazy" scrolling="no"></iframe></div>
+            <div><p>Résumé</p><iframe id="sport-summary" title="Résumé des sorties sportives" loading="lazy" scrolling="no"></iframe></div>
           </div>
+          <a class="outside-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Toutes mes sorties ↗</a>
         </details>
       </section>
     </div>
@@ -107,373 +74,431 @@ import Base from "../layouts/Base.astro";
 
   <script>
     import "maplibre-gl/dist/maplibre-gl.css";
+
     type Chess = {date:string;result:string;url:string;fin:number;rating?:number|null;mode?:string|null;eloDelta?:number|null};
-    type Run = {id?:string;date:string;fin?:number;km:number;kmTotal?:number;titre:string;minutes?:number;url:string;source?:string;sport?:string;parcours?:boolean};
+    type Run = {id?:string;date:string;fin?:number;km:number;titre:string;minutes?:number|null;url?:string|null;source?:string;sport?:string;parcours?:boolean};
     type Day = {date:string;echecs:Chess|null;activite:Run|null;resultat:"reussi"|"en_cours"|"manque"};
-    type Elo = {rating:number|null;mode:string;delta:number|null;tendance:string;historique:{date:string;rating:number;fin:number}[]};
-    type Defi = {configured:boolean;username?:string;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];elo?:Elo;coursesRecentes?:Run[];stravaFeed?:string;stravaSummary?:string;misAJour?:string;derniereCourseSynchro?:string|null;stravaSynchronisation?:{etat:string}};
-    const $=(id:string)=>document.getElementById(id);
-    const write=(id:string,value:string)=>{const node=$(id);if(node)node.textContent=value;};
-    const shortDate=(date:string)=>new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(date+"T12:00:00Z"));
-    const fullDate=(date:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"}).format(new Date(date+"T12:00:00Z"));
-    const km=(value:number)=>Number(value).toLocaleString("fr-FR",{maximumFractionDigits:2})+" km";
-    const eloModes:Record<string,string>={rapid:"Rapide",blitz:"Blitz",bullet:"Bullet",daily:"Quotidien"};
+    type Elo = {rating:number|null;mode:string;delta:number|null;historique:{date:string;fin:number;rating:number}[]};
+    type Data = {configured:boolean;username?:string;debut?:string;stats?:{
+      jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null
+    };jours?:Day[];elo?:Elo;coursesRecentes?:Run[];stravaFeed?:string;stravaSummary?:string;
+      synchronisation?:{etat:string};stravaSynchronisation?:{etat:string}};
+    const get=(id:string)=>document.getElementById(id);
+    const set=(id:string,value:string)=>{const node=get(id);if(node)node.textContent=value;};
+    const create=<K extends keyof HTMLElementTagNameMap>(tag:K,className?:string,text?:string):HTMLElementTagNameMap[K]=>{
+      const node=document.createElement(tag);
+      if(className)node.className=className;
+      if(text!==undefined)node.textContent=text;
+      return node;
+    };
+    const shortDate=(s:string)=>new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",timeZone:"UTC"})
+      .format(new Date(s+"T12:00:00Z"));
+    const longDate=(s:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"})
+      .format(new Date(s+"T12:00:00Z"));
+    const km=(n:number)=>Number(n||0).toLocaleString("fr-FR",{maximumFractionDigits:2})+" km";
+    const sportNames:Record<string,string>={course:"Course",kitesurf:"Kitesurf",velo:"Vélo",football:"Football",
+      marche:"Marche",natation:"Natation",autre:"Activité"};
+    let state:Data={configured:false};
     let mapModule:any=null;
     let activeMap:any=null;
-    let selectedId:string|null=null;
-    let routeTurn=0;
-    let knownRuns:Run[]=[];
-    let widgetUrls={feed:"",summary:""};
+    let routeSerial=0;
+    let sportWidgets={feed:"",summary:""};
 
-    function el<K extends keyof HTMLElementTagNameMap>(tag:K,className?:string,content?:string):HTMLElementTagNameMap[K]{
-      const node=document.createElement(tag);if(className)node.className=className;
-      if(content!==undefined)node.textContent=content;return node;
+    function validLink(raw:unknown,kind:"chess"|"activity"){
+      if(typeof raw!=="string")return null;
+      try{
+        const uri=new URL(raw);
+        if(uri.protocol!=="https:")return null;
+        if(kind==="chess"&&["chess.com","www.chess.com"].includes(uri.hostname))return uri.href;
+        if(kind==="activity"&&["strava.com","www.strava.com"].includes(uri.hostname))return uri.href;
+      }catch{}
+      return null;
     }
-    function external(href:string,text:string){
-      const a=el("a","detail-link",text);a.href=href;a.target="_blank";a.rel="noopener noreferrer";return a;
+    function externalLink(raw:unknown,kind:"chess"|"activity",label:string){
+      const address=validLink(raw,kind);
+      if(!address)return null;
+      const a=create("a","original-link",label);
+      a.href=address;a.target="_blank";a.rel="noopener noreferrer";
+      return a;
     }
-    function statusOf(day:Day){
-      if(day.resultat==="reussi")return {label:"Réussi",css:"win"};
-      if(day.resultat==="en_cours")return {label:day.echecs||day.activite?"En cours · 1/2":"En cours",css:"pending"};
-      return day.echecs||day.activite?{label:"Partiel",css:"partial"}:{label:"Manqué",css:"miss"};
-    }
-    function statusChip(day:Day){
-      const status=statusOf(day);return el("span","status-chip "+status.css,status.label);
-    }
-    function task(kind:"chess"|"run",day:Day){
-      const task=el("div","day-task");
-      const symbol=el("span","task-symbol "+((kind==="chess"?day.echecs:day.activite)?"complete":"waiting"),
-        (kind==="chess"?day.echecs:day.activite)?"✓":"·");
-      const copy=el("div","task-copy");
-      copy.append(el("span","task-category",kind==="chess"?"ÉCHECS":"ACTIVITÉ"));
-      const main=kind==="chess"
-        ?day.echecs?(day.echecs.result+(day.echecs.rating?" · "+day.echecs.rating+" ELO":"")):"Pas encore jouée"
-        :day.activite?km(day.activite.km):"Pas encore d'activité";
-      copy.append(el("strong",undefined,main));
-      if(kind==="chess"&&day.echecs?.eloDelta!=null){
-        const delta=day.echecs.eloDelta;copy.append(el("small","task-extra "+(delta>0?"positive":delta<0?"negative":""),
-          (delta>0?"+":"")+delta+" ELO · "+(eloModes[day.echecs.mode||""]||"classement")));
+    function status(day:Day){
+      if(day.resultat==="reussi")return {name:"Réussi · 2/2",css:"win"};
+      if(day.date===state.jours?.[0]?.date){
+        const score=Number(Boolean(day.echecs))+Number(Boolean(day.activite));
+        return {name:"En cours · "+score+"/2",css:"pending"};
       }
-      if(kind==="run"&&day.activite){
-        copy.append(el("small","task-extra",day.activite.titre+(day.activite.minutes?" · "+day.activite.minutes+" min":"")));
+      if(day.echecs||day.activite)return {name:"Partiel · 1/2",css:"partial"};
+      return {name:"Manqué · 0/2",css:"miss"};
+    }
+    function statusBadge(day:Day){const v=status(day);return create("span","day-status "+v.css,v.name);}
+    function detailLine(label:string,value:string){
+      const row=create("div","detail-line");
+      row.append(create("span",undefined,label),create("strong",undefined,value));
+      return row;
+    }
+    function expandElo(day:Day,body:HTMLElement){
+      body.replaceChildren();
+      const game=day.echecs;
+      if(!game){body.append(create("p","empty-text","Aucune partie rapide ce jour-là."));return;}
+      const summary=create("div","chess-detail-top");
+      const rating=game.rating==null?"ELO non disponible":game.rating+" ELO";
+      summary.append(create("strong",undefined,rating));
+      if(game.eloDelta!==null&&game.eloDelta!==undefined){
+        const n=game.eloDelta;
+        summary.append(create("span","variation "+(n>0?"up":n<0?"down":"flat"),
+          (n>0?"+":"")+n+" points"));
       }
-      task.append(symbol,copy);
-      if(kind==="chess"&&day.echecs?.url)task.append(external(day.echecs.url,"↗"));
-      else if(kind==="run"&&day.activite?.id&&day.activite.parcours){
-        const go=el("button","route-jump","Carte ↗");
-        go.type="button";go.addEventListener("click",()=>{
-          document.getElementById("courses")?.scrollIntoView({behavior:"smooth"});
-          chooseRun(day.activite!);
-        });task.append(go);
-      }else if(kind==="run"&&day.activite?.url&&!day.activite?.id)task.append(external(day.activite.url,"↗"));
-      return task;
+      body.append(summary);
+      const chart=chessGraph(day.date);
+      if(chart)body.append(chart);
+      const origin=externalLink(game.url,"chess","Voir la partie sur Chess.com ↗");
+      if(origin)body.append(origin);
     }
-    function dayCard(day:Day,index:number,total:number){
-      const article=el("article","day-card");
-      const header=el("div","day-card-header");
-      const date=el("div","day-date");
-      date.append(el("span","day-number","J"+(total-index)),el("strong",undefined,fullDate(day.date)));
-      header.append(date,statusChip(day));
-      const grid=el("div","day-tasks");grid.append(task("chess",day),task("run",day));
-      article.append(header,grid);return article;
-    }
-    function todayCard(day:Day){
-      const panel=$("today-panel");if(!panel)return;
-      panel.replaceChildren();
-      const header=el("div","today-top");
-      const copy=el("div");
-      copy.append(el("span","today-overline","OBJECTIF : 1 PARTIE + 1 ACTIVITÉ"));
-      copy.append(el("strong","today-outcome",statusOf(day).label));
-      header.append(copy,statusChip(day));
-      const body=el("div","today-tasks");body.append(task("chess",day),task("run",day));
-      panel.append(header,body);
-      write("today-date",fullDate(day.date));
-      write("hero-today-status",day.resultat==="reussi"?"Défi réussi ✓":day.echecs||day.activite?"1 objectif sur 2":"Défi en cours");
-      write("hero-today-description",day.resultat==="reussi"?"Les deux objectifs sont validés.":
-        day.echecs?"Échecs joués · activité en attente":
-        day.activite?"Activité faite · partie en attente":"Une partie et une activité à accomplir.");
-    }
-    function rating(elo:Elo|undefined){
-      write("elo-mode",elo?.mode?"ELO RAPIDE":"ELO CHESS.COM");
-      write("elo-current",elo?.rating!=null?String(elo.rating):"—");
-      const delta=elo?.delta;
-      const change=$("elo-change");
-      if(change){
-        change.textContent=delta==null?"Premières parties suivies":delta>0?"↗ +"+delta+" points":delta<0?"↘ "+delta+" points":"→ Stable";
-        change.className="elo-change "+(delta==null?"":delta>0?"positive":delta<0?"negative":"");
+    function chessGraph(date:string){
+      const entries=(state.elo?.historique||[])
+        .filter(p=>p.date<=date&&Number.isFinite(p.rating));
+      if(!entries.length)return null;
+      const wrapper=create("div","elo-inline");
+      wrapper.append(create("span","tiny-label","ÉVOLUTION ELO JUSQU'AU "+shortDate(date).toUpperCase()));
+      const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+      svg.setAttribute("viewBox","0 0 540 140");
+      svg.setAttribute("preserveAspectRatio","none");
+      svg.setAttribute("role","img");svg.setAttribute("aria-label","Historique ELO jusqu'au "+longDate(date));
+      const min=Math.min(...entries.map(x=>x.rating))-15;
+      const max=Math.max(...entries.map(x=>x.rating))+15;
+      const coords=entries.map((point,index)=>{
+        const x=entries.length===1?270:12+index*516/(entries.length-1);
+        const y=124-(point.rating-min)*107/(max-min||1);
+        return {x,y};
+      });
+      const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+      path.setAttribute("d",coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" "));
+      path.setAttribute("fill","none");path.setAttribute("stroke","#4e7a63");
+      path.setAttribute("stroke-width","3.5");path.setAttribute("stroke-linecap","round");
+      svg.append(path);
+      for(const i of [0,coords.length-1]){
+        const p=coords[i];
+        const circle=document.createElementNS("http://www.w3.org/2000/svg","circle");
+        circle.setAttribute("cx",String(p.x));circle.setAttribute("cy",String(p.y));
+        circle.setAttribute("r",i===coords.length-1?"5":"3");circle.setAttribute("fill","#c8714c");
+        svg.append(circle);
       }
-      const entries=(elo?.historique||[]).filter(e=>Number.isFinite(e.rating));
-      const path=$("elo-path") as unknown as SVGPathElement|null;
-      const dots=$("elo-dots") as unknown as SVGGElement|null;
-      if(!path||!dots)return;
-      dots.replaceChildren();if(entries.length<2){path.setAttribute("d","");return;}
-      const min=Math.min(...entries.map(e=>e.rating))-10;
-      const max=Math.max(...entries.map(e=>e.rating))+10;
-      const project=(item:{rating:number},i:number)=>{
-        const x=15+i/(entries.length-1)*510;
-        const y=157-(item.rating-min)/(max-min)*135;
-        return [x,y];
+      wrapper.append(svg);
+      const scale=create("div","elo-scale");
+      scale.append(create("span",undefined,shortDate(entries[0].date)+" · "+entries[0].rating),
+        create("span",undefined,shortDate(entries[entries.length-1].date)+" · "+entries[entries.length-1].rating));
+      wrapper.append(scale);
+      return wrapper;
+    }
+    function runsForDay(day:Day){
+      const known=(state.coursesRecentes||[]).filter(a=>a.date===day.date);
+      const all=[...known];
+      const selected=day.activite;
+      if(selected&&!all.some(a=>a.id&&a.id===selected.id))all.push(selected);
+      return all.sort((a,b)=>Number(b.fin||0)-Number(a.fin||0));
+    }
+    function showActivity(day:Day,body:HTMLElement,details:HTMLDetailsElement){
+      body.replaceChildren();
+      const runs=runsForDay(day);
+      if(!runs.length){body.append(create("p","empty-text","Aucune activité enregistrée ce jour-là."));return;}
+      const chooser=create("div","run-chooser");
+      const mapArea=create("div","inline-map-area");
+      const canvas=create("div","inline-map");
+      const hint=create("p","map-hint","Sélectionne une activité pour voir son parcours.");
+      mapArea.append(canvas,hint);
+      body.append(chooser,mapArea);
+      const select=(run:Run)=>{
+        chooser.querySelectorAll<HTMLButtonElement>("button").forEach(b=>{
+          b.classList.toggle("selected",b.dataset.id===String(run.id||run.fin));
+        });
+        const old=body.querySelector(".source-actions");
+        if(old)old.remove();
+        const actions=create("div","source-actions");
+        const link=externalLink(run.url,"activity","Voir l'activité originale ↗");
+        if(link)actions.append(link);
+        if(actions.childNodes.length)body.append(actions);
+        void drawRoute(run,canvas,hint,details);
       };
-      path.setAttribute("d",entries.map((item,i)=>{
-        const [x,y]=project(item,i);return (i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
-      }).join(" "));
-      const ns="http://www.w3.org/2000/svg";
-      const [cx,cy]=project(entries[entries.length-1],entries.length-1);
-      const last=document.createElementNS(ns,"circle");last.setAttribute("cx",String(cx));last.setAttribute("cy",String(cy));last.setAttribute("r","7");
-      dots.append(last);
-      write("elo-first",shortDate(entries[0].date));
-      write("elo-last",shortDate(entries[entries.length-1].date));
-    }
-    function renderRuns(runs:Run[]){
-      const list=$("recent-runs");if(!list)return;
-      list.replaceChildren();
-      // Sur la carte, montrer TOUTES les activités sportives (plusieurs par jour).
-      // Seul le bilan quotidien ne retient que la plus récente.
-      knownRuns=[...runs].sort((a,b)=>Number(b.fin||0)-Number(a.fin||0));
-      if(!knownRuns.length){
-        list.append(el("p","map-empty","Les parcours récents apparaîtront ici dès leur publication."));
-        write("map-help","Aucun tracé public disponible pour le moment.");
-        return;
+      for(const run of runs){
+        const item=create("button","run-choice");
+        item.type="button";item.dataset.id=String(run.id||run.fin);
+        const name=sportNames[run.sport||""]||"Activité";
+        const title=create("strong",undefined,run.titre||name);
+        const meta=create("span",undefined,name+" · "+km(run.km)+(run.minutes?" · "+run.minutes+" min":""));
+        item.append(title,meta);
+        if(!run.parcours)item.append(create("small",undefined,"Sans tracé GPS"));
+        item.addEventListener("click",()=>select(run));
+        chooser.append(item);
       }
-      for(const run of knownRuns){
-        const button=el("button","recent-run");
-        button.type="button";button.dataset.runId=run.id||"";
-        const top=el("div","recent-date");
-        top.append(el("span",undefined,shortDate(run.date)),el("span",undefined,km(run.km)));
-        button.append(top,el("strong",undefined,run.titre));
-        if(!run.parcours)button.append(el("small","run-no-route","Activité enregistrée · sans tracé GPS"));
-        button.addEventListener("click",()=>chooseRun(run));
-        list.append(button);
-      }
-      void chooseRun(knownRuns.find(run=>run.parcours)||knownRuns[0]);
+      select(runs.find(a=>a.parcours)||runs[0]);
     }
-    async function chooseRun(run:Run){
-      const turn=++routeTurn;
-      selectedId=run.id||null;
-      for(const button of document.querySelectorAll<HTMLButtonElement>(".recent-run"))
-        button.classList.toggle("selected",button.dataset.runId===selectedId);
-      const placeholder=$("map-placeholder"),message=$("map-help");
-      if(placeholder)placeholder.hidden=false;
-      if(message)message.textContent="Chargement du parcours…";
-      write("map-caption-title",run.titre);
-      write("map-caption-detail",shortDate(run.date)+" · "+km(run.km)+(run.minutes?" · "+run.minutes+" min":""));
-      if(!run.id){if(message)message.textContent="Parcours indisponible pour cette activité.";return;}
+    async function drawRoute(run:Run,container:HTMLElement,hint:HTMLElement,details:HTMLDetailsElement){
+      const serial=++routeSerial;
+      if(activeMap){activeMap.remove();activeMap=null;}
+      if(!run.parcours||!run.id){
+        hint.textContent="Pas de tracé GPS pour cette activité.";
+        container.hidden=true;return;
+      }
+      container.hidden=false;
+      hint.textContent="Chargement de la carte…";
       try{
         const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(run.id),{cache:"no-store"});
-        if(!response.ok)throw Error("Tracé GPS non disponible.");
+        if(!response.ok)throw Error("Tracé non disponible.");
         const data:{route?:number[][]}=await response.json();
-        if(turn!==routeTurn)return;
-        const coords=(data.route||[]).filter(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite));
-        if(coords.length<2)throw Error("Tracé absent.");
-        if(!mapModule){const mod=await import("maplibre-gl");mapModule=mod.default;}
-        if(turn!==routeTurn)return;
-        const mapEl=$("run-map");if(!mapEl)return;
-        if(activeMap){activeMap.remove();activeMap=null;}
-        activeMap=new mapModule.Map({container:mapEl,
-          style:"https://tiles.openfreemap.org/styles/liberty",
-          center:[coords[0][1],coords[0][0]],zoom:11});
-        activeMap.addControl(new mapModule.NavigationControl({showCompass:false}),"top-right");
-        activeMap.addControl(new mapModule.FullscreenControl({container:mapEl}),"top-right");
-        const points=coords.map(p=>[p[1],p[0]]);
-        activeMap.on("load",()=>{
-          if(turn!==routeTurn)return;
-          activeMap.addSource("trace",{type:"geojson",data:{type:"Feature",properties:{},
-            geometry:{type:"LineString",coordinates:points}}});
-          activeMap.addLayer({id:"trace",type:"line",source:"trace",
-            layout:{"line-join":"round","line-cap":"round"},
-            paint:{"line-color":"#c86f4d","line-width":5}});
+        const points=(data.route||[]).filter(p=>Array.isArray(p)&&p.length===2&&
+          p.every(Number.isFinite)&&Math.abs(p[0])<=85&&Math.abs(p[1])<=180);
+        if(points.length<2)throw Error("Pas de GPS pour cette sortie.");
+        if(!mapModule){const module=await import("maplibre-gl");mapModule=module.default;}
+        if(serial!==routeSerial||!details.open||!container.isConnected)return;
+        const coordinates=points.map(p=>[p[1],p[0]]);
+        const map=new mapModule.Map({container,style:"https://tiles.openfreemap.org/styles/liberty",
+          center:coordinates[0],zoom:11,attributionControl:true});
+        activeMap=map;
+        map.addControl(new mapModule.NavigationControl({showCompass:false}),"top-right");
+        map.addControl(new mapModule.FullscreenControl({container}),"top-right");
+        map.on("load",()=>{
+          if(serial!==routeSerial||!details.open)return;
+          map.addSource("parcours",{type:"geojson",data:{type:"Feature",properties:{},
+            geometry:{type:"LineString",coordinates}}});
+          map.addLayer({id:"parcours",type:"line",source:"parcours",
+            layout:{"line-cap":"round","line-join":"round"},
+            paint:{"line-width":5,"line-color":"#c8714c"}});
           const bounds=new mapModule.LngLatBounds();
-          for(const pt of points)bounds.extend(pt);
-          activeMap.fitBounds(bounds,{padding:48,maxZoom:15,duration:0});
-          activeMap.resize();
-          if(placeholder)placeholder.hidden=true;
+          for(const position of coordinates)bounds.extend(position);
+          map.fitBounds(bounds,{padding:35,maxZoom:16,duration:0});
+          map.resize();
+          hint.textContent="Carte interactive · bouton plein écran en haut à droite.";
         });
-      }catch(err){if(turn===routeTurn&&message)message.textContent=
-        err instanceof Error?err.message:"Impossible de charger la carte.";}
-    }
-    function loadWidgets(){
-      const details=$("strava-widgets") as HTMLDetailsElement|null;
-      for(const [id,url] of [["strava-feed",widgetUrls.feed],["strava-summary",widgetUrls.summary]]){
-        const frame=$(id) as HTMLIFrameElement|null;
-        if(frame&&details?.open&&url){if(frame.src!==url)frame.src=url;}
-        else if(frame&&frame.hasAttribute("src"))frame.removeAttribute("src");
+      }catch(error){
+        if(serial!==routeSerial)return;
+        container.hidden=true;
+        hint.textContent=error instanceof Error?error.message:"Carte indisponible.";
       }
     }
-    $("strava-widgets")?.addEventListener("toggle",loadWidgets);
-
-    async function load(forceSports=false){
-      const refresh=$("refresh-defi") as HTMLButtonElement|null;
-      if(refresh)refresh.disabled=true;
-      write("defi-loading","Mise à jour du défi…");
-      try{
-        const response=await fetch("/api/public/defi"+(forceSports?"?actualiser=1":""),{cache:"no-store"});
-        if(!response.ok)throw Error("Le défi est momentanément indisponible.");
-        const data:Defi=await response.json();
-        const content=$("defi-content"),empty=$("defi-empty");
-        if(content)content.hidden=!data.configured;
-        if(empty)empty.hidden=!!data.configured;
-        if(!data.configured){write("defi-loading","Défi en préparation");return;}
-        const stats=data.stats!;
-        write("kpi-days",String(stats.jours));
-        write("kpi-chess",String(stats.joursEchecs));
-        write("kpi-runs",String(stats.joursActivites));
-        write("kpi-success",stats.reussite===null?"—":stats.reussite+" %");
-        write("kpi-success-note",stats.joursComplets+" journées réussies");
-        const days=data.jours||[];
-        const today=days[0];if(today)todayCard(today);
-        rating(data.elo);
-        const profile=$("chess-profile") as HTMLAnchorElement|null;
-        if(profile&&data.username)profile.href="https://www.chess.com/member/"+encodeURIComponent(data.username);
-        renderRuns(data.coursesRecentes||[]);
-        const list=$("days-list");
-        if(list){list.replaceChildren();days.forEach((d,i)=>list.append(dayCard(d,i,days.length)));}
-        widgetUrls={feed:data.stravaFeed||"",summary:data.stravaSummary||""};loadWidgets();
-        const time=data.misAJour?new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",
-          timeZone:"Europe/Paris"}).format(new Date(data.misAJour)):"en attente";
-        write("source-line","Échecs rapides actualisés : "+time+" · Parcours mis à jour périodiquement.");
-        write("runs-note",data.stravaSynchronisation?.etat==="erreur"
-          ?"Les dernières courses enregistrées restent affichées même si la synchronisation échoue."
-          :"Les parcours présentés ici ne constituent pas une géolocalisation en direct.");
-        write("defi-loading","Défi synchronisé · une partie rapide et une activité par jour, tous les sports sur la carte.");
-      }catch(err){write("defi-loading",err instanceof Error?err.message:"Chargement impossible.");}
-      finally{if(refresh)refresh.disabled=false;}
+    function goal(kind:"chess"|"activity",day:Day){
+      const isChess=kind==="chess";
+      const done=Boolean(isChess?day.echecs:day.activite);
+      const details=create("details","goal "+(isChess?"goal-chess":"goal-activity"));
+      const summary=create("summary","goal-summary");
+      const icon=create("span","goal-marker "+(done?"done":"undone"),done?"✓":"·");
+      const description=create("span","goal-info");
+      description.append(create("small",undefined,isChess?"ÉCHECS RAPIDES":"ACTIVITÉ PHYSIQUE"));
+      description.append(create("strong",undefined,isChess
+        ?done?"Partie jouée":"Pas de partie"
+        :done?km(day.activite!.km):"Pas d'activité"));
+      const caret=create("span","goal-caret","⌄");
+      summary.append(icon,description,caret);
+      const body=create("div","goal-body");
+      details.append(summary,body);
+      details.addEventListener("toggle",()=>{
+        if(details.open){
+          if(isChess)expandElo(day,body);
+          else{
+            document.querySelectorAll<HTMLDetailsElement>("details.goal-activity[open]").forEach(other=>{
+              if(other!==details)other.open=false;
+            });
+            showActivity(day,body,details);
+          }
+        }else if(!isChess){
+          ++routeSerial;
+          if(activeMap){activeMap.remove();activeMap=null;}
+        }
+      });
+      return details;
     }
-    $("refresh-defi")?.addEventListener("click",()=>void load(true));
+    function dailyPanel(day:Day,index:number,isToday=false){
+      const card=create("article","day-panel"+(isToday?" today-panel":""));
+      const header=create("div","day-header");
+      const label=create("span","day-title",(isToday?"AUJOURD'HUI · ":"J"+index+" · ")+longDate(day.date));
+      header.append(label,statusBadge(day));
+      const goals=create("div","goal-grid");
+      goals.append(goal("chess",day),goal("activity",day));
+      card.append(header,goals);
+      return card;
+    }
+    function renderArchive(runs:Run[],dateLimit:string){
+      const before=runs.filter(run=>run.date<dateLimit);
+      const group=new Map<string,Run[]>();
+      for(const run of before){
+        const bucket=group.get(run.date)||[];bucket.push(run);group.set(run.date,bucket);
+      }
+      const list=get("older-list"),section=get("older-section");
+      if(!list||!section)return;
+      section.hidden=group.size===0;
+      list.replaceChildren();
+      for(const [date,items] of [...group.entries()].sort((a,b)=>b[0].localeCompare(a[0]))){
+        const day:Day={date,echecs:null,activite:items[0],resultat:"manque"};
+        const card=create("article","day-panel older-panel");
+        const header=create("div","day-header");
+        header.append(create("strong","day-title",longDate(date)));
+        card.append(header,goal("activity",day));
+        list.append(card);
+      }
+    }
+    function loadWidgets(){
+      const details=get("sport-widgets") as HTMLDetailsElement|null;
+      for(const [id,url] of [["sport-feed",sportWidgets.feed],["sport-summary",sportWidgets.summary]]){
+        const iframe=get(id) as HTMLIFrameElement|null;
+        if(!iframe)continue;
+        if(details?.open&&url){if(iframe.src!==url)iframe.src=url;}
+        else iframe.removeAttribute("src");
+      }
+    }
+    get("sport-widgets")?.addEventListener("toggle",loadWidgets);
+    async function load(force=false){
+      const button=get("refresh-defi") as HTMLButtonElement|null;
+      if(button)button.disabled=true;
+      set("defi-loading","Synchronisation…");
+      ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}
+      try{
+        const response=await fetch("/api/public/defi"+(force?"?actualiser=1":""),{cache:"no-store"});
+        if(!response.ok)throw Error("Impossible d'actualiser le défi.");
+        state=await response.json() as Data;
+        get("defi-content")!.hidden=!state.configured;
+        get("defi-empty")!.hidden=state.configured;
+        if(!state.configured){set("defi-loading","Défi en préparation.");return;}
+        const stats=state.stats!;
+        set("score-days",String(stats.jours));
+        set("score-chess",String(stats.joursEchecs));
+        set("score-activities",String(stats.joursActivites));
+        set("score-success",stats.reussite===null?"—":stats.reussite+" %");
+        const days=state.jours||[];
+        set("hero-status",days[0]?status(days[0]).name:"En attente");
+        if(days[0]){
+          set("today-date",longDate(days[0].date));
+          const today=get("today-panel");if(today)today.replaceChildren(...Array.from(dailyPanel(days[0],days.length,true).childNodes));
+        }
+        const list=get("days-list");
+        if(list){
+          list.replaceChildren();
+          days.slice(1).forEach((day,i)=>list.append(dailyPanel(day,days.length-i-1)));
+          const journal=get("journal");
+          if(journal)journal.hidden=days.length<2;
+        }
+        renderArchive(state.coursesRecentes||[],state.debut||days.at(-1)?.date||"");
+        sportWidgets={feed:state.stravaFeed||"",summary:state.stravaSummary||""};
+        loadWidgets();
+        const note=state.stravaSynchronisation?.etat==="erreur"?
+          "Dernières données conservées · synchronisation à réessayer.":
+          "Échecs et activités synchronisés.";
+        set("defi-loading",note);
+        set("source-note","Une partie rapide et une activité comptent par jour. Appuie pour les détails.");
+      }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
+      finally{if(button)button.disabled=false;}
+    }
+    get("refresh-defi")?.addEventListener("click",()=>void load(true));
     void load();
   </script>
 
   <style is:global>
-    .defi-hero{background:var(--forest);color:#fff;padding:clamp(48px,7vw,88px) 0}
-    .hero-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(250px,.65fr);gap:clamp(30px,7vw,90px);align-items:end}
-    .defi-hero .eyebrow{color:#e2a789}
-    .defi-hero h1{font:500 clamp(3rem,7.5vw,6.6rem)/1.04 'Playfair Display',Georgia,serif;letter-spacing:-.045em;margin:20px 0}
-    .defi-hero h1 em{font-weight:400;color:#edaf8b}
-    .hero-lead{max-width:410px;color:#d2e0dc;line-height:1.7;font-size:clamp(.95rem,1.6vw,1.13rem)}
-    .hero-today{border-top:1px solid #6f8a80;padding-top:20px;display:flex;flex-direction:column;align-items:start;gap:11px}
-    .hero-today-label,.today-overline{font-size:.68rem;letter-spacing:.14em;font-weight:800}
-    .hero-today-label{color:#dfad93}
-    .hero-today strong{font:500 clamp(1.75rem,3vw,2.7rem)/1.2 'Playfair Display',Georgia,serif}
-    .hero-today>span:nth-of-type(2){color:#d0ded9;font-size:.85rem}
-    .hero-today a{color:#fff;text-decoration:underline;text-underline-offset:5px;font-weight:700;margin-top:7px;font-size:.83rem}
-    .defi-main{padding-top:32px;padding-bottom:110px}
-    .source-line,.data-note{color:var(--muted);font-size:.78rem;line-height:1.65}
-    .source-line{margin:0 0 24px}
-    #defi-content[hidden],#defi-empty[hidden],.map-placeholder[hidden]{display:none}
-    .empty-state{background:var(--white);border:1px solid var(--line);padding:40px}
-    .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .kpi{background:var(--white);border:1px solid var(--line);padding:clamp(16px,2.7vw,26px);display:flex;flex-direction:column;min-width:0}
-    .kpi small{font-size:.65rem;letter-spacing:.095em;font-weight:800;color:var(--muted)}
-    .kpi strong{font:500 clamp(2.3rem,4vw,3.3rem)/1.2 'Playfair Display',Georgia,serif;margin:12px 0 6px;color:var(--forest)}
-    .kpi>span{font-size:.73rem;color:var(--muted)}
-    .kpi-accent{background:#e7eee5}
-    .today-section,.elo-section,.courses-section,.journal-section{margin-top:clamp(52px,7vw,80px)}
-    .section-top{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-bottom:18px}
-    .section-top h2{font:500 clamp(2rem,4.6vw,3.55rem)/1.17 'Playfair Display',Georgia,serif;margin:9px 0 0;letter-spacing:-.03em;color:var(--forest)}
-    .section-top .eyebrow{margin:0;font-size:.7rem;letter-spacing:.14em;color:var(--orange)}
-    .dot{color:var(--orange)}
-    .muted-date,.section-hint{color:var(--muted);font-size:.82rem}
-    .section-description{color:var(--muted);font-size:.88rem;max-width:680px;line-height:1.7;margin:0 0 22px}
-    .today-panel{background:var(--white);border:1px solid var(--line);padding:clamp(18px,3vw,30px)}
-    .today-top{display:flex;justify-content:space-between;align-items:start;gap:14px;margin-bottom:20px}
-    .today-overline{color:var(--muted);display:block;margin-bottom:8px}
-    .today-outcome{font:500 clamp(1.6rem,3vw,2.35rem)/1.1 'Playfair Display',Georgia,serif;color:var(--forest)}
-    .today-tasks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .day-task{display:flex;align-items:center;gap:12px;min-width:0;background:#f5f5f0;padding:17px}
-    .task-symbol{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;font-weight:800}
-    .task-symbol.complete{background:#d7e9d8;color:#275a41}
-    .task-symbol.waiting{background:#e7e4db;color:#837f71}
-    .task-copy{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-    .task-category{color:var(--muted);font-size:.64rem;letter-spacing:.09em;font-weight:800}
-    .task-copy strong{font-size:.9rem;color:var(--forest);overflow-wrap:anywhere}
-    .task-extra{color:var(--muted);font-size:.75rem;line-height:1.4}
-    .positive{color:#20734b!important}.negative{color:#b05a40!important}
-    .detail-link,.route-jump{margin-left:auto;flex-shrink:0;color:var(--forest);font-size:.8rem;font-weight:800;text-decoration:none}
-    .route-jump{border:0;background:transparent;cursor:pointer;padding:8px 3px}
-    .status-chip{padding:8px 12px;border-radius:30px;font-weight:800;font-size:.75rem;white-space:nowrap}
-    .status-chip.win{background:#dcebdd;color:#286344}
-    .status-chip.pending{background:#eee9d8;color:#8d7138}
-    .status-chip.partial{background:#f0e3d6;color:#945931}
-    .status-chip.miss{background:#ede3e1;color:#965f59}
-    .elo-panel{display:grid;grid-template-columns:minmax(180px,.6fr) 1fr;gap:30px;padding:clamp(22px,4vw,36px);background:#edf2ea;border:1px solid #d5e0d4}
-    .elo-numbers{display:flex;flex-direction:column;align-items:start}
-    .elo-numbers>.eyebrow{color:var(--muted);font-weight:800;font-size:.7rem}
-    .elo-numbers strong{font:500 clamp(3.2rem,7vw,5rem)/1.1 'Playfair Display',Georgia,serif;color:var(--forest);margin:9px 0}
-    .elo-change{font-size:.9rem;font-weight:800;color:var(--forest)}
-    .panel-note{font-size:.73rem;line-height:1.65;color:var(--muted);margin:16px 0 0;max-width:230px}
-    .elo-chart{align-self:center;min-width:0;color:#4f7764}
-    .elo-chart svg{width:100%;height:165px;display:block;overflow:visible}
-    #elo-dots{fill:var(--orange)}
-    .chart-range{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)}
-    .quiet-link{color:var(--forest);font-weight:700;font-size:.8rem;text-underline-offset:5px}
-    .map-layout{display:grid;grid-template-columns:minmax(210px,310px) minmax(0,1fr);gap:14px}
-    .map-sidebar{display:flex;flex-direction:column;gap:16px;min-width:0}
-    .recent-runs{display:flex;flex-direction:column;gap:8px;max-height:470px;overflow:auto;overscroll-behavior:contain}
-    .recent-run{background:var(--white);border:1px solid var(--line);padding:13px 15px;text-align:left;cursor:pointer;color:var(--forest)}
-    .recent-run.selected{border-color:var(--forest);box-shadow:inset 3px 0 var(--orange);background:#f1f5ef}
-    .recent-run:hover{border-color:var(--forest)}
-    .recent-date{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:.73rem;margin-bottom:6px}
-    .recent-run strong{font-size:.84rem;line-height:1.35;display:block;overflow-wrap:anywhere}
-    .run-no-route{display:block;color:var(--muted);font-size:.72rem;margin-top:7px}
-    .map-empty{font-size:.85rem;color:var(--muted);line-height:1.6}
-    .map-area{position:relative;min-width:0;border:1px solid var(--line);background:#e5eee9}
-    .run-map{height:410px;width:100%}
-    .map-placeholder{position:absolute;inset:0 0 55px;background:#e7efea;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:25px;text-align:center;z-index:1;color:var(--forest)}
-    .map-placeholder-icon{font-size:4rem;color:#a6bdb1;line-height:1}
-    .map-placeholder p{font-size:.85rem;max-width:260px}
-    .map-caption{min-height:55px;background:var(--white);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .map-caption span:first-child{color:var(--forest);font-size:.83rem;font-weight:800}
-    .map-caption span:last-child{color:var(--muted);font-size:.77rem}
-    .journal-section .section-description{margin-bottom:16px}
-    .refresh-button{border:1px solid var(--line);background:var(--white);color:var(--forest);cursor:pointer;padding:12px 16px;font-size:.82rem;font-weight:800}
-    .refresh-button:disabled{opacity:.55}
-    .days-list{display:grid;gap:12px}
-    .day-card{background:var(--white);border:1px solid var(--line);padding:20px}
-    .day-card-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:13px}
-    .day-date{display:flex;align-items:center;gap:14px;min-width:0}
-    .day-number{font-size:.67rem;letter-spacing:.08em;font-weight:800;color:var(--orange);white-space:nowrap}
-    .day-date strong{font-size:.94rem;color:var(--forest);text-transform:capitalize;overflow-wrap:anywhere}
-    .day-tasks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .widgets-section{margin-top:60px}
-    .widgets-details{border:1px solid var(--line);background:var(--white)}
-    .widgets-details>summary{cursor:pointer;display:flex;justify-content:space-between;gap:16px;padding:17px 22px;color:var(--forest);font-size:.89rem;font-weight:800;list-style:none}
-    .widgets-details>summary::-webkit-details-marker{display:none}
-    .widget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:28px;padding:15px 22px 26px}
-    .widget-grid h3{margin:0 0 12px;font-size:.9rem}
-    .widget-grid iframe{border:0;width:100%;height:454px}
-    #strava-summary{height:160px}
-    @media(max-width:850px){
-      .hero-grid{grid-template-columns:1fr}
-      .hero-today{max-width:420px}
-      .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .map-layout{grid-template-columns:1fr}
-      .recent-runs{display:flex;flex-direction:row;max-height:none;overflow-x:auto;padding-bottom:6px}
-      .recent-run{flex:0 0 min(235px,70vw)}
-      .map-area{width:100%}
+    .defi-hero{background:var(--forest);color:#fff;padding:clamp(42px,6vw,74px) 0}
+    .hero-inner{display:flex;align-items:end;justify-content:space-between;gap:48px}
+    .defi-hero .eyebrow{color:#e4ad8f;font-size:.7rem;letter-spacing:.16em}
+    .defi-hero h1{font:500 clamp(2.9rem,7vw,5.8rem)/1.02 'Playfair Display',Georgia,serif;letter-spacing:-.04em;margin:16px 0}
+    .defi-hero h1 em{font-weight:400;color:#ecaa86}
+    .hero-subtitle{font-size:clamp(.92rem,1.6vw,1.08rem);color:#d1e1dc;line-height:1.6;max-width:440px}
+    .hero-progress{display:flex;flex-direction:column;gap:10px;border-top:1px solid #748e83;padding-top:15px;min-width:230px}
+    .hero-progress span{font-size:.68rem;letter-spacing:.13em;color:#d5a48a;font-weight:800}
+    .hero-progress strong{font:500 1.65rem/1.2 'Playfair Display',Georgia,serif}
+    .hero-progress a{color:#f9f6f2;font-size:.84rem;text-decoration:underline;text-underline-offset:4px}
+    .defi-page{padding-top:25px;padding-bottom:95px}
+    .update-note{font-size:.77rem;line-height:1.5;color:var(--muted);margin:0 0 18px}
+    #defi-empty[hidden],#defi-content[hidden],#older-section[hidden],#journal[hidden]{display:none}
+    .score-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .score{background:var(--white);border:1px solid var(--line);padding:20px;min-width:0}
+    .score small{display:block;letter-spacing:.1em;color:var(--muted);font-weight:800;font-size:.68rem}
+    .score strong{display:block;font:500 clamp(2.1rem,3.9vw,3rem)/1.15 'Playfair Display',Georgia,serif;color:var(--forest);margin-top:12px}
+    .score-highlight{background:#e8efe7}
+    .today-section,.journal-section{margin-top:clamp(38px,6vw,65px)}
+    .section-heading{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:16px}
+    .section-heading .eyebrow{color:var(--orange);letter-spacing:.15em;font-weight:800;font-size:.68rem;margin:0 0 7px}
+    .section-heading h2{font:500 clamp(2rem,4.5vw,3.25rem)/1.12 'Playfair Display',Georgia,serif;color:var(--forest);letter-spacing:-.03em;margin:0}
+    .period{color:var(--orange)}
+    .section-date{color:var(--muted);font-size:.81rem;text-transform:capitalize}
+    .refresh-button{background:var(--white);border:1px solid var(--line);font-weight:800;font-size:.82rem;
+      padding:10px 15px;color:var(--forest);cursor:pointer}
+    .refresh-button:disabled{opacity:.5}
+    .day-panel{background:var(--white);border:1px solid var(--line);padding:clamp(13px,2.4vw,24px);min-width:0}
+    .day-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+    .day-title{font-size:.85rem;font-weight:800;color:var(--forest);text-transform:capitalize}
+    .day-status{font-size:.72rem;white-space:nowrap;border-radius:20px;padding:7px 10px;font-weight:800}
+    .day-status.win{background:#dcebdd;color:#286344}
+    .day-status.pending{background:#eee9d8;color:#8d7138}
+    .day-status.partial{background:#f0e3d6;color:#945931}
+    .day-status.miss{background:#eee7e5;color:#965f59}
+    .goal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    details.goal{background:#f5f5f1;min-width:0}
+    .goal-summary{cursor:pointer;display:flex;align-items:center;gap:12px;min-height:83px;
+      padding:14px;list-style:none}
+    .goal-summary::-webkit-details-marker{display:none}
+    .goal-summary:hover{background:#edf0e9}
+    .goal[open] .goal-summary{border-bottom:1px solid #e4e3dd}
+    .goal-marker{flex:0 0 30px;width:30px;height:30px;display:grid;place-items:center;
+      border-radius:50%;font-weight:800;background:#e6e3da;color:#847e73}
+    .goal-marker.done{background:#d8e9d9;color:#266144}
+    .goal-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+    .goal-info small{font-size:.64rem;letter-spacing:.09em;color:var(--muted);font-weight:800}
+    .goal-info strong{font-size:.95rem;line-height:1.4;color:var(--forest)}
+    .goal-caret{font-size:1.3rem;color:var(--forest);transition:transform .2s}
+    .goal[open] .goal-caret{transform:rotate(180deg)}
+    .goal-body{padding:15px;background:#fafaf7;min-width:0}
+    .goal-body .original-link,.source-actions .original-link{display:inline-block;margin-top:12px;
+      font-size:.83rem;color:var(--forest);font-weight:800;text-decoration:underline;text-underline-offset:4px}
+    .chess-detail-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .chess-detail-top strong{font:500 2rem/1.2 'Playfair Display',Georgia,serif;color:var(--forest)}
+    .variation{font-size:.82rem;font-weight:800;color:var(--muted)}
+    .variation.up{color:#28704c}.variation.down{color:#b65a43}
+    .elo-inline{margin-top:20px;color:var(--forest)}
+    .tiny-label{font-size:.67rem;color:var(--muted);letter-spacing:.08em;font-weight:800}
+    .elo-inline svg{width:100%;height:115px;display:block;margin-top:12px}
+    .elo-scale{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      font-size:.75rem;color:var(--muted)}
+    .run-chooser{display:flex;flex-direction:column;gap:6px}
+    .run-choice{width:100%;text-align:left;padding:11px 12px;background:#fff;border:1px solid var(--line);
+      color:var(--forest);cursor:pointer}
+    .run-choice.selected{border-color:#416b57;background:#edf4eb}
+    .run-choice strong,.run-choice span,.run-choice small{display:block;line-height:1.4;overflow-wrap:anywhere}
+    .run-choice strong{font-size:.84rem}
+    .run-choice span,.run-choice small{font-size:.75rem;color:var(--muted);margin-top:3px}
+    .inline-map-area{margin-top:11px}
+    .inline-map{height:300px;min-height:0;border:1px solid var(--line);background:#e8eee9}
+    .inline-map[hidden]{display:none}
+    .inline-map:fullscreen{height:100vh}
+    .map-hint,.empty-text{font-size:.77rem;line-height:1.5;color:var(--muted);margin:8px 0}
+    .source-actions{margin-top:4px}
+    .day-list{display:grid;gap:10px}
+    .journal-section>.update-note{margin-top:15px}
+    .older-section,.widget-section{margin-top:32px}
+    .archive-details{border:1px solid var(--line);background:var(--white)}
+    .archive-details>summary{cursor:pointer;display:flex;justify-content:space-between;
+      align-items:center;list-style:none;padding:16px 20px;font-weight:800;color:var(--forest);font-size:.87rem}
+    .archive-details>summary::-webkit-details-marker{display:none}
+    .older-section .day-list{padding:0 14px 14px}
+    .widget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:18px;padding:14px}
+    .widget-grid p{font-size:.84rem;font-weight:800;color:var(--forest)}
+    .widget-grid iframe{width:100%;height:454px;border:0}
+    #sport-summary{height:160px}
+    .outside-link{display:inline-block;color:var(--forest);font-size:.83rem;font-weight:700;
+      margin:0 14px 20px}
+    @media(max-width:790px){
+      .hero-inner{flex-direction:column;align-items:start;gap:16px}
+      .hero-progress{width:100%;max-width:420px}
+      .score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
-    @media(max-width:620px){
-      .defi-hero{padding:42px 0}
-      .defi-hero h1{font-size:clamp(3rem,13vw,4.1rem)}
-      .defi-main{padding-top:22px}
-      .kpi-grid{gap:8px}
-      .kpi{padding:16px 13px}
-      .kpi small{font-size:.6rem}
-      .kpi strong{font-size:2.65rem}
-      .section-top{align-items:start;flex-direction:column;gap:10px}
-      .section-top h2{font-size:2.55rem}
-      .today-tasks,.day-tasks{grid-template-columns:1fr}
-      .today-panel{padding:15px}
-      .today-top{gap:10px}
-      .day-task{padding:13px;gap:10px}
-      .day-card{padding:14px}
-      .day-date{gap:8px}
-      .day-date strong{font-size:.83rem}
-      .status-chip{padding:6px 9px;font-size:.68rem}
-      .elo-panel{grid-template-columns:1fr;gap:12px;padding:22px}
-      .elo-chart svg{height:115px}
-      .run-map{height:330px}
-      .map-placeholder{bottom:65px}
-      .map-caption{min-height:65px;align-items:start;flex-direction:column;gap:2px}
+    @media(max-width:650px){
+      .defi-hero{padding:36px 0}
+      .defi-hero h1{font-size:clamp(2.8rem,12vw,4.2rem)}
+      .score{padding:14px}
+      .score strong{font-size:2.45rem}
+      .section-heading{align-items:start;flex-direction:column;gap:10px}
+      .section-heading h2{font-size:2.45rem}
+      .goal-grid{grid-template-columns:1fr}
+      .goal-summary{min-height:67px;padding:12px}
+      .goal-body{padding:12px}
+      .day-header{flex-wrap:wrap}
+      .day-status{font-size:.69rem}
       .widget-grid{grid-template-columns:1fr}
+      .inline-map{height:310px}
     }
   </style>
 </Base>
