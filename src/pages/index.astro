@@ -17,7 +17,7 @@ const dernieresPhotos = galerie.slice(0, 4);
       <div class="route-heading route-heading-personal">
         <div class="route-heading-copy">
           <p class="eyebrow"><span class="eyebrow-line"></span> UN VOYAGE À RACONTER</p>
-          <h1>Sur la route.<br /><em id="home-current-city">Depuis ${actuelle?.ville || "La Ciotat"}.</em></h1>
+          <h1>Sur la route.<br /><em id="home-current-city">Depuis {actuelle?.ville || "La Ciotat"}.</em></h1>
           <p class="lead">Une carte, des étapes, et les photos qui racontent le reste.</p>
           <a class="text-link route-heading-link" href={chemin("/journal/")}>Parcourir le journal <span aria-hidden="true">↗</span></a>
         </div>
