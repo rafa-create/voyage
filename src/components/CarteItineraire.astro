@@ -66,6 +66,14 @@ const points = etapes
         pitchWithRotate: false,
       });
       map.doubleClickZoom.disable();
+      // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
+      let voyageLinksHidden = false;
+      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "trace-sportive", "tous-les-traces"];
+      const syncVoyageLinkVisibility = () => {
+        for (const id of voyageLinkLayers) {
+          if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", voyageLinksHidden ? "none" : "visible");
+        }
+      };
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.addControl(new maplibregl.FullscreenControl(), "top-right");
 
@@ -129,6 +137,7 @@ const points = etapes
               ...(trace.tirets ? { "line-dasharray": trace.tirets } : {}),
             },
           });
+          syncVoyageLinkVisibility();
         }
         let selectedDay = document.documentElement.dataset.voyageDay || "";
         const updateSelectedDay = (date:string) => {
@@ -277,6 +286,7 @@ const points = etapes
               map.addLayer({id:"fil-des-souvenirs",type:"line",source:"fil-des-souvenirs",
                 layout:{"line-cap":"round","line-join":"round"},
                 paint:{"line-color":"#b78369","line-width":2,"line-dasharray":[2,3],"line-opacity":.68}});
+              syncVoyageLinkVisibility();
             }
             const showTrace=async(id:string)=>{
               try{
@@ -295,6 +305,7 @@ const points = etapes
                   map.addLayer({id:"trace-sportive",type:"line",source:"trace-sportive",
                     layout:{"line-cap":"round","line-join":"round"},
                     paint:{"line-color":"#df784a","line-width":5}});
+                  syncVoyageLinkVisibility();
                 }
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
@@ -310,8 +321,9 @@ const points = etapes
                 if(eventName==="dblclick") event.preventDefault();
               });
             }
-            allTracesButton.textContent="Recentrer tous les tracés";
-            allTracesButton.setAttribute("aria-label","Recentrer la carte sur tous les tracés GPS");
+            allTracesButton.textContent="Masquer tous les liens entre les étapes";
+            allTracesButton.setAttribute("aria-label","Masquer tous les liens entre les étapes");
+            allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
             const loadAllTraces=async()=>{
               const activities=memories.filter(e=>e.type==="sport"&&e.id);
@@ -338,6 +350,7 @@ const points = etapes
                 map.addLayer({id:"tous-les-traces",type:"line",source:"tous-les-traces",
                   layout:{"line-cap":"round","line-join":"round"},
                   paint:{"line-color":"#df784a","line-width":3.5,"line-opacity":.85}});
+                syncVoyageLinkVisibility();
               }
               const bounds=new maplibregl.LngLatBounds();
               for(const feature of features){
@@ -346,7 +359,13 @@ const points = etapes
               if(!bounds.isEmpty())map.fitBounds(bounds,{padding:60,maxZoom:12,duration:650});
             };
             allTracesButton.addEventListener("click",()=>{
-              if(!allTracesButton.disabled)void loadAllTraces();
+              voyageLinksHidden = !voyageLinksHidden;
+              syncVoyageLinkVisibility();
+              allTracesButton.textContent = voyageLinksHidden
+                ? "Afficher tous les liens entre les étapes"
+                : "Masquer tous les liens entre les étapes";
+              allTracesButton.setAttribute("aria-label", allTracesButton.textContent);
+              allTracesButton.setAttribute("aria-pressed", String(voyageLinksHidden));
             });
             map.addControl({onAdd:()=>allTracesButton,onRemove:()=>allTracesButton.remove()} as maplibregl.IControl,"top-left");
             // Les tracés GPS sont chargés et affichés automatiquement à l'ouverture.
