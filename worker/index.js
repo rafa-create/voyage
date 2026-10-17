@@ -120,7 +120,7 @@ export default {
     const url=new URL(request.url),path=url.pathname;
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
-    if(path==="/api/public/defi"&&request.method==="GET")return json(await freshPublicChallenge(env));
+    if(path==="/api/public/defi"&&request.method==="GET")return json(await freshPublicChallenge(env,{forceSports:url.searchParams.get("actualiser")==="1"}));
     if(path==="/api/public/parcours"&&request.method==="GET")return json({parcours:await publicArchives(env)});
     if(path==="/api/public/carte-evenements"&&request.method==="GET"){
       return json({courses:await archiveMapPoints(env)});
