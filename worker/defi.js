@@ -301,10 +301,19 @@ export function summarizeChallenge(config,chess,activities,today){
   const previous=sameMode.length>1?sameMode.at(-2)?.rating:null;
   const rating=chess?.ratingStats?.rapid||latestRated?.rating||null;
   const delta=sameMode.length>1 ? sameMode.at(-1).rating-previous : null;
+  // Une valeur de classement par JOUR, conservée pour pouvoir consulter
+  // l'évolution telle qu'elle était à n'importe quelle date passée.
+  const ratingsByDay=new Map();
+  for(const game of sameMode){
+    const earlier=ratingsByDay.get(game.date);
+    if(!earlier||Number(game.fin)>Number(earlier.fin))ratingsByDay.set(game.date,{
+      date:game.date,fin:game.fin,rating:game.rating
+    });
+  }
   return {configured:true,debut:config.debut,timezone:config.timezone,username:config.chessUsername,
     misAJour:chess?.lastSync||null,historiquePartiel:Boolean(chess?.partial),
     elo:{rating,mode,delta,tendance:delta==null?"stable":delta>0?"hausse":delta<0?"baisse":"stable",
-      historique:sameMode.slice(-12).map(g=>({date:g.date,fin:g.fin,rating:g.rating}))},
+      historique:[...ratingsByDay.values()].sort((a,b)=>a.fin-b.fin)},
     stats:{jours:days.length,joursEchecs:days.filter(d=>d.echecs).length,
       joursActivites:days.filter(d=>d.activite).length,joursComplets:days.filter(d=>d.resultat==="reussi").length,
       reussite:finished.length?Math.round(completed/finished.length*100):null,joursTermines:finished.length},
