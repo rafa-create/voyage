@@ -1,0 +1,200 @@
+---
+import Base from "../../layouts/Base.astro";
+import { chemin } from "../../lib/paths";
+---
+<Base title="Administration">
+  <section class="container admin-page">
+    <div class="admin-intro">
+      <div>
+        <p class="eyebrow">TABLEAU DE BORD PERSONNEL</p>
+        <h1>Gérer le voyage<span class="heading-dot">.</span></h1>
+        <p>Choisis ton étape, ajoute tes photos et partage-les dans le bon album.</p>
+      </div>
+      <a class="text-link" href={chemin("/espace/")}>← Galerie privée</a>
+    </div>
+    <p id="admin-status" class="admin-status" role="status">Vérification de ton accès administrateur…</p>
+    <div id="admin-workspace" class="admin-workspace" hidden>
+      <div class="admin-card">
+        <p class="eyebrow">01 / LOCALISATION</p>
+        <h2>Étape actuelle</h2>
+        <p>Les nouvelles photos seront classées sous cette étape par défaut.</p>
+        <form id="active-form">
+          <label for="active-select">Étape en cours</label>
+          <select id="active-select" required></select>
+          <button type="submit" class="button button-primary">Définir comme étape actuelle ↗</button>
+        </form>
+      </div>
+      <div class="admin-card">
+        <p class="eyebrow">02 / PHOTOS</p>
+        <h2>Ajouter des souvenirs</h2>
+        <p>Les photos partent directement dans R2, sans être enregistrées dans GitHub.</p>
+        <form id="photo-form">
+          <label for="upload-etape">Destination</label>
+          <select id="upload-etape" required></select>
+          <label for="upload-visibility">Visibilité</label>
+          <select id="upload-visibility" required>
+            <option value="public">Publique — visible sur le site</option>
+            <option value="prive">Privée — seulement pour les proches connectés</option>
+          </select>
+          <label for="upload-files">Photos (JPEG, PNG, WebP, AVIF ou GIF, 12 Mo maximum par photo)</label>
+          <input id="upload-files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" multiple required />
+          <button type="submit" class="button button-primary">Envoyer les photos ↗</button>
+          <p id="photo-progress" role="status" class="admin-feedback"></p>
+        </form>
+      </div>
+      <div class="admin-card admin-step">
+        <p class="eyebrow">03 / ITINÉRAIRE</p>
+        <h2>Créer une étape</h2>
+        <p>Les nouvelles étapes sont enregistrées dans le stockage privé R2. Elles peuvent ensuite être choisies pour tes prochains imports.</p>
+        <form id="step-form">
+          <label for="step-ville">Ville</label><input id="step-ville" required maxlength="150" placeholder="Ex. Marseille"/>
+          <label for="step-pays">Pays</label><input id="step-pays" required maxlength="150" placeholder="Ex. France"/>
+          <label for="step-titre">Titre</label><input id="step-titre" required maxlength="150" placeholder="Ex. Escale à Marseille"/>
+          <label for="step-date">Date</label><input id="step-date" type="date" required/>
+          <div class="admin-two-fields">
+            <div><label for="step-lat">Latitude</label><input id="step-lat" type="number" step="any" min="-90" max="90" required placeholder="43.2965"/></div>
+            <div><label for="step-lon">Longitude</label><input id="step-lon" type="number" step="any" min="-180" max="180" required placeholder="5.3698"/></div>
+          </div>
+          <label for="step-texte">Court récit (facultatif)</label>
+          <textarea id="step-texte" rows="4"></textarea>
+          <button type="submit" class="button button-primary">Enregistrer l'étape ↗</button>
+          <p id="step-feedback" role="status" class="admin-feedback"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+  <script>
+    type Etape = { slug:string; titre:string; ville:string; pays:string; statut:string };
+    const status = document.querySelector<HTMLElement>("#admin-status");
+    const workspace = document.querySelector<HTMLElement>("#admin-workspace");
+    const active = document.querySelector<HTMLSelectElement>("#active-select");
+    const destination = document.querySelector<HTMLSelectElement>("#upload-etape");
+    let all: Etape[] = [];
+
+    async function api(path: string, options?: RequestInit) {
+      const res = await fetch(path, { credentials: "same-origin", ...options });
+      const data = await res.json().catch(() => ({ error: "Erreur réseau ou accès refusé." }));
+      if (!res.ok) throw Error(data.error || "Accès refusé. Vérifie la connexion Cloudflare Access.");
+      return data;
+    }
+    async function post(path: string, data: object) {
+      return api(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Voyage-Admin": "1" },
+        body: JSON.stringify(data),
+      });
+    }
+    function options() {
+      if (!active || !destination) return;
+      active.replaceChildren();
+      destination.replaceChildren();
+      for (const step of all) {
+        for (const select of [active, destination]) {
+          const opt = document.createElement("option");
+          opt.value = step.slug;
+          opt.textContent = step.ville + " · " + step.pays;
+          select.append(opt);
+        }
+      }
+      const current = all.find(e => e.statut === "actuelle");
+      if (current) { active.value = current.slug; destination.value = current.slug; }
+    }
+    async function refresh() {
+      all = (await api("/api/prive/etapes")).etapes;
+      options();
+    }
+    async function start() {
+      try {
+        const me = await api("/api/prive/moi");
+        if (!me.isAdmin) throw Error("Cet espace est réservé à l'administrateur.");
+        await refresh();
+        if (workspace) workspace.hidden = false;
+        if (status) status.textContent = "Connecté en tant qu'administrateur.";
+      } catch (e) { if (status) status.textContent = e instanceof Error ? e.message : "Accès indisponible."; }
+    }
+    start();
+
+    document.querySelector<HTMLFormElement>("#active-form")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!active || !status) return;
+      try {
+        await post("/api/prive/admin/actuelle", { slug: active.value });
+        await refresh();
+        status.textContent = "Étape actuelle mise à jour. Les prochaines photos seront classées ici.";
+      } catch (err) { status.textContent = err instanceof Error ? err.message : "Erreur."; }
+    });
+
+    document.querySelector<HTMLFormElement>("#photo-form")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const upload = document.querySelector<HTMLInputElement>("#upload-files");
+      const visibilite = document.querySelector<HTMLSelectElement>("#upload-visibility");
+      const progress = document.querySelector<HTMLElement>("#photo-progress");
+      const form = e.currentTarget as HTMLFormElement;
+      if (!upload?.files?.length || !destination || !visibilite || !progress) return;
+      const files = Array.from(upload.files);
+      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+      if (button) button.disabled = true;
+      let done = 0;
+      try {
+        for (const file of files) {
+          if (file.size > 12 * 1024 * 1024) throw Error(file.name + " dépasse la limite de 12 Mo.");
+          progress.textContent = "Import en cours : " + (done + 1) + "/" + files.length + " · " + file.name;
+          const path = "/api/prive/admin/upload?etape=" + encodeURIComponent(destination.value) + "&visibilite=" + encodeURIComponent(visibilite.value);
+          const res = await fetch(path, { method: "POST", credentials: "same-origin", headers: { "X-Voyage-Admin": "1", "Content-Type": file.type }, body: file });
+          const response = await res.json().catch(() => ({}));
+          if (!res.ok) throw Error(response.error || "Échec du transfert " + file.name);
+          done++;
+        }
+        progress.textContent = done + " photo(s) ajoutée(s) avec succès dans l'étape sélectionnée !";
+        upload.value = "";
+      } catch (err) {
+        progress.textContent = done + " photo(s) envoyée(s). " + (err instanceof Error ? err.message : "Erreur de transfert.");
+      } finally { if (button) button.disabled = false; }
+    });
+
+    function slugify(input: string): string {
+      return input.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    }
+    document.querySelector<HTMLFormElement>("#step-form")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      const get = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement).value.trim();
+      const feedback = document.querySelector<HTMLElement>("#step-feedback");
+      const data = {
+        slug: slugify(get("step-ville")) + "-" + get("step-date"),
+        ville: get("step-ville"), pays: get("step-pays"), titre: get("step-titre"),
+        date: get("step-date"), texte: get("step-texte"),
+        latitude: Number(get("step-lat")), longitude: Number(get("step-lon")),
+      };
+      try {
+        await post("/api/prive/admin/etapes", data);
+        await refresh();
+        if (feedback) feedback.textContent = "Étape créée. Tu peux maintenant y ajouter des photos.";
+        form.reset();
+      } catch (err) { if (feedback) feedback.textContent = err instanceof Error ? err.message : "Erreur."; }
+    });
+  </script>
+  <style>
+    .admin-page { padding: 64px 0 110px; }
+    .admin-intro { display: flex; justify-content: space-between; gap: 20px; align-items: end; }
+    .admin-intro h1 { font-size: clamp(2.8rem,5vw,4.6rem); margin: 16px 0; }
+    .admin-intro p:last-child { color: var(--muted); }
+    .admin-status { padding: 18px 22px; margin: 32px 0; background: #dce8db; color: var(--forest); line-height: 1.5; }
+    .admin-workspace { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; }
+    .admin-workspace[hidden] { display: none; }
+    .admin-card { padding: clamp(20px,3vw,32px); background: var(--white); border: 1px solid var(--line); }
+    .admin-card h2 { font-size: 2rem; margin-bottom: 10px; }
+    .admin-card p { color: var(--muted); line-height: 1.6; }
+    .admin-card form { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+    .admin-card label { font-size: .82rem; font-weight: 700; }
+    .admin-card input,.admin-card select,.admin-card textarea { display: block; width: 100%; padding: 12px; border-radius: 3px; border: 1px solid #bbbfb5; background: #fff; color: var(--ink); font: inherit; }
+    .admin-card input[type=file] { font-size: .83rem; }
+    .admin-card button { align-self: start; cursor: pointer; margin-top: 9px; }
+    .admin-card button:disabled { opacity: .5; cursor: wait; }
+    .admin-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .admin-two-fields label { display: block; margin: 0 0 12px; }
+    .admin-step { grid-column: 1/-1; }
+    .admin-feedback { font-size: .81rem; }
+    @media(max-width:760px) { .admin-intro { flex-direction: column; align-items: start; } .admin-workspace { grid-template-columns: 1fr; } }
+  </style>
+</Base>
