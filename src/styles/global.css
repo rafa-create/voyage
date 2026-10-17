@@ -226,32 +226,38 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 }
 
 
-/* Identité plus personnelle : une vraie photo en ouverture, carte immédiatement après. */
-.route-heading-personal { align-items: stretch; gap: 36px; margin-bottom: 27px; }
-.route-heading-copy { flex: 1 1 56%; display: flex; flex-direction: column; align-items: start; justify-content: center; }
-.route-heading-copy h1 { font-size: clamp(2.6rem,5vw,4.25rem); margin: 16px 0 15px; line-height: 1.09; }
-.route-heading-copy .lead { max-width: 490px; line-height: 1.65; font-size: .93rem; }
-.route-heading-link { margin-top: 15px; }
-.route-cover-photo { width: min(40%,420px); height: 260px; position: relative; overflow: hidden; display: block; background: #d7ddd2; }
+/* Accueil sobre : introduction courte, parcours au premier plan. */
+.route-section { padding-top: 34px; }
+.route-heading-personal { align-items: center; gap: 24px; margin-bottom: 20px; }
+.route-heading-copy { flex: 1 1 60%; display: flex; flex-direction: column; align-items: start; justify-content: center; }
+.route-heading-copy .eyebrow { margin-bottom: 0; }
+.route-heading-copy h1 { font-size: clamp(2.25rem,4.2vw,3.45rem); margin: 9px 0; line-height: 1.08; font-weight: 500; }
+.route-heading-copy h1 em { font-style: normal; color: var(--ink); font-weight: 400; }
+.route-heading-copy .lead { max-width: 490px; line-height: 1.5; font-size: .91rem; margin-bottom: 0; }
+.route-heading-link { margin-top: 9px; }
+.route-cover-photo { width: min(34%,360px); height: 205px; position: relative; overflow: hidden; display: block; background: #d7ddd2; flex-shrink: 0; }
 .route-cover-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.route-cover-caption { position: absolute; inset: auto 0 0; padding: 38px 20px 17px; display: flex; flex-direction: column; gap: 5px; background: linear-gradient(transparent,rgba(18,31,31,.82)); color: white; }
-.route-cover-caption>span { font-size: .66rem; letter-spacing: .12em; opacity: .9; }
-.route-cover-caption strong { font: 500 1.35rem 'Playfair Display',Georgia,serif; }
+.route-cover-caption { position: absolute; inset: auto 0 0; padding: 30px 16px 13px; display: flex; flex-direction: column; gap: 4px; background: linear-gradient(transparent,rgba(18,31,31,.78)); color: white; }
+.route-cover-caption>span { font-size: .62rem; letter-spacing: .1em; opacity: .9; }
+.route-cover-caption strong { font: 500 1.2rem 'Playfair Display',Georgia,serif; }
 @media (max-width:650px) {
-  .header-inner { padding: 12px 0 8px; gap: 8px; }
-  .brand { font-size: 1.03rem; }
-  .brand-mark { width: 31px; height: 31px; font-size: 21px; }
-  .main-nav { justify-content: space-between; gap: 5px; }
-  .main-nav a { font-size: .76rem; padding: 10px 0; }
-  .route-heading-personal { gap: 14px; margin-bottom: 16px; }
-  .route-heading-copy h1 { font-size: clamp(2.1rem,9vw,3rem); margin: 11px 0; }
-  .route-heading-copy .lead { margin-bottom: 5px; font-size: .88rem; line-height: 1.55; }
-  .route-heading-link { margin-top: 7px; }
-  .route-cover-photo { width: 100%; height: 165px; }
-  .route-cover-caption { padding: 25px 16px 11px; }
-  .route-map-title { padding: 15px 16px 12px; gap: 3px; }
-  .route-map-title h2 { font-size: 1.5rem; }
-  .voyage-map { height: 275px; }
+  .header-inner { padding: 8px 0 5px; gap: 8px; min-height: auto; }
+  .brand { font-size: 1rem; }
+  .brand-mark { width: 29px; height: 29px; font-size: 20px; }
+  .main-nav { justify-content: center; gap: 5px 16px; }
+  .main-nav a { font-size: .74rem; padding: 7px 0; }
+  .route-section { padding-top: 20px; }
+  .route-heading-personal { gap: 0; margin-bottom: 14px; }
+  .route-heading-copy h1 { font-size: clamp(1.9rem,7.8vw,2.55rem); margin: 7px 0; line-height: 1.08; }
+  .route-heading-copy .lead { margin-bottom: 0; font-size: .83rem; line-height: 1.45; }
+  .route-heading-link { margin-top: 6px; font-size: .82rem; }
+  .route-cover-photo { display: none; }
+  .route-map-title { padding: 13px 15px 10px; gap: 3px; }
+  .route-map-title h2 { font-size: 1.35rem; }
+  .route-map-counter { font-size: .7rem; }
+  .voyage-map { height: 290px; }
+  .route-layout { gap: 14px; }
+  .route-journal { padding: 17px; }
 }
 
 /* Six rubriques : garder une navigation lisible sur les petits téléphones. */
