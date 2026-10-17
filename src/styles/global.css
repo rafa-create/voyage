@@ -303,6 +303,19 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 }
 
 
+/* Les commandes chronologiques restent au-dessus des photos et des marqueurs. */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  z-index: 1000 !important;
+  pointer-events: none;
+}
+.maplibregl-ctrl-bottom-left .map-day-control,
+.maplibregl-ctrl-bottom-right .map-today-control {
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
 /* Commandes chronologiques discrètes intégrées au bas de la carte. */
 .map-day-control {
   display:flex;
