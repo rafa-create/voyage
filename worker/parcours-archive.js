@@ -73,6 +73,11 @@ export async function importGpx(env,form){
     !["course","kitesurf","football","velo","marche","autre"].includes(sport))
     throw Error("Type d'activité ou visibilité invalide.");
   const xml=await file.text();
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(xml));
+  const sourceHash=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");
+  const duplicates=await archiveIndex(env);
+  const already=duplicates.find(item=>item.sourceHash===sourceHash);
+  if(already)return {...publicItem(already),alreadyArchived:true};
   const parsed=parseGpx(xml);
   if(!parsed)throw Error("Impossible de lire ce tracé GPX.");
   // L'heure de départ contenue dans l'original est prioritaire.
@@ -95,13 +100,12 @@ export async function importGpx(env,form){
     titre: title,sport, public:visibility==="public",pointCount:parsed.pointCount,
     latitude:parsed.route[Math.floor(parsed.route.length/2)][0],
     longitude:parsed.route[Math.floor(parsed.route.length/2)][1],
-    source:"archive",ajouteLe:new Date().toISOString()};
+    source:"archive",sourceHash,ajouteLe:new Date().toISOString()};
   // La copie GPX originale appartient au propriétaire et ne dépend pas de l'API.
   await env.PHOTOS_PRIVEES.put(SOURCE+id+".gpx",xml,{
     httpMetadata:{contentType:"application/gpx+xml"}});
   await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",{...item,route:parsed.route});
-  const existing=await archiveIndex(env);
-  await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...existing,item].slice(-6000)});
+  await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...duplicates,item].slice(-6000)});
   return publicItem(item);
 }
 export async function publicArchivedRoute(env,id){
