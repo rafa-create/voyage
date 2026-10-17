@@ -9,7 +9,8 @@
       "/media-prive/*",
       "/api/*",
       "/espace/*",
-      "/admin/*"
+      "/admin/*",
+      "/etapes/*"
     ]
   },
   "workers_dev": true,
