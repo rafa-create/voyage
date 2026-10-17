@@ -301,12 +301,12 @@ import Base from "../layouts/Base.astro";
     }
     $("strava-widgets")?.addEventListener("toggle",loadWidgets);
 
-    async function load(){
+    async function load(forceSports=false){
       const refresh=$("refresh-defi") as HTMLButtonElement|null;
       if(refresh)refresh.disabled=true;
       write("defi-loading","Mise à jour du défi…");
       try{
-        const response=await fetch("/api/public/defi",{cache:"no-store"});
+        const response=await fetch("/api/public/defi"+(forceSports?"?actualiser=1":""),{cache:"no-store"});
         if(!response.ok)throw Error("Le défi est momentanément indisponible.");
         const data:Defi=await response.json();
         const content=$("defi-content"),empty=$("defi-empty");
@@ -338,7 +338,7 @@ import Base from "../layouts/Base.astro";
       }catch(err){write("defi-loading",err instanceof Error?err.message:"Chargement impossible.");}
       finally{if(refresh)refresh.disabled=false;}
     }
-    $("refresh-defi")?.addEventListener("click",load);
+    $("refresh-defi")?.addEventListener("click",()=>void load(true));
     void load();
   </script>
 
