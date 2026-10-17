@@ -1,4 +1,5 @@
 import { requireAccess } from "./auth.js";
+import { publicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
@@ -68,11 +69,13 @@ export default {
   async scheduled(event,env,ctx){
     // Chaque jour, examiner les nouveaux objets R2 non classés (sans connexion humaine).
     ctx.waitUntil(synchroniserR2(env));
+    ctx.waitUntil(syncChess(env).catch(e=>console.warn("Synchronisation Chess.com:",String(e))));
   },
   async fetch(request,env){
     const url=new URL(request.url),path=url.pathname;
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
+    if(path==="/api/public/defi"&&request.method==="GET")return json(await publicChallenge(env));
     if(path==="/api/public/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/public/photos"&&request.method==="GET"){
       const slug=url.searchParams.get("etape");
@@ -118,6 +121,7 @@ export default {
       return new Response(page.body,{status:page.status,headers});
     }
     if(path==="/api/prive/moi"&&request.method==="GET")return json(auth.user);
+    if(path==="/api/prive/admin/defi"&&request.method==="GET"&&auth.user.isAdmin)return json(await privateChallenge(env));
     if(path==="/api/prive/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/prive/photos"&&request.method==="GET"){
       return json({photos:(await listedPhotos(env,"prive")).filter(p=>p.etape)});
@@ -135,6 +139,25 @@ export default {
     }
     if(request.method!=="POST"||!mutationOk(request))return error("Action non autorisée.",403);
 
+    if(path==="/api/prive/admin/defi/config"){
+      const input=await readBody(request);
+      try{return json({ok:true,config:await setChallengeConfig(env,input)});}
+      catch(e){return error(e.message);}
+    }
+    if(path==="/api/prive/admin/defi/chess-synchroniser"){
+      try{return json(await syncChess(env));}
+      catch(e){return error("Synchronisation Chess.com impossible : "+e.message,502);}
+    }
+    if(path==="/api/prive/admin/defi/strava-ajouter"){
+      const input=await readBody(request);
+      try{return json({ok:true,activite:await addStravaActivity(env,input)},201);}
+      catch(e){return error(e.message);}
+    }
+    if(path==="/api/prive/admin/defi/strava-supprimer"){
+      const input=await readBody(request);
+      try{await deleteStravaActivity(env,input?.url);return json({ok:true});}
+      catch(e){return error(e.message);}
+    }
     if(path==="/api/prive/admin/etapes"){
       const input=await readBody(request),step=validateStage(input);
       if(!step)return error("Étape invalide : renseigne titre, ville, pays, dates et coordonnées.");
