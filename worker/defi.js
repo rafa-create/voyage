@@ -10,6 +10,7 @@ const DEFAULT_CONFIG=Object.freeze({
 });
 const CHESS_KEY="__meta/defi/chess.json";
 const STRAVA_KEY="__meta/defi/strava.json";
+const STRAVA_FEED_KEY="__meta/defi/strava-public-feed.json";
 const MAX_DAYS=1095;
 const MAX_MONTHS_PER_SYNC=12;
 const usernamePattern=/^[a-zA-Z0-9_-]{3,30}$/;
@@ -139,6 +140,35 @@ export async function freshPublicChallenge(env){
   return {...current,synchronisation:sync};
 }
 
+// Intégration officielle du flux Strava (widget servi par Strava).
+// Il n'utilise ni jeton OAuth, ni copie des activités, ni API Strava.
+export function parsePublicStravaFeed(input){
+  if(typeof input!=="string"||input.length>2500)return null;
+  const trimmed=input.trim();
+  if(!trimmed)return "";
+  const iframe=/<iframe\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1/i.exec(trimmed);
+  const candidate=(iframe?iframe[2]:trimmed).replaceAll("&amp;","&");
+  try{
+    const url=new URL(candidate);
+    if(url.protocol!=="https:"||url.hostname!=="www.strava.com"||
+       !/^\/athletes\/[1-9][0-9]{0,19}\/(?:latest-rides|activity-summary)\/[a-zA-Z0-9_-]+\/?$/.test(url.pathname))
+      return null;
+    if(url.username||url.password)return null;
+    for(const key of url.searchParams.keys())if(!["show_rides"].includes(key))return null;
+    return url.href;
+  }catch{return null;}
+}
+export async function getPublicStravaFeed(env){
+  const stored=await getJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,{url:""});
+  return parsePublicStravaFeed(stored?.url||"")||"";
+}
+export async function setPublicStravaFeed(env,input){
+  const url=parsePublicStravaFeed(input);
+  if(url===null)throw Error("Copie le code d'intégration du flux ou du résumé de ton profil Strava, pas celui d'une seule activité.");
+  await putJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,{url});
+  return url;
+}
+
 export function normalizeStravaActivity(input){
   if(!input||!validDate(input.date)||typeof input.titre!=="string"||!input.titre.trim()||input.titre.length>120)return null;
   const km=Number(input.km);
@@ -208,7 +238,8 @@ export async function publicChallenge(env){
     getJSON(env.PHOTOS_PRIVEES,CHESS_KEY,{games:[],lastSync:null}),
     getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[])
   ]);
-  return summarizeChallenge(config,chess,activities,dateInZone(new Date(),config.timezone));
+  const result=summarizeChallenge(config,chess,activities,dateInZone(new Date(),config.timezone));
+  return {...result,stravaFeed:await getPublicStravaFeed(env)};
 }
 export async function privateChallenge(env){
   const result=await publicChallenge(env);
