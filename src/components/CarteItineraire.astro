@@ -8,6 +8,7 @@ const points = etapes
   .sort((a, b) => a.date.localeCompare(b.date))
   .map((etape) => ({
     slug: etape.slug,
+    date: etape.date,
     titre: etape.titre,
     ville: etape.ville,
     pays: etape.pays,
@@ -33,6 +34,7 @@ const points = etapes
 
   type Point = {
     slug: string;
+    date: string;
     titre: string;
     ville: string;
     pays: string;
