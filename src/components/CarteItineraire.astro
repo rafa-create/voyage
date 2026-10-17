@@ -141,6 +141,7 @@ const points = etapes
           element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
             const active = !selectedDay || marker.dataset.date === selectedDay;
             marker.style.opacity = active ? "1" : ".38";
+            marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
             marker.style.zIndex = active ? "2" : "1";
           });
         });
@@ -273,7 +274,7 @@ const points = etapes
                 link.textContent="Voir dans la galerie ↗";panel.append(link);
               }
               if(selectedDay && selectedDay !== memory.date){
-                marker.style.opacity=".38";
+                marker.style.opacity=".38";marker.style.transform="scale(.82)";
               }
               new maplibregl.Marker({element:marker,anchor:"center"})
                 .setLngLat([memory.longitude,memory.latitude])
