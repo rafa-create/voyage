@@ -110,11 +110,21 @@ import { chemin } from "../lib/paths";
             img.loading = "lazy";
             button.append(img);
             const cap = document.createElement("figcaption");
-            cap.textContent = "Étape : " + photo.etape;
+            const lieu = photo.etape ? "Étape : " + photo.etape : "";
+            const horodatage = photo.dateHeure || photo.datePrise || "";
+            const heure = horodatage ? " · " + String(horodatage).replace("T", " ").slice(0, 16) : "";
+            cap.textContent = lieu + heure;
             figure.append(button, cap);
             grid.append(figure);
           }
           gallery.hidden = false;
+          // Une photo ouverte depuis la carte est sélectionnée dès son insertion.
+          const requested = new URLSearchParams(location.search).get("photo");
+          if (requested) {
+            const target = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
+              .find(button => button.dataset.photo === requested || decodeURIComponent(button.dataset.photo || "") === requested);
+            target?.click();
+          }
         })
         .catch(() => {});
     }
@@ -176,5 +186,12 @@ import { chemin } from "../lib/paths";
       if (agrandissement) agrandissement.removeAttribute("src");
       index = -1;
     });
+    // Gère aussi les photos déjà présentes dans le HTML statique.
+    const requestedPhoto = new URLSearchParams(location.search).get("photo");
+    if (requestedPhoto) {
+      const target = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
+        .find(button => button.dataset.photo === requestedPhoto || decodeURIComponent(button.dataset.photo || "") === requestedPhoto);
+      target?.click();
+    }
   </script>
 </Base>
