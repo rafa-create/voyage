@@ -165,7 +165,7 @@ import Base from "../layouts/Base.astro";
           document.getElementById("courses")?.scrollIntoView({behavior:"smooth"});
           chooseRun(day.activite!);
         });task.append(go);
-      }else if(kind==="run"&&day.activite?.url)task.append(external(day.activite.url,"↗"));
+      }else if(kind==="run"&&day.activite?.url&&!day.activite?.id)task.append(external(day.activite.url,"↗"));
       return task;
     }
     function dayCard(day:Day,index:number,total:number){
@@ -245,7 +245,7 @@ import Base from "../layouts/Base.astro";
         button.addEventListener("click",()=>chooseRun(run));
         list.append(button);
       }
-      void chooseRun(knownRuns[0]);
+      void chooseRun(knownRuns.find(run=>run.parcours)||knownRuns[0]);
     }
     async function chooseRun(run:Run){
       const turn=++routeTurn;
