@@ -136,7 +136,7 @@ export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
 const PUBLIC_POLL_KEY="__meta/defi/chess-public-poll.json";
 const PUBLIC_POLL_MIN_MS=120000;
 
-export async function freshPublicChallenge(env){
+export async function freshPublicChallenge(env,{forceSports=false}={}){
   const config=await getChallengeConfig(env);
   if(!config)return {configured:false};
   let sync={etat:"cache",prochaineVerification:null};
@@ -157,7 +157,7 @@ export async function freshPublicChallenge(env){
   }
   // Mettre aussi à jour les dernières courses publiquement visibles,
   // avec un plafond d'un appel toutes les dix minutes.
-  const stravaSync=await syncPublicRuns(env);
+  const stravaSync=await syncPublicRuns(env,{force:forceSports});
   const current=await publicChallenge(env);
   return {...current,synchronisation:sync,stravaSynchronisation:stravaSync};
 }
@@ -234,12 +234,12 @@ export async function deleteStravaActivity(env,url){
 // Les données de l'API sportive sont temporaires : elles ne doivent pas devenir
 // une archive permanente. Les archives conservables proviennent des fichiers
 // GPX originaux fournis par le propriétaire, dans parcours-archive.js.
-export async function syncPublicRuns(env){
+export async function syncPublicRuns(env,{force=false}={}){
   // L'ouverture de la page déclenche la mise à jour du cache PERSONNEL.
   // Le résultat du défi public reste exclusivement fondé sur les archives
   // indépendantes importées par le propriétaire.
   const {syncRecentSports}=await import("./sport-sync.js");
-  const result=await syncRecentSports(env);
+  const result=await syncRecentSports(env,{force});
   return {etat:result.etat};
 }
 export async function publicRoute(env,id){
