@@ -126,6 +126,15 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 .lightbox::backdrop { background: rgba(12,24,23,.87); }
 .lightbox img { margin: auto; max-height: calc(94vh - 110px); object-fit: contain; }
 .lightbox-close { position: absolute; top: 13px; right: 20px; color: white; background: transparent; border: 1px solid #82958b; padding: 6px 10px; cursor: pointer; }
+.lightbox-fullscreen { position: absolute; top: 13px; right: 72px; color: white; background: transparent; border: 1px solid #82958b; padding: 6px 10px; cursor: pointer; }
+.lightbox:fullscreen, .lightbox.lightbox-fullscreen-mode { box-sizing: border-box; position: fixed; inset: 0; margin: 0; width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; padding: 58px 12px 18px; border-radius: 0; overflow: auto; }
+.lightbox:fullscreen img, .lightbox.lightbox-fullscreen-mode img { max-height: calc(100vh - 125px); max-height: calc(100dvh - 125px); }
+.lightbox:fullscreen .lightbox-video, .lightbox.lightbox-fullscreen-mode .lightbox-video { width: min(100%, 1200px); height: min(70vh, 675px); margin: auto; }
+@media(max-width:650px) {
+  .lightbox-fullscreen { right: 66px; }
+  .lightbox:fullscreen, .lightbox.lightbox-fullscreen-mode { padding: 58px 8px 12px; }
+  .lightbox:fullscreen img, .lightbox.lightbox-fullscreen-mode img { max-height: calc(100dvh - 115px); }
+}
 .site-footer { border-top: 1px solid var(--line); }
 .footer-inner { min-height: 120px; display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); font-size: .8rem; }
 @media(max-width:900px) {
