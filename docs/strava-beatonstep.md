@@ -1,21 +1,34 @@
-# Relier Strava à Voyage via BeatOnStep
+# Intégration Strava entre BeatOnStep et Voyage
 
-Les deux projets conservent leurs propres interfaces ; aucune connexion OAuth supplémentaire n'est créée.
+Les deux sites utilisent le même compte Strava. BeatOnStep reste la source des jetons OAuth stockés sur son Worker ; l'interface BeatOnStep est inchangée.
 
-## Configuration (une seule fois)
+## Activation Cloudflare
 
-1. Dans les paramètres Cloudflare du Worker `beatonstep-website`, ajouter un **Secret** `VOYAGE_BRIDGE_KEY` avec une valeur aléatoire de 40 caractères ou plus.
-2. Dans les paramètres du Worker `voyage`, ajouter un **Secret** `VOYAGE_BRIDGE_KEY` avec **exactement la même valeur**.
-3. S'assurer que les deux Workers utilisent les dernières versions déployées. Ne pas placer la clé dans GitHub.
-4. Depuis BeatOnStep, le compte Strava du propriétaire doit déjà être connecté et autorisé à lire les activités (`activity:read`). L'identifiant du propriétaire par défaut est celui du profil Strava choisi pour Voyage ; il peut être remplacé dans BeatOnStep par la variable `VOYAGE_STRAVA_ATHLETE_ID`.
-5. Ouvrir la page publique `/defi/`, déplier « Mes courses et tracés GPS » en étant connecté en tant qu'administrateur Cloudflare Access. Les courses et les tracés sont alors chargés uniquement dans cette session.
+- Ajouter le même secret `VOYAGE_BRIDGE_KEY` (minimum 40 caractères) dans `beatonstep-website` et `voyage`, et déployer les deux Workers.
+- BeatOnStep doit avoir une connexion Strava active autorisant `activity:read`.
+- BeatOnStep peut préciser l'athlète dans `VOYAGE_STRAVA_ATHLETE_ID`, sinon le profil déjà configuré par défaut est utilisé.
+- Les secrets restent dans Cloudflare, jamais dans le dépôt GitHub.
 
-L'endpoint de BeatOnStep `/api/voyage/strava/*` est verrouillé sans clé de liaison et ne transmet jamais de jeton Strava.
+## Synchronisation publique
 
-## Affichage
+- `/api/public/defi` déclenche au maximum toutes les dix minutes la synchronisation des dernières courses via le pont privé.
+- Seules les activités dont la visibilité renvoyée par Strava est exactement `everyone` sont incluses, jamais les sorties privées ou réservées aux abonnés.
+- La liste des dix sorties les plus récentes se trouve dans R2. Elle inclut les sorties antérieures à la date de début du défi pour la carte de localisation historique.
+- Sur la page `/defi/`, chaque journée de défi présente **la dernière** course publique de la date et **la dernière** partie d'échecs, sans cumul d'activités.
+- Pour chaque course publique récente, `/api/public/defi/parcours/:id` retourne un tracé simplifié : uniquement pour les IDs de courses présentes dans la liste publique ; les extrémités du tracé sont réduites d'environ 7 % lorsqu'il y a assez de points.
+- La carte MapLibre utilise les tuiles OpenFreeMap.
+- Les widgets Strava officiels sont repliés par défaut en complément du journal.
 
-Les widgets Strava officiels restent publics et repliés par défaut. L'historique API et ses cartes MapLibre restent accessibles uniquement à l'administrateur authentifié. Les données API ne sont pas mises en cache par Voyage ni publiées sur la page accessible aux visiteurs, conformément aux restrictions d'affichage Strava applicables.
+## Échecs / ELO
 
-Les courses affichées sont les dix courses les plus récentes retournées par l'intégration BeatOnStep. Les parcours peuvent ne pas être disponibles pour certaines activités ou selon les autorisations Strava. Il ne s'agit pas d'une localisation en temps réel.
+Les parties récentes sont synchronisées avec l'API publique Chess.com, au maximum toutes les deux minutes lors d'une visite. Le dernier résultat terminé dans une journée est retenu.
 
-Le calendrier public des journées complètes utilise toujours les entrées Strava saisies/publiées depuis Voyage : le flux API privé ne modifie pas automatiquement ce calendrier public.
+Les classements sont lus depuis les statistiques et les archives Chess.com ; on ne compare que les parties de la même cadence pour les variations. Si les données sont insuffisantes, l'interface affiche un tiret plutôt qu'une variation inventée.
+
+## Limites et publication
+
+Les parcours GPS sont visibles à tout visiteur du carnet. Cela peut révéler la localisation de l'athlète ; les débuts et fins sont atténués, mais le tracé reste informatif. Les utilisateurs doivent veiller à configurer leurs zones de confidentialité sur Strava.
+
+Les données partagées via l'API restent soumises aux conditions Strava en vigueur, indépendamment du fait que l'athlète soit propriétaire du compte et du partage d'une application OAuth avec BeatOnStep.
+
+L'API ne représente pas une géolocalisation en direct. Si le pont Strava ne répond pas, les dernières courses enregistrées restent affichées et le défi Chess.com continue de fonctionner.
