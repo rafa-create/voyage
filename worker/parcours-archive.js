@@ -52,9 +52,11 @@ export function parseGpx(source){
 }
 function publicItem(item){
   const parcours=item.source!=="import_automatique"||["disponible","resume"].includes(item.routeState);
+  const distant=item.source==="import_automatique"&&/^strava:[1-9][0-9]{0,19}$/.test(item.sourceId||"")
+    ? "https://www.strava.com/activities/"+item.sourceId.slice(7):null;
   return {id:item.id,date:item.date,fin:item.fin,km:item.km,
     minutes:item.minutes,titre:item.titre,sport:item.sport||"course",
-    parcours,url:"/defi/#courses",source:"archive"};
+    parcours,url:distant||item.url||null,source:"archive"};
 }
 export async function archiveIndex(env){
   const value=await getJSON(env.PHOTOS_PRIVEES,INDEX,{items:[]});
