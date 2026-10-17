@@ -108,7 +108,7 @@ import Base from "../layouts/Base.astro";
   <script>
     import "maplibre-gl/dist/maplibre-gl.css";
     type Chess = {date:string;result:string;url:string;fin:number;rating?:number|null;mode?:string|null;eloDelta?:number|null};
-    type Run = {id?:string;date:string;fin?:number;km:number;kmTotal?:number;titre:string;minutes?:number;url:string;source?:string};
+    type Run = {id?:string;date:string;fin?:number;km:number;kmTotal?:number;titre:string;minutes?:number;url:string;source?:string;sport?:string;parcours?:boolean};
     type Day = {date:string;echecs:Chess|null;activite:Run|null;resultat:"reussi"|"en_cours"|"manque"};
     type Elo = {rating:number|null;mode:string;delta:number|null;tendance:string;historique:{date:string;rating:number;fin:number}[]};
     type Defi = {configured:boolean;username?:string;stats?:{jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null;joursTermines:number};jours?:Day[];elo?:Elo;coursesRecentes?:Run[];stravaFeed?:string;stravaSummary?:string;misAJour?:string;derniereCourseSynchro?:string|null;stravaSynchronisation?:{etat:string}};
@@ -159,7 +159,7 @@ import Base from "../layouts/Base.astro";
       }
       task.append(symbol,copy);
       if(kind==="chess"&&day.echecs?.url)task.append(external(day.echecs.url,"↗"));
-      else if(kind==="run"&&day.activite?.id){
+      else if(kind==="run"&&day.activite?.id&&day.activite.parcours){
         const go=el("button","route-jump","Carte ↗");
         go.type="button";go.addEventListener("click",()=>{
           document.getElementById("courses")?.scrollIntoView({behavior:"smooth"});
@@ -227,12 +227,9 @@ import Base from "../layouts/Base.astro";
     function renderRuns(runs:Run[]){
       const list=$("recent-runs");if(!list)return;
       list.replaceChildren();
-      // Les courses antérieures au lancement du défi restent consultables sur la carte.
-      const latestByDay=new Map<string,Run>();
-      for(const run of [...runs].sort((a,b)=>Number(b.fin||0)-Number(a.fin||0))){
-        if(!latestByDay.has(run.date))latestByDay.set(run.date,run);
-      }
-      knownRuns=[...latestByDay.values()];
+      // Sur la carte, montrer TOUTES les activités sportives (plusieurs par jour).
+      // Seul le bilan quotidien ne retient que la plus récente.
+      knownRuns=[...runs].sort((a,b)=>Number(b.fin||0)-Number(a.fin||0));
       if(!knownRuns.length){
         list.append(el("p","map-empty","Les parcours récents apparaîtront ici dès leur publication."));
         write("map-help","Aucun tracé public disponible pour le moment.");
@@ -244,6 +241,7 @@ import Base from "../layouts/Base.astro";
         const top=el("div","recent-date");
         top.append(el("span",undefined,shortDate(run.date)),el("span",undefined,km(run.km)));
         button.append(top,el("strong",undefined,run.titre));
+        if(!run.parcours)button.append(el("small","run-no-route","Activité enregistrée · sans tracé GPS"));
         button.addEventListener("click",()=>chooseRun(run));
         list.append(button);
       }
@@ -336,7 +334,7 @@ import Base from "../layouts/Base.astro";
         write("runs-note",data.stravaSynchronisation?.etat==="erreur"
           ?"Les dernières courses enregistrées restent affichées même si la synchronisation échoue."
           :"Les parcours présentés ici ne constituent pas une géolocalisation en direct.");
-        write("defi-loading","Défi synchronisé · dernière partie et dernière course retenues pour chaque date.");
+        write("defi-loading","Défi synchronisé · une partie rapide et une activité par jour, tous les sports sur la carte.");
       }catch(err){write("defi-loading",err instanceof Error?err.message:"Chargement impossible.");}
       finally{if(refresh)refresh.disabled=false;}
     }
@@ -415,6 +413,7 @@ import Base from "../layouts/Base.astro";
     .recent-run:hover{border-color:var(--forest)}
     .recent-date{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:.73rem;margin-bottom:6px}
     .recent-run strong{font-size:.84rem;line-height:1.35;display:block;overflow-wrap:anywhere}
+    .run-no-route{display:block;color:var(--muted);font-size:.72rem;margin-top:7px}
     .map-empty{font-size:.85rem;color:var(--muted);line-height:1.6}
     .map-area{position:relative;min-width:0;border:1px solid var(--line);background:#e5eee9}
     .run-map{height:410px;width:100%}
