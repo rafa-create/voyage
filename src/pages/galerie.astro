@@ -77,6 +77,42 @@ import { chemin } from "../lib/paths";
     )}
   </section>
 
+  <section id="galerie-r2-direct" class="container section" hidden>
+    <div class="section-heading"><div><p class="eyebrow">AJOUTÉES EN COURS DE ROUTE</p><h2>Nouveaux souvenirs<span class="heading-dot">.</span></h2></div></div>
+    <div id="galerie-r2-grid" class="photo-grid gallery-grid"></div>
+  </section>
+  <script>
+    const gallery = document.querySelector<HTMLElement>("#galerie-r2-direct");
+    const grid = document.querySelector<HTMLElement>("#galerie-r2-grid");
+    if (gallery && grid) {
+      fetch("/api/public/photos")
+        .then(response => response.ok ? response.json() : { photos: [] })
+        .then(({ photos }) => {
+          if (!photos.length) return;
+          for (const photo of photos) {
+            const figure = document.createElement("figure");
+            figure.className = "photo-tile";
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "photo-open";
+            button.dataset.photo = photo.src;
+            button.dataset.alt = photo.alt || "Photo de voyage";
+            button.setAttribute("aria-label", "Afficher " + (photo.alt || "la photo"));
+            const img = document.createElement("img");
+            img.src = photo.src;
+            img.alt = photo.alt || "Photo de voyage";
+            img.loading = "lazy";
+            button.append(img);
+            const cap = document.createElement("figcaption");
+            cap.textContent = "Étape : " + photo.etape;
+            figure.append(button, cap);
+            grid.append(figure);
+          }
+          gallery.hidden = false;
+        })
+        .catch(() => {});
+    }
+  </script>
   <dialog id="visionneuse" class="lightbox" aria-label="Photo agrandie">
     <button type="button" class="lightbox-close" aria-label="Fermer la photo">Fermer ✕</button>
     <img src="" alt="" />
@@ -84,13 +120,12 @@ import { chemin } from "../lib/paths";
   <script>
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
     const agrandissement = dialog?.querySelector("img");
-    document.querySelectorAll<HTMLButtonElement>(".photo-open").forEach((bouton) => {
-      bouton.addEventListener("click", () => {
-        if (!dialog || !agrandissement) return;
-        agrandissement.src = bouton.dataset.photo || "";
-        agrandissement.alt = bouton.dataset.alt || "";
-        dialog.showModal();
-      });
+    document.addEventListener("click", (evenement) => {
+      const bouton = (evenement.target as HTMLElement).closest<HTMLButtonElement>(".photo-open");
+      if (!bouton || !dialog || !agrandissement) return;
+      agrandissement.src = bouton.dataset.photo || "";
+      agrandissement.alt = bouton.dataset.alt || "";
+      dialog.showModal();
     });
     dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
     dialog?.addEventListener("click", (evenement) => {
