@@ -44,7 +44,31 @@ async function stageExists(env,slug){return slugOk(slug)&&(await steps(env)).som
 function makePublicSteps(all){
   return all.map(e=>({slug:e.slug,date:e.date,dateFin:e.dateFin||null,pays:e.pays,ville:e.ville,titre:e.titre,texte:e.texte||"",latitude:e.latitude,longitude:e.longitude,statut:e.statut,videos:[],photos:[]}));
 }
+async function synchroniserR2(env) {
+  // Une passe courte et bornée pour respecter les quotas gratuits.
+  const all=await steps(env);
+  let matched=0,unclassified=0,examined=0;
+  for(const visibility of ["public","prive"]){
+    const bucket=bucketFor(env,visibility);
+    const photos=await listedPhotos(env,visibility);
+    for(const photo of photos.filter(p=>!p.etape).slice(0,30)){
+      examined++;
+      const date=photo.datePrise||await getCaptureDate(bucket,photo.key);
+      const stage=matchStep(date,all);
+      if(!stage){unclassified++;continue;}
+      const name="etapes/"+stage.slug+"/"+crypto.randomUUID()+"."+photo.key.split(".").pop().toLowerCase();
+      await movePhoto(bucket,bucket,photo.key,name,{etape:stage.slug,...(date?{datePrise:date}:{})});
+      matched++;
+    }
+  }
+  return {ok:true,examined,matched,unclassified};
+}
+
 export default {
+  async scheduled(event,env,ctx){
+    // Chaque jour, examiner les nouveaux objets R2 non classés (sans connexion humaine).
+    ctx.waitUntil(synchroniserR2(env));
+  },
   async fetch(request,env){
     const url=new URL(request.url),path=url.pathname;
 
@@ -174,23 +198,7 @@ export default {
       return json({ok:true});
     }
     if(path==="/api/prive/admin/synchroniser"){
-      // Détection à la demande : un seul lot limité, pas de cron ni d'API facturée.
-      const all=await steps(env);
-      let matched=0,unclassified=0,examined=0;
-      for(const vis of ["public","prive"]){
-        const bucket=bucketFor(env,vis);
-        const photos=await listedPhotos(env,vis);
-        for(const photo of photos.filter(p=>!p.etape).slice(0,30)){
-          examined++;
-          const date=photo.datePrise||await getCaptureDate(bucket,photo.key);
-          const stage=matchStep(date,all);
-          if(!stage){unclassified++;continue;}
-          const name="etapes/"+stage.slug+"/"+crypto.randomUUID()+"."+photo.key.split(".").pop().toLowerCase();
-          await movePhoto(bucket,bucket,photo.key,name,{etape:stage.slug,...(date?{datePrise:date}:{})});
-          matched++;
-        }
-      }
-      return json({ok:true,examined,matched,unclassified,message:"Synchronisation terminée. Les fichiers sans date reconnue restent à classer."});
+      return json(await synchroniserR2(env));
     }
     if(path==="/api/prive/admin/assigner"||path==="/api/prive/admin/visibilite"||path==="/api/prive/admin/supprimer-photo"){
       const input=await readBody(request);
