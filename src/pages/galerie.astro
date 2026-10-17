@@ -19,7 +19,7 @@ import { chemin } from "../lib/paths";
         <h2>Le voyage en images<span class="heading-dot">.</span></h2>
       </div>
     </div>
-    <div id="galerie-unifiee-grid" class="photo-grid gallery-grid">
+    <div id="galerie-unifiee-grid" class="gallery-months">
       {photosAClasser.map((photo) => (
         <figure class="photo-tile" data-date={(photo as any).date || ""}>
           <button type="button" class="photo-open" data-photo={chemin(photo.src)} data-alt={photo.alt} aria-label={"Afficher en grand : " + photo.alt}>
@@ -45,7 +45,38 @@ import { chemin } from "../lib/paths";
       if (!unifiedGrid) return;
       const items = Array.from(unifiedGrid.querySelectorAll<HTMLElement>("figure.photo-tile"));
       items.sort((a, b) => String(b.dataset.date || "").localeCompare(String(a.dataset.date || "")));
-      items.forEach(item => unifiedGrid.append(item));
+      const groups = new Map<string, HTMLElement[]>();
+      for (const item of items) {
+        const rawDate = String(item.dataset.date || "");
+        const match = rawDate.match(/^(\\d{4})[-/](\\d{1,2})/);
+        const monthKey = match ? match[1] + "-" + match[2].padStart(2, "0") : "sans-date";
+        if (!groups.has(monthKey)) groups.set(monthKey, []);
+        groups.get(monthKey)!.push(item);
+      }
+      unifiedGrid.replaceChildren();
+      for (const [monthKey, monthItems] of groups) {
+        const section = document.createElement("details");
+        section.className = "gallery-month";
+        section.open = monthKey === groups.keys().next().value;
+        const summary = document.createElement("summary");
+        const title = document.createElement("span");
+        if (monthKey === "sans-date") title.textContent = "Date inconnue";
+        else {
+          const [year, month] = monthKey.split("-");
+          const date = new Date(Number(year), Number(month) - 1, 1);
+          title.textContent = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date);
+          title.textContent = title.textContent.charAt(0).toLocaleUpperCase("fr-FR") + title.textContent.slice(1);
+        }
+        const count = document.createElement("span");
+        count.className = "gallery-month-count";
+        count.textContent = monthItems.length + (monthItems.length > 1 ? " souvenirs" : " souvenir");
+        summary.append(title, count);
+        const grid = document.createElement("div");
+        grid.className = "photo-grid gallery-grid";
+        monthItems.forEach(item => grid.append(item));
+        section.append(summary, grid);
+        unifiedGrid.append(section);
+      }
       const empty = document.querySelector<HTMLElement>("#galerie-vide");
       if (empty) empty.hidden = items.length > 0;
     };
@@ -295,6 +326,18 @@ import { chemin } from "../lib/paths";
       target?.click();
     }
   </script>
+  <style>
+    .gallery-months{display:flex;flex-direction:column;gap:1rem}
+    .gallery-month{border:1px solid var(--line,#deded6);background:var(--surface,#fff)}
+    .gallery-month>summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;cursor:pointer;list-style:none;font-family:'Playfair Display',Georgia,serif;font-size:1.25rem}
+    .gallery-month>summary::-webkit-details-marker{display:none}
+    .gallery-month>summary::before{content:"+";display:inline-grid;place-items:center;width:1.6rem;height:1.6rem;border:1px solid var(--line,#deded6);border-radius:50%;font:1rem 'DM Sans',sans-serif;flex-shrink:0}
+    .gallery-month[open]>summary::before{content:"−"}
+    .gallery-month>summary>span:first-of-type{flex:1}
+    .gallery-month-count{font: .75rem 'DM Sans',sans-serif;color:var(--muted,#777);white-space:nowrap}
+    .gallery-month .gallery-grid{padding:0 1rem 1rem}
+    @media(max-width:600px){.gallery-month>summary{padding:.85rem;font-size:1.1rem}.gallery-month .gallery-grid{padding:0 .65rem .65rem}}
+  </style>
   <style>
     .lightbox:not([open]){display:none}
     .lightbox{box-sizing:border-box;width:min(96vw,1100px);max-width:96vw;max-height:96dvh;overflow:auto;padding:3.5rem 1rem 1rem;position:relative}
