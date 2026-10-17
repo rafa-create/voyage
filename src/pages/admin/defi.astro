@@ -55,8 +55,17 @@ import { chemin } from "../../lib/paths";
           <h2>Garder mes courses pour toujours</h2>
           <p>Ajoute ici un fichier GPX depuis ta montre, ton téléphone ou un export personnel. Le fichier original et le parcours restent sauvegardés dans le stockage de ce site : il n'y a aucune dépendance à un service sportif extérieur.</p>
           <form id="gpx-import-form" class="admin-form">
-            <label for="gpx-title">Nom de la course</label>
-            <input id="gpx-title" name="titre" required maxlength="120" placeholder="Course au bord de la mer" />
+            <label for="gpx-title">Nom de l'activité</label>
+            <input id="gpx-title" name="titre" required maxlength="120" placeholder="Course, kitesurf ou football…" />
+            <label for="gpx-sport">Type d'activité</label>
+            <select id="gpx-sport" name="sport">
+              <option value="course">Course à pied</option>
+              <option value="kitesurf">Kitesurf</option>
+              <option value="football">Football</option>
+              <option value="velo">Vélo</option>
+              <option value="marche">Marche</option>
+              <option value="autre">Autre activité</option>
+            </select>
             <div class="two-col">
               <div>
                 <label for="gpx-date">Date</label>
