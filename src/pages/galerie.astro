@@ -122,7 +122,8 @@ import { chemin } from "../lib/paths";
       for (const photo of (photosData.photos || [])) {
         const figure = document.createElement("figure");
         figure.className = "photo-tile";
-        const stamp = String(photo.dateHeure || photo.datePrise || photo.ajouteLe || "");
+        const photoStep = steps.find((step: any) => step.slug === photo.etape);
+        const stamp = String(photo.dateHeure || photo.datePrise || photo.ajouteLe || photoStep?.date || "");
         figure.dataset.date = stamp || "";
         const button = document.createElement("button");
         button.type = "button"; button.className = "photo-open";
