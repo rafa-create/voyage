@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {archiveNewSports} from "../worker/archive-auto.js";
 import {archiveIndex,publicArchives} from "../worker/parcours-archive.js";
+import {summarizeChallenge} from "../worker/defi.js";
 
 function fakeBucket(){
   const records=new Map();
@@ -45,4 +46,16 @@ test("les anciennes copies publiques remontent automatiquement dans le défi",as
   list[0].public=false;
   await bucket.put("__meta/parcours/index.json",JSON.stringify({items:list}));
   assert.equal((await publicArchives(env)).length,1);
+});
+test("une course récupérée automatiquement complète le défi du jour avec les échecs rapides",async()=>{
+  const env={PHOTOS_PRIVEES:fakeBucket()};
+  await archiveNewSports(env,[sport(987,1792224000000,"Run")],{maxRoutes:0});
+  const activities=await publicArchives(env);
+  const config={debut:"2026-10-17",chessUsername:"rafaelorset",timezone:"Europe/Paris"};
+  const games=[{date:"2026-10-17",fin:1792240000,mode:"rapid",result:"defaite",rating:1010,url:"https://www.chess.com/game/live/123"}];
+  const result=summarizeChallenge(config,{games},activities,"2026-10-17");
+  assert.equal(result.stats.joursActivites,1);
+  assert.equal(result.stats.joursEchecs,1);
+  assert.equal(result.jours[0].resultat,"reussi");
+  assert.equal(result.jours[0].activite.km,4.9);
 });
