@@ -148,8 +148,8 @@ const points = etapes
             const [{photos},{courses}]=await Promise.all([photosResponse.json(),runsResponse.json()]);
             const memories:Event[]=[];
             for(const photo of (Array.isArray(photos)?photos:[])){
-              if(!photo||!photo.datePrise||!Number.isFinite(photo.latitude)||!Number.isFinite(photo.longitude))continue;
-              memories.push({type:"photo",date:photo.datePrise,fin:Date.parse(photo.datePrise+"T12:00:00Z"),
+              if(!photo||!Number.isFinite(photo.latitude)||!Number.isFinite(photo.longitude))continue;
+              memories.push({type:"photo",date:photo.datePrise||"",fin:photo.datePrise?Date.parse(photo.datePrise+"T12:00:00Z"):undefined,
                 latitude:photo.latitude,longitude:photo.longitude,
                 titre:photo.alt||"Souvenir du voyage",src:photo.src,etape:photo.etape});
             }
@@ -162,7 +162,7 @@ const points = etapes
             const baseEvents:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
               type:"photo",date:p.date,fin:Date.parse(p.date+"T00:00:00Z"),
               latitude:p.latitude,longitude:p.longitude,titre:p.ville}));
-            const chronology=[...baseEvents,...memories].filter(p=>Number.isFinite(p.latitude)&&
+            const chronology=[...baseEvents,...memories].filter(p=>p.date&&Number.isFinite(p.latitude)&&
               Number.isFinite(p.longitude)).sort((a,b)=>Number(a.fin||0)-Number(b.fin||0));
             if(chronology.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{type:"Feature",properties:{},
@@ -182,7 +182,7 @@ const points = etapes
               const content=document.createElement("div");
               content.className="map-popup-content";
               const title=document.createElement("strong");title.textContent=memory.titre;
-              const date=document.createElement("span");date.textContent=memory.date;
+              const date=document.createElement("span");date.textContent=memory.date||"Date de prise de vue non disponible";
               content.append(title,date);
               if(memory.type==="photo"&&memory.src){
                 const image=document.createElement("img");image.src=memory.src;
