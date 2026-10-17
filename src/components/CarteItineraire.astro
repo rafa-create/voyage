@@ -26,6 +26,8 @@ const points = etapes
     <span><span class="legend-dot legend-current" aria-hidden="true"></span> Étape actuelle</span>
     <span><span class="legend-dot legend-past" aria-hidden="true"></span> Parcouru</span>
     <span><span class="legend-dot legend-future" aria-hidden="true"></span> À venir</span>
+    <span>● Photos géolocalisées</span>
+    <span>● Courses archivées</span>
   </div>
 </div>
 <script>
@@ -132,6 +134,78 @@ const points = etapes
             },
           });
         }
+        // Points archivés dans le carnet : photos EXIF (position approx.)
+        // et courses GPX. Les données privées ne sont jamais chargées ici.
+        void (async()=>{
+          type Event = {date:string;fin?:number;latitude:number;longitude:number;type:"photo"|"course";
+            titre:string;src?:string;etape?:string;id?:string;distance?:number};
+          try{
+            const [photosResponse,runsResponse]=await Promise.all([
+              fetch("/api/public/photos",{cache:"no-store"}),
+              fetch("/api/public/carte-evenements",{cache:"no-store"})
+            ]);
+            if(!photosResponse.ok||!runsResponse.ok)return;
+            const [{photos},{courses}]=await Promise.all([photosResponse.json(),runsResponse.json()]);
+            const memories:Event[]=[];
+            for(const photo of (Array.isArray(photos)?photos:[])){
+              if(!photo||!photo.datePrise||!Number.isFinite(photo.latitude)||!Number.isFinite(photo.longitude))continue;
+              memories.push({type:"photo",date:photo.datePrise,fin:Date.parse(photo.datePrise+"T12:00:00Z"),
+                latitude:photo.latitude,longitude:photo.longitude,
+                titre:photo.alt||"Souvenir du voyage",src:photo.src,etape:photo.etape});
+            }
+            for(const course of (Array.isArray(courses)?courses:[])){
+              if(!course||!Number.isFinite(course.latitude)||!Number.isFinite(course.longitude))continue;
+              memories.push({type:"course",date:course.date,fin:course.fin,
+                latitude:course.latitude,longitude:course.longitude,
+                titre:course.titre||"Course à pied",id:course.id,distance:course.distance});
+            }
+            const baseEvents:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
+              type:"photo",date:p.date,fin:Date.parse(p.date+"T00:00:00Z"),
+              latitude:p.latitude,longitude:p.longitude,titre:p.ville}));
+            const chronology=[...baseEvents,...memories].filter(p=>Number.isFinite(p.latitude)&&
+              Number.isFinite(p.longitude)).sort((a,b)=>Number(a.fin||0)-Number(b.fin||0));
+            if(chronology.length>=2){
+              map.addSource("fil-des-souvenirs",{type:"geojson",data:{type:"Feature",properties:{},
+                geometry:{type:"LineString",coordinates:chronology.map(p=>[p.longitude,p.latitude])}}});
+              map.addLayer({id:"fil-des-souvenirs",type:"line",source:"fil-des-souvenirs",
+                layout:{"line-cap":"round","line-join":"round"},
+                paint:{"line-color":"#b78369","line-width":2,"line-dasharray":[2,3],"line-opacity":.68}});
+            }
+            for(const memory of memories.slice(-180)){
+              const marker=document.createElement("button");
+              marker.type="button";
+              marker.title=(memory.type==="course"?"Course · ":"Photo · ")+memory.date;
+              marker.setAttribute("aria-label",memory.title+" du "+memory.date);
+              marker.style.cssText="width:16px;height:16px;cursor:pointer;border:2px solid #fff;border-radius:50%;"+
+                "background:"+(memory.type==="photo"?"#4c837c":"#c86f4d")+";"+
+                "box-shadow:0 1px 5px #0005;";
+              const content=document.createElement("div");
+              content.className="map-popup-content";
+              const title=document.createElement("strong");title.textContent=memory.titre;
+              const date=document.createElement("span");date.textContent=memory.date;
+              content.append(title,date);
+              if(memory.type==="photo"&&memory.src){
+                const image=document.createElement("img");image.src=memory.src;
+                image.alt=memory.titre;image.loading="lazy";
+                image.style.cssText="width:100%;max-width:230px;max-height:160px;object-fit:cover;border-radius:6px;margin:6px 0;";
+                content.append(image);
+              }
+              if(memory.type==="course"){
+                const link=document.createElement("a");
+                link.href="/defi/#courses";
+                link.textContent="Voir mes courses et la carte ↗";
+                content.append(link);
+              }else if(memory.etape){
+                const link=document.createElement("a");
+                link.href="/etapes/"+encodeURIComponent(memory.etape)+"/";
+                link.textContent="Voir l'étape ↗";content.append(link);
+              }
+              new maplibregl.Marker({element:marker,anchor:"center"})
+                .setLngLat([memory.longitude,memory.latitude])
+                .setPopup(new maplibregl.Popup({offset:14}).setDOMContent(content)).addTo(map);
+            }
+          }catch{ /* Les étapes principales restent accessibles si les souvenirs échouent. */ }
+        })();
         if (points.length > 1) {
           const bornes = new maplibregl.LngLatBounds();
           points.forEach((p) => bornes.extend([p.longitude, p.latitude]));
