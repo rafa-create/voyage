@@ -27,11 +27,11 @@ const { paysItem } = Astro.props;
         <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
           {etape.photos[0] ? (
             <img src={chemin(etape.photos[0].src)} alt={etape.photos[0].alt} loading="lazy" width="720" height="480" />
-          ) : <div class="card-illustration"><span>✳</span></div>}
+          ) : <div class="card-illustration"></div>}
           <div class="card-body">
             <span class="card-meta">{dateFr(etape.date)} · {etape.ville}</span>
             <h2>{etape.titre}</h2>
-            <span class="card-more">Voir l'étape ↗</span>
+            <span class="card-more">Voir l'étape</span>
           </div>
         </a>
       ))}
@@ -51,7 +51,7 @@ const { paysItem } = Astro.props;
           const card=document.createElement("div");card.className="card-body";
           const meta=document.createElement("span");meta.className="card-meta";meta.textContent=e.date+" · "+e.ville;
           const h=document.createElement("h2");h.textContent=e.titre;
-          const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape ↗";
+          const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape";
           card.append(meta,h,more);a.append(card);grid.append(a);
         }
       }).catch(()=>{});
