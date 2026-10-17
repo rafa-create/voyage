@@ -3,198 +3,481 @@ import Base from "../../layouts/Base.astro";
 import { chemin } from "../../lib/paths";
 ---
 <Base title="Administration">
-  <section class="container admin-page">
-    <div class="admin-intro">
+  <section class="container admin-journey">
+    <header class="admin-head">
       <div>
-        <p class="eyebrow">TABLEAU DE BORD PERSONNEL</p>
-        <h1>Gérer le voyage<span class="heading-dot">.</span></h1>
-        <p>Choisis ton étape, ajoute tes photos et partage-les dans le bon album.</p>
+        <p class="eyebrow">MON ESPACE ADMINISTRATEUR</p>
+        <h1>Mes souvenirs<span class="heading-dot">.</span></h1>
+        <p>Étapes, photos et vidéos. Tout depuis ton téléphone.</p>
       </div>
-      <a class="text-link" href={chemin("/espace/")}>← Galerie privée</a>
+      <a class="text-link" href={chemin("/espace/")}>Albums privés ↗</a>
+    </header>
+    <div class="admin-topline">
+      <p id="admin-status" role="status">Vérification de la connexion…</p>
+      <button type="button" id="refresh-btn" disabled>↻ Actualiser</button>
     </div>
-    <p id="admin-status" class="admin-status" role="status">Vérification de ton accès administrateur…</p>
-    <div id="admin-workspace" class="admin-workspace" hidden>
-      <div class="admin-card">
-        <p class="eyebrow">01 / LOCALISATION</p>
-        <h2>Étape actuelle</h2>
-        <p>Les nouvelles photos seront classées sous cette étape par défaut.</p>
-        <form id="active-form">
-          <label for="active-select">Étape en cours</label>
-          <select id="active-select" required></select>
-          <button type="submit" class="button button-primary">Définir comme étape actuelle ↗</button>
+    <div id="admin-app" hidden>
+      <section class="admin-panel admin-now">
+        <div class="admin-section-title">
+          <div><p class="eyebrow">01 / EN CE MOMENT</p><h2>Où suis-je ?</h2></div>
+          <span class="admin-pill">Étape active</span>
+        </div>
+        <form id="active-form" class="compact-form">
+          <select id="active-select" aria-label="Étape actuelle" required></select>
+          <button type="submit" class="admin-primary">Enregistrer</button>
         </form>
-      </div>
-      <div class="admin-card">
-        <p class="eyebrow">02 / PHOTOS</p>
-        <h2>Ajouter des souvenirs</h2>
-        <p>Les photos partent directement dans R2, sans être enregistrées dans GitHub.</p>
-        <form id="photo-form">
-          <label for="upload-etape">Destination</label>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-section-title">
+          <div><p class="eyebrow">02 / UN NOUVEAU SOUVENIR</p><h2>Ajouter des photos</h2></div>
+        </div>
+        <form id="photo-form" class="admin-stack">
+          <label for="upload-etape">Étape de destination si la photo n'a pas de date reconnue</label>
           <select id="upload-etape" required></select>
-          <label for="upload-visibility">Visibilité</label>
-          <select id="upload-visibility" required>
-            <option value="public">Publique — visible sur le site</option>
-            <option value="prive">Privée — seulement pour les proches connectés</option>
-          </select>
-          <label for="upload-files">Photos (JPEG, PNG, WebP, AVIF ou GIF, 12 Mo maximum par photo)</label>
-          <input id="upload-files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" multiple required />
-          <button type="submit" class="button button-primary">Envoyer les photos ↗</button>
+          <label class="admin-inline-check">
+            <input id="auto-date" type="checkbox" checked/>
+            Classer automatiquement selon la date de prise de vue (EXIF)
+          </label>
+          <label for="upload-files" class="admin-dropzone">
+            <strong>+ Choisir des photos</strong>
+            <span>JPEG, HEIC, PNG, WebP, AVIF · Plusieurs photos à la fois</span>
+          </label>
+          <input id="upload-files" class="visually-hidden" type="file" accept="image/*,.heic,.heif" multiple />
+          <div id="chosen-files" class="chosen-files"></div>
+          <button class="admin-primary" type="submit">Envoyer les photos <span aria-hidden="true">↗</span></button>
+          <p class="admin-note">Chaque photo possède sa propre case « Privée ». Les photos publiques sont compressées et leurs métadonnées GPS supprimées avant envoi.</p>
           <p id="photo-progress" role="status" class="admin-feedback"></p>
         </form>
-      </div>
-      <div class="admin-card admin-step">
-        <p class="eyebrow">03 / ITINÉRAIRE</p>
-        <h2>Créer une étape</h2>
-        <p>Les nouvelles étapes sont enregistrées dans le stockage privé R2. Elles peuvent ensuite être choisies pour tes prochains imports.</p>
-        <form id="step-form">
-          <label for="step-ville">Ville</label><input id="step-ville" required maxlength="150" placeholder="Ex. Marseille"/>
-          <label for="step-pays">Pays</label><input id="step-pays" required maxlength="150" placeholder="Ex. France"/>
-          <label for="step-titre">Titre</label><input id="step-titre" required maxlength="150" placeholder="Ex. Escale à Marseille"/>
-          <label for="step-date">Date</label><input id="step-date" type="date" required/>
-          <div class="admin-two-fields">
-            <div><label for="step-lat">Latitude</label><input id="step-lat" type="number" step="any" min="-90" max="90" required placeholder="43.2965"/></div>
-            <div><label for="step-lon">Longitude</label><input id="step-lon" type="number" step="any" min="-180" max="180" required placeholder="5.3698"/></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-section-title">
+          <div><p class="eyebrow">03 / YOUTUBE</p><h2>Ajouter une vidéo</h2></div>
+        </div>
+        <form id="video-form" class="admin-stack">
+          <label for="video-etape">Étape</label>
+          <select id="video-etape" required></select>
+          <label for="video-title">Titre de la vidéo</label>
+          <input id="video-title" placeholder="Ex. Coucher de soleil sur le port" required maxlength="180"/>
+          <label for="video-url">Lien YouTube</label>
+          <input id="video-url" type="url" required placeholder="https://youtu.be/…"/>
+          <button type="submit" class="admin-primary">Ajouter la vidéo ↗</button>
+          <p id="video-feedback" role="status" class="admin-feedback"></p>
+        </form>
+        <div id="video-list" class="admin-video-list"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-section-title">
+          <div><p class="eyebrow">04 / BIBLIOTHÈQUE R2</p><h2>Gérer les photos</h2></div>
+          <button type="button" class="admin-secondary" id="sync-btn">↻ Synchroniser R2</button>
+        </div>
+        <p class="admin-note">Actualiser recharge les photos réellement présentes dans R2. Synchroniser cherche également les fichiers déposés directement dans le bucket et tente de les classer d'après leur date EXIF.</p>
+        <label for="library-filter">Filtrer les photos</label>
+        <select id="library-filter"><option value="all">Toutes les photos</option><option value="unclassified">À classer</option></select>
+        <p id="sync-result" role="status" class="admin-feedback"></p>
+        <div id="library-list" class="admin-photo-list"></div>
+      </section>
+
+      <section class="admin-panel admin-full">
+        <div class="admin-section-title"><div><p class="eyebrow">05 / ITINÉRAIRE</p><h2>Créer une nouvelle étape</h2></div></div>
+        <form id="step-form" class="admin-stack">
+          <div class="admin-double">
+            <div><label for="step-ville">Ville</label><input id="step-ville" required maxlength="150" placeholder="Ex. Tunis"/></div>
+            <div><label for="step-pays">Pays</label><input id="step-pays" required maxlength="150" placeholder="Ex. Tunisie"/></div>
           </div>
-          <label for="step-texte">Court récit (facultatif)</label>
-          <textarea id="step-texte" rows="4"></textarea>
-          <button type="submit" class="button button-primary">Enregistrer l'étape ↗</button>
+          <label for="step-titre">Titre de l'étape</label><input id="step-titre" required maxlength="150" placeholder="Ex. Arrivée à Tunis"/>
+          <div class="admin-double">
+            <div><label for="step-date">Du</label><input id="step-date" type="date" required/></div>
+            <div><label for="step-end">Au (optionnel)</label><input id="step-end" type="date"/></div>
+          </div>
+          <div class="admin-double">
+            <div><label for="step-lat">Latitude</label><input id="step-lat" type="number" step="any" min="-90" max="90" required/></div>
+            <div><label for="step-lon">Longitude</label><input id="step-lon" type="number" step="any" min="-180" max="180" required/></div>
+          </div>
+          <button class="admin-secondary admin-geocode" type="button" id="find-coordinates">⌖ Trouver les coordonnées de la ville</button>
+          <label for="step-texte">Quelques mots (facultatif)</label>
+          <textarea id="step-texte" rows="3" placeholder="Ce que tu as envie de raconter…"></textarea>
+          <button class="admin-primary" type="submit">Créer l'étape ↗</button>
           <p id="step-feedback" role="status" class="admin-feedback"></p>
         </form>
-      </div>
+      </section>
     </div>
   </section>
-  <script>
-    type Etape = { slug:string; titre:string; ville:string; pays:string; statut:string };
-    const status = document.querySelector<HTMLElement>("#admin-status");
-    const workspace = document.querySelector<HTMLElement>("#admin-workspace");
-    const active = document.querySelector<HTMLSelectElement>("#active-select");
-    const destination = document.querySelector<HTMLSelectElement>("#upload-etape");
-    let all: Etape[] = [];
 
-    async function api(path: string, options?: RequestInit) {
-      const res = await fetch(path, { credentials: "same-origin", ...options });
-      const data = await res.json().catch(() => ({ error: "Erreur réseau ou accès refusé." }));
-      if (!res.ok) throw Error(data.error || "Accès refusé. Vérifie la connexion Cloudflare Access.");
+  <script>
+    import * as exifr from "exifr";
+
+    type Etape = { slug:string; titre:string; ville:string; pays:string; date:string; dateFin?:string; statut:string };
+    type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;alt:string;legacy?:boolean};
+    type Chosen = { file:File; preview:string; date:string|null; prive:boolean };
+    const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
+    const status = $("admin-status");
+    const selectors = ["active-select","upload-etape","video-etape"];
+    let etapes:Etape[]=[];
+    let photos:Photo[]=[];
+    let selected:Chosen[]=[];
+
+    async function api(path:string, options?:RequestInit){
+      const res=await fetch(path,{credentials:"same-origin",cache:"no-store",...options});
+      const data=await res.json().catch(()=>({error:"Service indisponible."}));
+      if(!res.ok)throw Error(data.error||"Accès refusé. Vérifie la connexion Cloudflare Access.");
       return data;
     }
-    async function post(path: string, data: object) {
-      return api(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Voyage-Admin": "1" },
-        body: JSON.stringify(data),
-      });
-    }
-    function options() {
-      if (!active || !destination) return;
-      active.replaceChildren();
-      destination.replaceChildren();
-      for (const step of all) {
-        for (const select of [active, destination]) {
-          const opt = document.createElement("option");
-          opt.value = step.slug;
-          opt.textContent = step.ville + " · " + step.pays;
-          select.append(opt);
+    const post=(path:string,payload:object)=>api(path,{
+      method:"POST",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify(payload)
+    });
+    const message=(id:string,text:string)=>{const el=$(id);if(el)el.textContent=text;};
+    function makeOptions(){
+      const before=Object.fromEntries(selectors.map(id=>[id,($<HTMLSelectElement>(id))?.value]));
+      for(const id of selectors){
+        const select=$<HTMLSelectElement>(id);
+        if(!select)continue;
+        select.replaceChildren();
+        for(const e of etapes){
+          const option=document.createElement("option");
+          option.value=e.slug;option.textContent=e.ville+" · "+e.pays;
+          select.append(option);
         }
+        const choice=before[id];
+        const current=etapes.find(e=>e.statut==="actuelle");
+        select.value=choice&&etapes.some(e=>e.slug===choice)?choice:current?.slug||etapes[0]?.slug||"";
       }
-      const current = all.find(e => e.statut === "actuelle");
-      if (current) { active.value = current.slug; destination.value = current.slug; }
+      const filter=$<HTMLSelectElement>("library-filter");
+      if(filter){
+        const chosen=filter.value;
+        filter.replaceChildren(new Option("Toutes les photos","all"),new Option("À classer","unclassified"));
+        for(const e of etapes)filter.append(new Option(e.ville+" · "+e.pays,e.slug));
+        filter.value=chosen;
+      }
     }
-    async function refresh() {
-      all = (await api("/api/prive/etapes")).etapes;
-      options();
+    async function refresh(){
+      const [steps,library]=await Promise.all([api("/api/prive/etapes"),api("/api/prive/admin/media")]);
+      etapes=steps.etapes;
+      photos=library.photos;
+      makeOptions();
+      renderLibrary();
+      await renderVideos();
+      message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
-    async function start() {
-      try {
-        const me = await api("/api/prive/moi");
-        if (!me.isAdmin) throw Error("Cet espace est réservé à l'administrateur.");
+    async function start(){
+      try{
+        const me=await api("/api/prive/moi");
+        if(!me.isAdmin)throw Error("Cet espace est réservé à l'administrateur.");
         await refresh();
-        if (workspace) workspace.hidden = false;
-        if (status) status.textContent = "Connecté en tant qu'administrateur.";
-      } catch (e) { if (status) status.textContent = e instanceof Error ? e.message : "Accès indisponible."; }
+        const app=$("admin-app");
+        if(app)app.hidden=false;
+        const btn=$<HTMLButtonElement>("refresh-btn");
+        if(btn)btn.disabled=false;
+      }catch(e){message("admin-status",e instanceof Error?e.message:"Connexion impossible.");}
     }
     start();
-
-    document.querySelector<HTMLFormElement>("#active-form")?.addEventListener("submit", async e => {
-      e.preventDefault();
-      if (!active || !status) return;
-      try {
-        await post("/api/prive/admin/actuelle", { slug: active.value });
-        await refresh();
-        status.textContent = "Étape actuelle mise à jour. Les prochaines photos seront classées ici.";
-      } catch (err) { status.textContent = err instanceof Error ? err.message : "Erreur."; }
+    $("refresh-btn")?.addEventListener("click",async()=>{
+      try{message("admin-status","Actualisation…");await refresh();}catch(e){message("admin-status",String(e));}
     });
 
-    document.querySelector<HTMLFormElement>("#photo-form")?.addEventListener("submit", async e => {
+    function displayDate(input:unknown):string|null{
+      if(input instanceof Date&&!Number.isNaN(input.getTime()))
+        return input.getFullYear()+"-"+String(input.getMonth()+1).padStart(2,"0")+"-"+String(input.getDate()).padStart(2,"0");
+      if(typeof input==="string"){
+        const match=/^(\d{4})[:\-](\d{2})[:\-](\d{2})/.exec(input);
+        return match?match[1]+"-"+match[2]+"-"+match[3]:null;
+      }
+      return null;
+    }
+    async function capturedDate(file:File):Promise<string|null>{
+      try{
+        const tags=await exifr.parse(file,["DateTimeOriginal","CreateDate","DateTimeDigitized"]);
+        return displayDate(tags?.DateTimeOriginal||tags?.CreateDate||tags?.DateTimeDigitized);
+      }catch{return null;}
+    }
+    function dateStep(date:string|null):Etape|null{
+      if(!date)return null;
+      const valid=etapes.filter(e=>date>=e.date&&(!e.dateFin||date<=e.dateFin));
+      const sorted=[...etapes].sort((a,b)=>a.date.localeCompare(b.date));
+      const matches=valid.filter(e=>{
+        if(e.dateFin)return true;
+        const next=sorted.find(x=>x.date>e.date);
+        return !next||date<next.date;
+      });
+      return matches.length===1?matches[0]:null;
+    }
+    function renderChosen(){
+      const container=$("chosen-files");if(!container)return;
+      container.replaceChildren();
+      for(const [index,item] of selected.entries()){
+        const el=document.createElement("div");el.className="chosen-file";
+        const image=document.createElement("img");image.src=item.preview;image.alt="";
+        const details=document.createElement("div");details.className="chosen-details";
+        const name=document.createElement("strong");name.textContent=item.file.name;
+        const date=document.createElement("span");date.textContent=item.date?"Prise le "+item.date+(dateStep(item.date)?" · "+dateStep(item.date)?.ville:" · étape à confirmer"):"Date de prise de vue absente : étape sélectionnée";
+        details.append(name,date);
+        const label=document.createElement("label");label.className="chosen-private";
+        const check=document.createElement("input");check.type="checkbox";check.checked=item.prive;
+        check.addEventListener("change",()=>{selected[index].prive=check.checked;});
+        label.append(check," Privée");
+        el.append(image,details,label);container.append(el);
+      }
+    }
+    $<HTMLInputElement>("upload-files")?.addEventListener("change",async e=>{
+      const files=Array.from((e.target as HTMLInputElement).files||[]);
+      selected.forEach(x=>URL.revokeObjectURL(x.preview));
+      selected=[];
+      message("photo-progress","Lecture des dates EXIF…");
+      for(const file of files){
+        selected.push({file,preview:URL.createObjectURL(file),date:await capturedDate(file),prive:false});
+      }
+      renderChosen();message("photo-progress",selected.length+" fichier(s) sélectionné(s).");
+    });
+    async function optimizedPublic(file:File):Promise<Blob>{
+      // Réencodage : retire la plupart des métadonnées EXIF, GPS et limite à 2048 px.
+      const objectURL=URL.createObjectURL(file);
+      try{
+        const image=new Image();
+        image.src=objectURL;
+        await image.decode();
+        const ratio=Math.min(1,2048/Math.max(image.naturalWidth,image.naturalHeight));
+        const canvas=document.createElement("canvas");
+        canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));
+        canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+        const ctx=canvas.getContext("2d");
+        if(!ctx)throw Error("Conversion de l'image impossible.");
+        ctx.drawImage(image,0,0,canvas.width,canvas.height);
+        const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",.86));
+        if(!blob)throw Error("Conversion JPEG impossible.");
+        return blob;
+      }finally{URL.revokeObjectURL(objectURL);}
+    }
+    $<HTMLFormElement>("photo-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
-      const upload = document.querySelector<HTMLInputElement>("#upload-files");
-      const visibilite = document.querySelector<HTMLSelectElement>("#upload-visibility");
-      const progress = document.querySelector<HTMLElement>("#photo-progress");
-      const form = e.currentTarget as HTMLFormElement;
-      if (!upload?.files?.length || !destination || !visibilite || !progress) return;
-      const files = Array.from(upload.files);
-      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
-      if (button) button.disabled = true;
-      let done = 0;
-      try {
-        for (const file of files) {
-          if (file.size > 12 * 1024 * 1024) throw Error(file.name + " dépasse la limite de 12 Mo.");
-          progress.textContent = "Import en cours : " + (done + 1) + "/" + files.length + " · " + file.name;
-          const path = "/api/prive/admin/upload?etape=" + encodeURIComponent(destination.value) + "&visibilite=" + encodeURIComponent(visibilite.value);
-          const res = await fetch(path, { method: "POST", credentials: "same-origin", headers: { "X-Voyage-Admin": "1", "Content-Type": file.type }, body: file });
-          const response = await res.json().catch(() => ({}));
-          if (!res.ok) throw Error(response.error || "Échec du transfert " + file.name);
+      const form=e.currentTarget as HTMLFormElement;
+      const btn=form.querySelector<HTMLButtonElement>("button[type=submit]");
+      if(!selected.length){message("photo-progress","Choisis d'abord des photos.");return;}
+      if(btn)btn.disabled=true;
+      let done=0;
+      try{
+        for(const item of selected){
+          message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
+          const publicPhoto=!item.prive;
+          const body=publicPhoto?await optimizedPublic(item.file):item.file;
+          if(body.size>12*1024*1024)throw Error(item.file.name+" dépasse 12 Mo.");
+          const params=new URLSearchParams({
+            etape:$<HTMLSelectElement>("upload-etape")?.value||"",
+            visibilite:publicPhoto?"public":"prive",
+            auto:$<HTMLInputElement>("auto-date")?.checked?"1":"0",
+          });
+          if(item.date)params.set("datePrise",item.date);
+          const res=await api("/api/prive/admin/upload?"+params.toString(),{
+            method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":publicPhoto?"image/jpeg":item.file.type},body
+          });
           done++;
         }
-        progress.textContent = done + " photo(s) ajoutée(s) avec succès dans l'étape sélectionnée !";
-        upload.value = "";
-      } catch (err) {
-        progress.textContent = done + " photo(s) envoyée(s). " + (err instanceof Error ? err.message : "Erreur de transfert.");
-      } finally { if (button) button.disabled = false; }
+        selected.forEach(x=>URL.revokeObjectURL(x.preview));
+        selected=[];
+        renderChosen();
+        const input=$<HTMLInputElement>("upload-files");if(input)input.value="";
+        await refresh();
+        message("photo-progress",done+" photo(s) enregistrée(s) et classée(s).");
+      }catch(err){
+        message("photo-progress",done+" envoi(s) réussis. "+(err instanceof Error?err.message:"Erreur."));
+        await refresh().catch(()=>{});
+      }finally{if(btn)btn.disabled=false;}
     });
 
-    function slugify(input: string): string {
-      return input.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    function renderLibrary(){
+      const list=$("library-list");if(!list)return;
+      const filter=$<HTMLSelectElement>("library-filter")?.value||"all";
+      const visible=photos.filter(p=>filter==="all"||filter==="unclassified"&&!p.etape||p.etape===filter);
+      list.replaceChildren();
+      if(!visible.length){const p=document.createElement("p");p.textContent="Aucune photo dans cette sélection.";list.append(p);return;}
+      for(const photo of visible.slice(0,300)){
+        const card=document.createElement("div");card.className="admin-photo-item";
+        const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo de voyage";img.loading="lazy";
+        const body=document.createElement("div");body.className="admin-photo-body";
+        const title=document.createElement("strong");title.textContent=photo.etape?etapes.find(x=>x.slug===photo.etape)?.ville||photo.etape:"À classer";
+        const date=document.createElement("small");date.textContent=photo.datePrise?"Prise le "+photo.datePrise:"Date EXIF inconnue";
+        const actions=document.createElement("div");actions.className="admin-photo-actions";
+        const privateLabel=document.createElement("label");privateLabel.className="chosen-private";
+        const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=photo.visibilite==="prive";checkbox.setAttribute("aria-label","Photo privée");
+        checkbox.addEventListener("change",async()=>{
+          const target=checkbox.checked?"prive":"public";
+          if(!window.confirm("Changer la visibilité de cette photo ? Une photo déjà publique a pu être enregistrée ou mise en cache par d'autres personnes.")){checkbox.checked=!checkbox.checked;return;}
+          checkbox.disabled=true;
+          try{await post("/api/prive/admin/visibilite",{key:photo.key,visibilite:photo.visibilite,nouvelleVisibilite:target});await refresh();}
+          catch(e){checkbox.checked=!checkbox.checked;message("sync-result",String(e));}
+          finally{checkbox.disabled=false;}
+        });
+        privateLabel.append(checkbox," Privée");
+        const del=document.createElement("button");del.type="button";del.className="admin-small-danger";del.textContent="Supprimer";
+        del.addEventListener("click",async()=>{
+          if(!window.confirm("Supprimer définitivement cette photo de R2 ?"))return;
+          del.disabled=true;
+          try{await post("/api/prive/admin/supprimer-photo",{key:photo.key,visibilite:photo.visibilite});await refresh();message("sync-result","Photo supprimée du stockage.");}
+          catch(e){message("sync-result",String(e));del.disabled=false;}
+        });
+        actions.append(privateLabel,del);
+        if(!photo.etape){
+          const select=document.createElement("select");select.setAttribute("aria-label","Attribuer l'étape");
+          for(const e of etapes)select.add(new Option(e.ville+" · "+e.pays,e.slug));
+          const assign=document.createElement("button");assign.type="button";assign.className="admin-secondary";assign.textContent="Classer";
+          assign.addEventListener("click",async()=>{
+            try{await post("/api/prive/admin/assigner",{key:photo.key,visibilite:photo.visibilite,etape:select.value});await refresh();}
+            catch(e){message("sync-result",String(e));}
+          });
+          actions.append(select,assign);
+        }
+        body.append(title,date,actions);card.append(img,body);list.append(card);
+      }
+      if(visible.length>300){const more=document.createElement("p");more.textContent="Affichage limité aux 300 premières photos. Filtre par étape pour en voir davantage.";list.append(more);}
     }
-    document.querySelector<HTMLFormElement>("#step-form")?.addEventListener("submit", async e => {
-      e.preventDefault();
-      const form = e.currentTarget as HTMLFormElement;
-      const get = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement).value.trim();
-      const feedback = document.querySelector<HTMLElement>("#step-feedback");
-      const data = {
-        slug: slugify(get("step-ville")) + "-" + get("step-date"),
-        ville: get("step-ville"), pays: get("step-pays"), titre: get("step-titre"),
-        date: get("step-date"), texte: get("step-texte"),
-        latitude: Number(get("step-lat")), longitude: Number(get("step-lon")),
-      };
-      try {
-        await post("/api/prive/admin/etapes", data);
+    $<HTMLSelectElement>("library-filter")?.addEventListener("change",renderLibrary);
+    $("sync-btn")?.addEventListener("click",async e=>{
+      const btn=e.currentTarget as HTMLButtonElement;btn.disabled=true;
+      message("sync-result","Analyse des nouveaux fichiers R2…");
+      try{
+        const result=await post("/api/prive/admin/synchroniser",{});
         await refresh();
-        if (feedback) feedback.textContent = "Étape créée. Tu peux maintenant y ajouter des photos.";
+        message("sync-result",result.matched+" photo(s) classée(s), "+result.unclassified+" à classer dans le lot vérifié.");
+      }catch(err){message("sync-result",err instanceof Error?err.message:"Erreur de synchronisation.");}
+      finally{btn.disabled=false;}
+    });
+
+    async function renderVideos(){
+      const list=$("video-list");if(!list)return;
+      const slug=$<HTMLSelectElement>("video-etape")?.value;
+      list.replaceChildren();
+      if(!slug)return;
+      const result=await api("/api/prive/admin/videos?etape="+encodeURIComponent(slug));
+      for(const video of result.videos){
+        const line=document.createElement("div");line.className="admin-video-item";
+        const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=video.titre+" ↗";
+        line.append(link);
+        if(video.id){
+          const del=document.createElement("button");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Supprimer cette vidéo");
+          del.addEventListener("click",async()=>{
+            if(!window.confirm("Retirer ce lien YouTube ?"))return;
+            try{await post("/api/prive/admin/video-supprimer",{slug,id:video.id});await renderVideos();}
+            catch(err){message("video-feedback",String(err));}
+          });
+          line.append(del);
+        }
+        list.append(line);
+      }
+    }
+    $("video-etape")?.addEventListener("change",()=>{renderVideos().catch(()=>{});});
+    $<HTMLFormElement>("video-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      try{
+        await post("/api/prive/admin/video-ajouter",{
+          slug:$<HTMLSelectElement>("video-etape")?.value,
+          titre:$<HTMLInputElement>("video-title")?.value,
+          url:$<HTMLInputElement>("video-url")?.value,
+        });
+        message("video-feedback","Vidéo ajoutée à l'étape.");
+        for(const id of ["video-title","video-url"]){const el=$<HTMLInputElement>(id);if(el)el.value="";}
+        await renderVideos();
+      }catch(err){message("video-feedback",err instanceof Error?err.message:"Erreur.");}
+    });
+
+    $<HTMLFormElement>("active-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      try{await post("/api/prive/admin/actuelle",{slug:$<HTMLSelectElement>("active-select")?.value});await refresh();message("admin-status","Étape actuelle mise à jour.");}
+      catch(err){message("admin-status",err instanceof Error?err.message:"Erreur.");}
+    });
+    $("find-coordinates")?.addEventListener("click",async()=>{
+      const ville=$<HTMLInputElement>("step-ville")?.value.trim();
+      const pays=$<HTMLInputElement>("step-pays")?.value.trim();
+      if(!ville||!pays){message("step-feedback","Renseigne la ville et le pays.");return;}
+      try{
+        message("step-feedback","Recherche des coordonnées…");
+        const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(ville+", "+pays));
+        if(!r.ok)throw Error("Service cartographique temporairement indisponible.");
+        const found=await r.json();
+        if(!found.length)throw Error("Lieu introuvable. Tu peux renseigner les coordonnées manuellement.");
+        const lat=$<HTMLInputElement>("step-lat"),lon=$<HTMLInputElement>("step-lon");
+        if(lat)lat.value=found[0].lat;
+        if(lon)lon.value=found[0].lon;
+        message("step-feedback","Coordonnées trouvées. Vérifie qu'elles correspondent au bon lieu.");
+      }catch(e){message("step-feedback",e instanceof Error?e.message:"Recherche impossible.");}
+    });
+    function slugify(text:string){return text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+    $<HTMLFormElement>("step-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const form=e.currentTarget as HTMLFormElement;
+      const val=(id:string)=>($<HTMLInputElement|HTMLTextAreaElement>(id)?.value||"").trim();
+      const input={
+        slug:slugify(val("step-ville"))+"-"+val("step-date"),
+        ville:val("step-ville"),pays:val("step-pays"),titre:val("step-titre"),
+        date:val("step-date"),dateFin:val("step-end")||null,
+        latitude:Number(val("step-lat")),longitude:Number(val("step-lon")),texte:val("step-texte")
+      };
+      try{
+        await post("/api/prive/admin/etapes",input);
+        await refresh();
         form.reset();
-      } catch (err) { if (feedback) feedback.textContent = err instanceof Error ? err.message : "Erreur."; }
+        message("step-feedback","Étape créée ! Elle apparaît sur la carte et dans le choix des destinations.");
+      }catch(err){message("step-feedback",err instanceof Error?err.message:"Erreur.");}
     });
   </script>
   <style>
-    .admin-page { padding: 64px 0 110px; }
-    .admin-intro { display: flex; justify-content: space-between; gap: 20px; align-items: end; }
-    .admin-intro h1 { font-size: clamp(2.8rem,5vw,4.6rem); margin: 16px 0; }
-    .admin-intro p:last-child { color: var(--muted); }
-    .admin-status { padding: 18px 22px; margin: 32px 0; background: #dce8db; color: var(--forest); line-height: 1.5; }
-    .admin-workspace { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; }
-    .admin-workspace[hidden] { display: none; }
-    .admin-card { padding: clamp(20px,3vw,32px); background: var(--white); border: 1px solid var(--line); }
-    .admin-card h2 { font-size: 2rem; margin-bottom: 10px; }
-    .admin-card p { color: var(--muted); line-height: 1.6; }
-    .admin-card form { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-    .admin-card label { font-size: .82rem; font-weight: 700; }
-    .admin-card input,.admin-card select,.admin-card textarea { display: block; width: 100%; padding: 12px; border-radius: 3px; border: 1px solid #bbbfb5; background: #fff; color: var(--ink); font: inherit; }
-    .admin-card input[type=file] { font-size: .83rem; }
-    .admin-card button { align-self: start; cursor: pointer; margin-top: 9px; }
-    .admin-card button:disabled { opacity: .5; cursor: wait; }
-    .admin-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .admin-two-fields label { display: block; margin: 0 0 12px; }
-    .admin-step { grid-column: 1/-1; }
-    .admin-feedback { font-size: .81rem; }
-    @media(max-width:760px) { .admin-intro { flex-direction: column; align-items: start; } .admin-workspace { grid-template-columns: 1fr; } }
+    .admin-journey{padding:40px 0 110px;max-width:1060px}
+    .admin-head{display:flex;justify-content:space-between;gap:20px;align-items:end}
+    .admin-head h1{font-size:clamp(2.4rem,5vw,4.3rem);margin:12px 0}
+    .admin-head p:last-child{color:var(--muted)}
+    .admin-topline{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:14px 0;margin:14px 0 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .admin-topline p{margin:0;color:var(--muted);font-size:.82rem}
+    .admin-topline button,.admin-secondary{background:transparent;border:1px solid #b7c3b9;color:var(--forest);padding:10px 14px;border-radius:3px;font:700 .8rem 'DM Sans',sans-serif;cursor:pointer}
+    #admin-app{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    #admin-app[hidden]{display:none}
+    .admin-panel{padding:clamp(19px,3vw,30px);background:var(--white);border:1px solid var(--line);min-width:0}
+    .admin-now,.admin-full{grid-column:1/-1}
+    .admin-now{background:#e8efe4}
+    .admin-section-title{display:flex;justify-content:space-between;align-items:start;gap:14px;margin-bottom:18px}
+    .admin-section-title .eyebrow{margin-bottom:8px}
+    .admin-section-title h2{font-size:1.8rem;margin:0}
+    .admin-pill{font-size:.72rem;background:var(--forest);color:white;padding:8px 10px;border-radius:20px}
+    .compact-form{display:flex;gap:8px}
+    .admin-stack{display:flex;flex-direction:column;gap:11px}
+    .admin-stack label,.admin-panel>label{font-weight:700;font-size:.78rem}
+    .admin-stack input:not([type=checkbox]),.admin-stack select,.admin-stack textarea,.compact-form select,.admin-photo-actions select,.admin-panel>select{width:100%;min-height:42px;border:1px solid #bdc3ba;background:white;color:var(--ink);border-radius:3px;padding:10px;font:inherit;font-size:.9rem}
+    .compact-form select{flex:1;min-width:0}
+    .admin-primary{border:0;background:var(--forest);color:white;padding:12px 18px;min-height:42px;border-radius:3px;font:700 .84rem 'DM Sans',sans-serif;cursor:pointer}
+    button:disabled{opacity:.5;cursor:wait}
+    .admin-stack>.admin-primary{align-self:start;margin-top:7px}
+    .admin-note{color:var(--muted);font-size:.77rem;line-height:1.6}
+    .admin-feedback{color:var(--forest);font-size:.81rem;line-height:1.6}
+    .admin-inline-check{display:flex;align-items:center;gap:9px;font-weight:500!important;line-height:1.5}
+    .admin-dropzone{border:1px dashed #9dab9b;background:#f0f4ed;padding:23px;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center}
+    .admin-dropzone strong{font-size:1rem}.admin-dropzone span{font-size:.74rem;color:var(--muted)}
+    .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+    .chosen-files,.admin-photo-list{display:grid;grid-template-columns:1fr;gap:8px}
+    .chosen-file,.admin-photo-item{border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:8px;min-width:0}
+    .chosen-file img,.admin-photo-item>img{width:57px;height:58px;object-fit:cover;flex-shrink:0;background:#e5e8e3}
+    .chosen-details,.admin-photo-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+    .chosen-details strong{font-size:.78rem;overflow-wrap:anywhere}
+    .chosen-details span,.admin-photo-body small{color:var(--muted);font-size:.68rem}
+    .chosen-private{font-size:.76rem;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap}
+    .chosen-private input{accent-color:#a4563b;width:17px;height:17px}
+    .admin-photo-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px}
+    .admin-photo-actions select{max-width:170px;font-size:.72rem;padding:7px;min-height:32px}
+    .admin-small-danger{background:none;border:0;color:#a74732;text-decoration:underline;font-size:.75rem;cursor:pointer}
+    .admin-photo-list{max-height:550px;overflow-y:auto;margin-top:15px}
+    .admin-photo-body strong{font-size:.83rem}
+    .admin-video-item{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:.81rem}
+    .admin-video-item a{text-decoration:underline;text-decoration-color:var(--orange)}
+    .admin-video-item button{border:0;background:none;color:#b35e40;font-size:1rem;cursor:pointer}
+    .admin-double{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .admin-double>div{min-width:0;display:flex;flex-direction:column;gap:9px}
+    .admin-geocode{align-self:start;margin:5px 0}
+    #library-filter{margin-top:8px}
+    @media(max-width:780px){
+      #admin-app{grid-template-columns:1fr}
+      .admin-head{flex-direction:column;align-items:start}
+      .admin-head h1{font-size:2.9rem}
+      .admin-section-title{flex-wrap:wrap}
+      .admin-journey{padding-top:28px}
+    }
+    @media(max-width:430px){.chosen-file{flex-wrap:wrap}.chosen-private{margin-left:auto}.compact-form{flex-direction:column}}
   </style>
 </Base>
