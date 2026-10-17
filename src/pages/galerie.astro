@@ -135,6 +135,16 @@ import { chemin } from "../lib/paths";
     <img src="" alt="" />
     <button type="button" class="lightbox-next" aria-label="Photo suivante">→</button>
     <p class="lightbox-counter" aria-live="polite"></p>
+    <form id="photo-editor" class="photo-editor" hidden>
+      <p class="eyebrow">MODIFICATION ADMIN</p>
+      <label for="edit-photo-date">Date de prise de vue</label><input id="edit-photo-date" type="date"/>
+      <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
+      <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
+      <label for="edit-photo-stage">Étape du journal</label><select id="edit-photo-stage"><option value="">Sans étape</option></select>
+      <label for="edit-photo-lat">Latitude (facultatif)</label><input id="edit-photo-lat" type="number" step="any" min="-85" max="85"/>
+      <label for="edit-photo-lon">Longitude (facultatif)</label><input id="edit-photo-lon" type="number" step="any" min="-180" max="180"/>
+      <button type="submit" class="admin-primary">Enregistrer les modifications</button><p id="edit-photo-status" role="status"></p>
+    </form>
   </dialog>
   <script>
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
@@ -143,6 +153,17 @@ import { chemin } from "../lib/paths";
     let photos: HTMLButtonElement[] = [];
     let index = -1;
     let touchX = 0;
+    let isAdmin = false;
+    let adminPhotos: any[] = [];
+    const editor = document.querySelector<HTMLFormElement>("#photo-editor");
+    const editDate = document.querySelector<HTMLInputElement>("#edit-photo-date");
+    const editPlace = document.querySelector<HTMLInputElement>("#edit-photo-place");
+    const editComment = document.querySelector<HTMLTextAreaElement>("#edit-photo-comment");
+    const editStage = document.querySelector<HTMLSelectElement>("#edit-photo-stage");
+    const editLat = document.querySelector<HTMLInputElement>("#edit-photo-lat");
+    const editLon = document.querySelector<HTMLInputElement>("#edit-photo-lon");
+    const editStatus = document.querySelector<HTMLElement>("#edit-photo-status");
+    const selectedPhoto = () => { const button=photos[index]; return adminPhotos.find(p=>p.src===button?.dataset.photo) || null; };
     const afficher = (next: number) => {
       if (!agrandissement || !photos.length) return;
       index = (next + photos.length) % photos.length;
@@ -150,6 +171,9 @@ import { chemin } from "../lib/paths";
       agrandissement.src = bouton.dataset.photo || "";
       agrandissement.alt = bouton.dataset.alt || "";
       if (compteur) compteur.textContent = (index + 1) + " / " + photos.length;
+      const item=selectedPhoto();
+      if(editor&&isAdmin&&item){editor.hidden=false;if(editDate)editDate.value=item.datePrise||"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value=item.etape||"";if(editStatus)editStatus.textContent="";}
+      else if(editor)editor.hidden=true;
     };
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
       if (!dialog) return;
@@ -186,6 +210,25 @@ import { chemin } from "../lib/paths";
       if (agrandissement) agrandissement.removeAttribute("src");
       index = -1;
     });
+        async function initPhotoEditor(){
+      try{
+        const me=await fetch("/api/prive/moi",{credentials:"same-origin",cache:"no-store"});
+        if(!me.ok)return;const user=await me.json();if(!user.isAdmin)return;isAdmin=true;
+        const [library,steps]=await Promise.all([fetch("/api/prive/admin/media",{credentials:"same-origin",cache:"no-store"}),fetch("/api/prive/etapes",{credentials:"same-origin",cache:"no-store"})]);
+        if(!library.ok||!steps.ok)return;adminPhotos=(await library.json()).photos||[];
+        const allSteps=(await steps.json()).etapes||[];
+        if(editStage){for(const step of allSteps){const option=document.createElement("option");option.value=step.slug;option.textContent=step.ville+" · "+step.pays;editStage.append(option);}}
+        for(const button of document.querySelectorAll<HTMLButtonElement>(".photo-open")){const p=adminPhotos.find(item=>item.src===button.dataset.photo);if(p){button.dataset.key=p.key;button.dataset.visibility=p.visibilite;button.dataset.alt=p.alt||button.dataset.alt||"";}}
+        if(editor)editor.hidden=true;
+      }catch{}
+    }
+    editor?.addEventListener("submit",async event=>{
+      event.preventDefault();const p=selectedPhoto();if(!p||!editDate||!editPlace||!editComment||!editStage||!editLat||!editLon||!editStatus)return;
+      editStatus.textContent="Enregistrement…";
+      try{const response=await fetch("/api/prive/admin/photo-modifier",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify({key:p.key,visibilite:p.visibilite,datePrise:editDate.value,lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value,latitude:editLat.value,longitude:editLon.value})});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Enregistrement impossible.");Object.assign(p,{datePrise:editDate.value||null,lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value||null,latitude:editLat.value?Number(editLat.value):null,longitude:editLon.value?Number(editLon.value):null});editStatus.textContent="Modifications enregistrées.";if(compteur)compteur.textContent=(index+1)+" / "+photos.length;
+      }catch(error){editStatus.textContent=error instanceof Error?error.message:"Erreur de sauvegarde.";}
+    });
+    initPhotoEditor();
     // Gère aussi les photos déjà présentes dans le HTML statique.
     const requestedPhoto = new URLSearchParams(location.search).get("photo");
     if (requestedPhoto) {
@@ -194,4 +237,9 @@ import { chemin } from "../lib/paths";
       target?.click();
     }
   </script>
+  <style>
+    .photo-editor{grid-column:1/-1;width:min(100%,640px);max-height:40vh;overflow:auto;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
+    .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{width:100%;padding:.65rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{padding:.75rem;border:0;border-radius:8px;cursor:pointer}
+    .lightbox{max-width:min(96vw,1100px);max-height:96vh}.lightbox img{max-height:60vh;max-width:90vw;object-fit:contain}
+  </style>
 </Base>
