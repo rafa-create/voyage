@@ -40,7 +40,7 @@ import { chemin } from "../lib/paths";
       const groups = new Map<string, HTMLElement[]>();
       for (const item of items) {
         const rawDate = String(item.dataset.date || "");
-        const match = rawDate.match(/^(\\d{4})[-/](\\d{1,2})/);
+        const match = rawDate.match(/^(\d{4})[-/](\d{1,2})/);
         const monthKey = match ? match[1] + "-" + match[2].padStart(2, "0") : "sans-date";
         if (!groups.has(monthKey)) groups.set(monthKey, []);
         groups.get(monthKey)!.push(item);
