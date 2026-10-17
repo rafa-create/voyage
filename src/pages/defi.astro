@@ -85,12 +85,12 @@ import Base from "../layouts/Base.astro";
       synchronisation?:{etat:string};stravaSynchronisation?:{etat:string}};
     const get=(id:string)=>document.getElementById(id);
     const set=(id:string,value:string)=>{const node=get(id);if(node)node.textContent=value;};
-    const create=<K extends keyof HTMLElementTagNameMap>(tag:K,className?:string,text?:string):HTMLElementTagNameMap[K]=>{
+    function create<K extends keyof HTMLElementTagNameMap>(tag:K,className?:string,text?:string):HTMLElementTagNameMap[K]{
       const node=document.createElement(tag);
       if(className)node.className=className;
       if(text!==undefined)node.textContent=text;
       return node;
-    };
+    }
     const shortDate=(s:string)=>new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",timeZone:"UTC"})
       .format(new Date(s+"T12:00:00Z"));
     const longDate=(s:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"})
@@ -101,6 +101,7 @@ import Base from "../layouts/Base.astro";
     let state:Data={configured:false};
     let mapModule:any=null;
     let activeMap:any=null;
+    let mapOwner:HTMLDetailsElement|null=null;
     let routeSerial=0;
     let sportWidgets={feed:"",summary:""};
 
@@ -234,6 +235,7 @@ import Base from "../layouts/Base.astro";
     }
     async function drawRoute(run:Run,container:HTMLElement,hint:HTMLElement,details:HTMLDetailsElement){
       const serial=++routeSerial;
+      mapOwner=details;
       if(activeMap){activeMap.remove();activeMap=null;}
       if(!run.parcours||!run.id){
         hint.textContent="Pas de tracé GPS pour cette activité.";
@@ -299,9 +301,10 @@ import Base from "../layouts/Base.astro";
             });
             showActivity(day,body,details);
           }
-        }else if(!isChess){
+        }else if(!isChess&&mapOwner===details){
           ++routeSerial;
           if(activeMap){activeMap.remove();activeMap=null;}
+          mapOwner=null;
         }
       });
       return details;
@@ -349,7 +352,7 @@ import Base from "../layouts/Base.astro";
       const button=get("refresh-defi") as HTMLButtonElement|null;
       if(button)button.disabled=true;
       set("defi-loading","Synchronisation…");
-      ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}
+      ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}mapOwner=null;
       try{
         const response=await fetch("/api/public/defi"+(force?"?actualiser=1":""),{cache:"no-store"});
         if(!response.ok)throw Error("Impossible d'actualiser le défi.");
