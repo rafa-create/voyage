@@ -100,11 +100,13 @@ async function enrichirPositionsPhotos(env){
 
 export default {
   async scheduled(event,env,ctx){
-    // Chaque jour, examiner les nouveaux objets R2 non classés (sans connexion humaine).
+    // L'activité sportive est vérifiée toutes les deux heures.
+    ctx.waitUntil(syncRecentSports(env).catch(e=>console.warn("Synchronisation des activités sportives:",String(e))));
+    // Les imports des photos et le retrait des caches restent quotidiens.
+    if(event.cron!=="0 4 * * *")return;
     ctx.waitUntil(synchroniserR2(env));
     ctx.waitUntil(enrichirPositionsPhotos(env).catch(e=>console.warn("Localisation photos:",String(e))));
     ctx.waitUntil(syncChess(env).catch(e=>console.warn("Synchronisation Chess.com:",String(e))));
-    ctx.waitUntil(syncRecentSports(env).catch(e=>console.warn("Synchronisation des activités sportives:",String(e))));
     ctx.waitUntil((async()=>{
       const marker="__meta/defi/cache-api-nettoye.json";
       const already=await getJSON(env.PHOTOS_PRIVEES,marker,null);
