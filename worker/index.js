@@ -1,4 +1,5 @@
 import { requireAccess } from "./auth.js";
+import { privateStravaFetch } from "./strava-bridge.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
@@ -122,6 +123,15 @@ export default {
     }
     if(path==="/api/prive/moi"&&request.method==="GET")return json(auth.user);
     if(path==="/api/prive/admin/defi"&&request.method==="GET"&&auth.user.isAdmin)return json(await privateChallenge(env));
+    if(path==="/api/prive/admin/defi/strava-recentes"&&request.method==="GET"&&auth.user.isAdmin){
+      const result=await privateStravaFetch(env,"activities");
+      return json(result.body,result.status);
+    }
+    const gps=/^\/api\/prive\/admin\/defi\/strava-parcours\/([1-9][0-9]{0,19})$/.exec(path);
+    if(gps&&request.method==="GET"&&auth.user.isAdmin){
+      const result=await privateStravaFetch(env,"activities/"+gps[1]+"/route");
+      return json(result.body,result.status);
+    }
     if(path==="/api/prive/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/prive/photos"&&request.method==="GET"){
       return json({photos:(await listedPhotos(env,"prive")).filter(p=>p.etape)});
