@@ -44,9 +44,17 @@ Ce contenu est un EXEMPLE de structure, pas un voyage déjà publié. Le vrai fi
 
 ## Mettre en ligne
 
-**Option conseillée au départ : Cloudflare Pages**. Connecter le dépôt GitHub, branche main, framework Astro, commande de build **npm run build**, répertoire de sortie **dist**, version Node 22. Le site est alors publié sur une adresse pages.dev, sans serveur à gérer.
+**Option utilisée : Cloudflare Workers (assets statiques)**. Le fichier `wrangler.jsonc` configure le stockage du résultat Astro dans `./dist`. Dans l'écran de configuration de Cloudflare avec le dépôt `rafa-create/voyage`, choisir :
 
-**Alternative GitHub Pages** : exécuter le build avec la variable GITHUB_PAGES=true afin de générer les liens sous /voyage/. Déployer dist avec une action GitHub Pages. L'URL cible serait https://rafa-create.github.io/voyage/. Les deux plateformes ne sont pas nécessaires à la fois.
+- Branche de production : `main`
+- Build command : `npm run build`
+- Deploy command : `npx wrangler deploy` (valeur par défaut)
+- Preview builds : optionnel, peut être activé pour tester les changements
+- Protect with Cloudflare Access : **désactivé** car le site public doit rester visible
+
+Cloudflare attribuera une adresse `*.workers.dev`. GitHub reste l'endroit où modifier le code et Cloudflare gère l'hébergement. La configuration actuelle est **statique** : aucun serveur d'administration, album privé ou service d'IA n'est encore installé.
+
+**Alternative GitHub Pages** : exécuter le build avec la variable `GITHUB_PAGES=true` afin de générer les liens sous `/voyage/`. Déployer `dist` avec une action GitHub Pages. L'URL cible serait https://rafa-create.github.io/voyage/. Les deux plateformes ne sont pas nécessaires à la fois.
 
 ## Évolutions prévues
 
