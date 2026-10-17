@@ -1,0 +1,69 @@
+---
+import Base from "../layouts/Base.astro";
+import { chemin } from "../lib/paths";
+---
+<Base title="Étape du voyage" active="journal">
+  <div class="container dynamic-step">
+    <p class="eyebrow"><a href={chemin("/journal/")}>JOURNAL</a> / ÉTAPE</p>
+    <header id="dynamic-heading">
+      <p id="dynamic-meta" class="step-meta">Chargement de l'étape…</p>
+      <h1 id="dynamic-title">Le voyage continue<span class="heading-dot">.</span></h1>
+      <p id="dynamic-story"></p>
+    </header>
+    <section>
+      <h2>Photos de l'étape</h2>
+      <div id="dynamic-photos" class="photo-grid"></div>
+    </section>
+  </div>
+  <script>
+    const slug = location.pathname.split("/").filter(Boolean).at(-1) || "";
+    const meta = document.querySelector<HTMLElement>("#dynamic-meta");
+    const title = document.querySelector<HTMLElement>("#dynamic-title");
+    const story = document.querySelector<HTMLElement>("#dynamic-story");
+    const photos = document.querySelector<HTMLElement>("#dynamic-photos");
+    async function load() {
+      try {
+        const r = await fetch("/api/public/etapes");
+        if (!r.ok) throw Error("Étape indisponible");
+        const { etapes } = await r.json();
+        const step = etapes.find((x: { slug:string }) => x.slug === slug);
+        if (!step) throw Error("Étape introuvable");
+        if (meta) meta.textContent = step.date + " · " + step.ville + ", " + step.pays;
+        if (title) title.textContent = step.titre;
+        if (story) story.textContent = step.texte || "Les souvenirs de cette étape seront ajoutés bientôt.";
+        const original = Array.isArray(step.photos) ? step.photos : [];
+        const uploaded = await fetch("/api/public/photos?etape=" + encodeURIComponent(slug));
+        const newPhotos = uploaded.ok ? (await uploaded.json()).photos : [];
+        if (!photos) return;
+        for (const photo of [...original, ...newPhotos]) {
+          const figure = document.createElement("figure");
+          figure.className = "photo-tile";
+          const a = document.createElement("a");
+          a.href = photo.src;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          const img = document.createElement("img");
+          img.src = photo.src;
+          img.loading = "lazy";
+          img.alt = photo.alt || "Photo de voyage";
+          a.append(img);
+          figure.append(a);
+          if (photo.legende) {
+            const cap = document.createElement("figcaption");
+            cap.textContent = photo.legende;
+            figure.append(cap);
+          }
+          photos.append(figure);
+        }
+      } catch (e) { if (meta) meta.textContent = e instanceof Error ? e.message : "Cette étape est indisponible."; }
+    }
+    load();
+  </script>
+  <style>
+    .dynamic-step { padding-top: 65px; padding-bottom: 100px; min-height: 70vh; }
+    .dynamic-step h1 { font-size: clamp(2.7rem,5vw,5rem); margin: 20px 0; }
+    .dynamic-step h2 { margin-top: 65px; }
+    .dynamic-step .step-meta { color: var(--orange); margin-top: 45px; }
+    .dynamic-step #dynamic-story { max-width: 730px; line-height: 1.85; white-space: pre-line; font-size: 1.04rem; }
+  </style>
+</Base>
