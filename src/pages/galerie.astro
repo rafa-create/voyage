@@ -77,11 +77,42 @@ import { chemin } from "../lib/paths";
     )}
   </section>
 
+  <section id="videos-r2-direct" class="container section" hidden><div class="section-heading"><div><p class="eyebrow">CARNET VIDÉO</p><h2>Les vidéos du voyage<span class="heading-dot">.</span></h2></div></div><div id="videos-r2-grid" class="photo-grid gallery-grid"></div></section>
   <section id="galerie-r2-direct" class="container section" hidden>
     <div class="section-heading"><div><p class="eyebrow">AJOUTÉES EN COURS DE ROUTE</p><h2>Nouveaux souvenirs<span class="heading-dot">.</span></h2></div></div>
     <div id="galerie-r2-grid" class="photo-grid gallery-grid"></div>
   </section>
   <script>
+    const videoGallery = document.querySelector<HTMLElement>("#videos-r2-direct");
+    const videoGrid = document.querySelector<HTMLElement>("#videos-r2-grid");
+    if (videoGallery && videoGrid) {
+      fetch("/api/public/etapes").then(r => r.ok ? r.json() : { etapes: [] }).then(async ({ etapes }) => {
+        const groups = await Promise.all((etapes || []).map(async (step: any) => {
+          const response = await fetch("/api/public/videos?etape=" + encodeURIComponent(step.slug));
+          if (!response.ok) return [];
+          const data = await response.json();
+          return (data.videos || []).map((video: any) => ({ ...video, etape: step.slug, ville: step.ville, pays: step.pays, date: step.date }));
+        }));
+        const seen = new Set<string>();
+        for (const video of groups.flat()) {
+          const match = String(video.url || "").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
+          const id = match?.[1];
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          const figure = document.createElement("figure"); figure.className = "photo-tile";
+          const button = document.createElement("button"); button.type = "button"; button.className = "photo-open";
+          button.dataset.video = id; button.dataset.videoTitle = video.titre || "Vidéo du voyage";
+          button.dataset.alt = button.dataset.videoTitle; button.dataset.date = video.date || "";
+          button.dataset.lieu = [video.ville, video.pays].filter(Boolean).join(" · ");
+          button.setAttribute("aria-label", "Lire la vidéo : " + button.dataset.videoTitle);
+          const poster = document.createElement("img"); poster.src = "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg"; poster.alt = button.dataset.videoTitle; poster.loading = "lazy";
+          button.append(poster); figure.append(button);
+          const caption = document.createElement("figcaption"); caption.textContent = button.dataset.videoTitle + (button.dataset.lieu ? " · " + button.dataset.lieu : "");
+          figure.append(caption); videoGrid.append(figure);
+        }
+        videoGallery.hidden = !videoGrid.childElementCount;
+      }).catch(() => {});
+    }
     const gallery = document.querySelector<HTMLElement>("#galerie-r2-direct");
     const grid = document.querySelector<HTMLElement>("#galerie-r2-grid");
     if (gallery && grid) {
@@ -150,7 +181,7 @@ import { chemin } from "../lib/paths";
   </dialog>
   <script>
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
-    const agrandissement = dialog?.querySelector("img");
+    const agrandissement = dialog?.querySelector("img");\n    const videoPlayer = dialog?.querySelector<HTMLIFrameElement>(".lightbox-video");
     const compteur = dialog?.querySelector<HTMLElement>(".lightbox-counter");
     const details = dialog?.querySelector<HTMLElement>("#lightbox-details");
     let photos: HTMLButtonElement[] = [];
@@ -175,9 +206,9 @@ import { chemin } from "../lib/paths";
       agrandissement.alt = bouton.dataset.alt || "";
       if (compteur) compteur.textContent = (index + 1) + " / " + photos.length;
       const item=selectedPhoto();
-      if(details){details.replaceChildren();const bits=[item?.datePrise,item?.lieu,item?.commentaire||item?.legende].filter(Boolean);for(const bit of bits){const line=document.createElement("span");line.textContent=String(bit);details.append(line);}details.hidden=!bits.length;}
+      if(details){details.replaceChildren();const bits=[item?.datePrise||bouton.dataset.date,bouton.dataset.videoTitle||item?.lieu,item?.commentaire||item?.legende].filter(Boolean);for(const bit of bits){const line=document.createElement("span");line.textContent=String(bit);details.append(line);}details.hidden=!bits.length;}
       const editButton=dialog?.querySelector<HTMLButtonElement>(".lightbox-edit");
-      if(editButton)editButton.hidden=!(isAdmin&&item);
+      if(editButton)editButton.hidden=!(isAdmin&&item&&!bouton.dataset.video);
       if(editor){editor.hidden=true;if(item){if(editDate)editDate.value=item.datePrise||"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value=item.etape||"";}if(editStatus)editStatus.textContent="";}
     };
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
@@ -213,7 +244,7 @@ import { chemin } from "../lib/paths";
       if (evenement.target === dialog) dialog.close();
     });
     dialog?.addEventListener("close", () => {
-      if (agrandissement) agrandissement.removeAttribute("src");
+      if (agrandissement) { agrandissement.removeAttribute("src"); agrandissement.hidden=false; }\n      if(videoPlayer){videoPlayer.src="";videoPlayer.hidden=true;}
       if(details){details.textContent="";details.hidden=true;}
       if(editor)editor.hidden=true;
       index = -1;
@@ -248,14 +279,14 @@ import { chemin } from "../lib/paths";
   <style>
     .lightbox:not([open]){display:none}
     .lightbox{box-sizing:border-box;width:min(96vw,1100px);max-width:96vw;max-height:96dvh;overflow:auto;padding:3.5rem 1rem 1rem;position:relative}
-    .lightbox img{display:block;max-height:60vh;max-width:90vw;width:auto;height:auto;object-fit:contain;margin:0 auto}
+    .lightbox img{display:block;max-height:60vh;max-width:90vw;width:auto;height:auto;object-fit:contain;margin:0 auto}\n    .lightbox-video{display:block;width:min(90vw,1000px);aspect-ratio:16/9;height:auto;border:0;margin:0 auto}.lightbox-video[hidden]{display:none}
     .lightbox-close,.lightbox-edit{position:sticky;top:0;z-index:5;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#222;box-shadow:0 2px 12px #0002;font-size:1.35rem;cursor:pointer}
     .lightbox-close{position:absolute;top:.65rem;right:.65rem}.lightbox-edit{position:absolute;top:.65rem;right:3.8rem}
     .photo-editor{width:100%;max-width:640px;max-height:none;box-sizing:border-box;overflow:visible;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
     .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{box-sizing:border-box;width:100%;min-width:0;padding:.65rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{padding:.75rem;border:0;border-radius:8px;cursor:pointer}
     @media(max-width:600px) and (orientation:portrait){
       .lightbox{position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;border-radius:0;padding:3.7rem 1rem max(1rem,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.65rem}
-      .lightbox img{flex:0 1 auto;width:100%;max-width:100%;max-height:40dvh;object-fit:contain;margin:auto}
+      .lightbox img,.lightbox-video{flex:0 1 auto;width:100%;max-width:100%;max-height:40dvh;object-fit:contain;margin:auto}.lightbox-video{height:auto;aspect-ratio:16/9}
       .lightbox-counter{margin:.1rem 0 .45rem;text-align:center;flex-shrink:0}.lightbox-details{margin:-.3rem 0 .5rem;text-align:center;font-size:.9rem;line-height:1.55;overflow-wrap:anywhere;display:flex;flex-direction:column;gap:.35rem;flex-shrink:0}
       .lightbox-prev,.lightbox-next{flex:0 0 auto;align-self:center}
       .photo-editor{flex:1 1 auto;min-height:0;max-width:none;max-height:none;overflow-y:auto;margin:0;padding:.75rem}
