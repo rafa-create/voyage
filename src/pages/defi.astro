@@ -8,7 +8,7 @@ import Base from "../layouts/Base.astro";
       <div>
         <p class="eyebrow"><span class="eyebrow-line"></span> LE DÉFI DU VOYAGE</p>
         <h1>Un jour.<br /><em>Deux défis.</em></h1>
-        <p class="hero-lead">Une partie d'échecs. Une course à pied. Chaque jour, une nouvelle occasion de réussir.</p>
+        <p class="hero-lead">Une partie rapide aux échecs. Une course à pied. Chaque jour, une nouvelle occasion de réussir.</p>
       </div>
       <div class="hero-today" aria-live="polite">
         <span class="hero-today-label">LE DÉFI D'AUJOURD'HUI</span>
@@ -20,7 +20,7 @@ import Base from "../layouts/Base.astro";
   </section>
 
   <main class="container defi-main">
-    <p id="defi-loading" class="source-line" role="status">Synchronisation avec Chess.com et Strava…</p>
+    <p id="defi-loading" class="source-line" role="status">Synchronisation des échecs et des courses…</p>
     <div id="defi-empty" class="empty-state" hidden>Le défi sera bientôt disponible.</div>
     <div id="defi-content" hidden>
       <div class="kpi-grid" aria-label="Statistiques du défi">
@@ -40,12 +40,12 @@ import Base from "../layouts/Base.astro";
 
       <section id="elo" class="elo-section" aria-labelledby="elo-title">
         <div class="section-top">
-          <div><p class="eyebrow">LE NIVEAU AUX ÉCHECS</p><h2 id="elo-title">Mon ELO<span class="dot">.</span></h2></div>
+          <div><p class="eyebrow">LE CLASSEMENT RAPIDE</p><h2 id="elo-title">Mon ELO<span class="dot">.</span></h2></div>
           <a id="chess-profile" href="https://www.chess.com/member/rafaelorset" target="_blank" rel="noopener noreferrer" class="quiet-link">Chess.com ↗</a>
         </div>
         <div class="elo-panel">
           <div class="elo-numbers">
-            <span id="elo-mode" class="eyebrow">CLASSEMENT</span>
+            <span id="elo-mode" class="eyebrow">ELO RAPIDE</span>
             <strong id="elo-current">—</strong>
             <span id="elo-change" class="elo-change">En attente des parties classées</span>
             <p class="panel-note">Évolution du classement pour une même cadence, sans mélanger blitz et rapid.</p>
@@ -69,7 +69,7 @@ import Base from "../layouts/Base.astro";
         <div class="map-layout">
           <div class="map-sidebar">
             <div id="recent-runs" class="recent-runs" aria-label="Courses récentes classées par date"></div>
-            <a class="quiet-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Voir mon profil Strava ↗</a>
+            <a class="quiet-link" href="https://www.strava.com/athletes/149399419" target="_blank" rel="noopener noreferrer">Voir toutes mes sorties ↗</a>
           </div>
           <div class="map-area">
             <div id="run-map" class="run-map" role="region" aria-label="Carte interactive des derniers parcours de course"></div>
@@ -88,17 +88,17 @@ import Base from "../layouts/Base.astro";
           <div><p class="eyebrow">UN DÉFI, CHAQUE JOUR</p><h2 id="journal-title">Jour après jour<span class="dot">.</span></h2></div>
           <button id="refresh-defi" class="refresh-button" type="button">↻ Actualiser</button>
         </div>
-        <p class="section-description">Une seule course et une seule partie affichées par jour : les plus récentes. Le résultat aux échecs n'a pas besoin d'être une victoire.</p>
+        <p class="section-description">Une seule course et une seule partie rapide par jour : les plus récentes. Le résultat aux échecs n'a pas besoin d'être une victoire.</p>
         <div id="days-list" class="days-list" aria-live="polite"></div>
         <p id="source-line" class="data-note"></p>
       </section>
 
       <section class="widgets-section">
         <details id="strava-widgets" class="widgets-details">
-          <summary>Voir les widgets Strava officiels <span aria-hidden="true">⌄</span></summary>
+          <summary>Voir les activités et le résumé <span aria-hidden="true">⌄</span></summary>
           <div class="widget-grid">
-            <div><h3>Dernières sorties</h3><iframe id="strava-feed" title="Dernières activités sur Strava" loading="lazy" scrolling="no"></iframe></div>
-            <div><h3>Résumé Strava</h3><iframe id="strava-summary" title="Résumé d'activités Strava" loading="lazy" scrolling="no"></iframe></div>
+            <div><h3>Dernières sorties</h3><iframe id="strava-feed" title="Dernières activités sportives" loading="lazy" scrolling="no"></iframe></div>
+            <div><h3>Résumé des sorties</h3><iframe id="strava-summary" title="Résumé d'activités Strava" loading="lazy" scrolling="no"></iframe></div>
           </div>
         </details>
       </section>
@@ -194,7 +194,7 @@ import Base from "../layouts/Base.astro";
         day.activite?"Course faite · partie en attente":"Une partie et une course à accomplir.");
     }
     function rating(elo:Elo|undefined){
-      write("elo-mode",elo?.mode?"ELO "+(eloModes[elo.mode]||elo.mode).toUpperCase():"ELO CHESS.COM");
+      write("elo-mode",elo?.mode?"ELO RAPIDE":"ELO CHESS.COM");
       write("elo-current",elo?.rating!=null?String(elo.rating):"—");
       const delta=elo?.delta;
       const change=$("elo-change");
@@ -234,7 +234,7 @@ import Base from "../layouts/Base.astro";
       }
       knownRuns=[...latestByDay.values()];
       if(!knownRuns.length){
-        list.append(el("p","map-empty","Les dernières courses publiques apparaîtront ici après la synchronisation Strava."));
+        list.append(el("p","map-empty","Les parcours récents apparaîtront ici dès leur publication."));
         write("map-help","Aucun tracé public disponible pour le moment.");
         return;
       }
@@ -275,6 +275,7 @@ import Base from "../layouts/Base.astro";
           style:"https://tiles.openfreemap.org/styles/liberty",
           center:[coords[0][1],coords[0][0]],zoom:11});
         activeMap.addControl(new mapModule.NavigationControl({showCompass:false}),"top-right");
+        activeMap.addControl(new mapModule.FullscreenControl({container:mapEl}),"top-right");
         const points=coords.map(p=>[p[1],p[0]]);
         activeMap.on("load",()=>{
           if(turn!==routeTurn)return;
@@ -331,10 +332,10 @@ import Base from "../layouts/Base.astro";
         widgetUrls={feed:data.stravaFeed||"",summary:data.stravaSummary||""};loadWidgets();
         const time=data.misAJour?new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",
           timeZone:"Europe/Paris"}).format(new Date(data.misAJour)):"en attente";
-        write("source-line","Échecs actualisés : "+time+" · Courses publiques Strava mises à jour périodiquement.");
+        write("source-line","Échecs rapides actualisés : "+time+" · Parcours mis à jour périodiquement.");
         write("runs-note",data.stravaSynchronisation?.etat==="erreur"
-          ?"Strava ne répond pas pour l'instant ; les dernières courses enregistrées restent affichées."
-          :"Seules les activités que tu as rendues publiques sur Strava sont visibles ici. Ce n'est pas une localisation en direct.");
+          ?"Les dernières courses enregistrées restent affichées même si la synchronisation échoue."
+          :"Les parcours présentés ici ne constituent pas une géolocalisation en direct.");
         write("defi-loading","Défi synchronisé · dernière partie et dernière course retenues pour chaque date.");
       }catch(err){write("defi-loading",err instanceof Error?err.message:"Chargement impossible.");}
       finally{if(refresh)refresh.disabled=false;}
