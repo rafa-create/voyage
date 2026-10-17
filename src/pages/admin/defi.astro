@@ -55,6 +55,14 @@ import { chemin } from "../../lib/paths";
           <h2>Mes activités récentes</h2>
           <p>Course, vélo, kitesurf, football… Tes activités Garmin et tes enregistrements sur téléphone se retrouvent ici, sans manipulation supplémentaire.</p>
           <p id="activities-sync-status" class="fineprint" role="status">Chargement automatique des activités récentes…</p>
+          <label class="activity-publication" for="auto-publication">
+            <input id="auto-publication" type="checkbox" checked />
+            <span>
+              <strong>Afficher mes activités dans le journal et sur la carte publics</strong>
+              <small>Activé par défaut selon ton choix. Le désactiver masque tous les imports automatiques, sans effacer les archives R2.</small>
+            </span>
+          </label>
+          <p id="auto-publication-feedback" class="fineprint" role="status"></p>
           <p class="fineprint">Au retour d'un voyage, le carnet rattrape aussi les activités des 90 derniers jours, progressivement et sans doublons. Le total d'archives ci-dessous augmente au fil des synchronisations.</p>
           <div id="activities-sync-list" class="strava-records"></div>
           <button id="activities-reload" type="button">↻ Vérifier maintenant</button>
@@ -192,6 +200,8 @@ import { chemin } from "../../lib/paths";
         const archived=Number.isFinite(data.archives)?data.archives:0;
         const publicCount=Number.isFinite(data.activitesPubliques)?data.activitesPubliques:0;
         const gpsCount=Number.isFinite(data.parcoursDisponibles)?data.parcoursDisponibles:0;
+        const toggle=get("auto-publication") as HTMLInputElement|null;
+        if(toggle)toggle.checked=data.publicationAutomatique!==false;
         write("activities-sync-status",data.etat==="non_configure"
           ?"Connexion sportive non activée : vérifier la clé Cloudflare commune aux deux sites."
           :data.error
@@ -223,6 +233,21 @@ import { chemin } from "../../lib/paths";
         }
       }catch(err){write("activities-sync-status",err instanceof Error?err.message:"Liste momentanément indisponible.");}
     }
+    get("auto-publication")?.addEventListener("change",async e=>{
+      const input=e.currentTarget as HTMLInputElement;
+      input.disabled=true;
+      write("auto-publication-feedback","Enregistrement du choix…");
+      try{
+        await post("/api/prive/admin/defi/publication-activites",{enabled:input.checked});
+        write("auto-publication-feedback",input.checked
+          ?"Les activités archivées sont visibles publiquement."
+          :"Les activités archivées sont masquées du public, sans suppression.");
+        await loadConnectedActivities();
+      }catch(err){
+        input.checked=!input.checked;
+        write("auto-publication-feedback",err instanceof Error?err.message:"Enregistrement impossible.");
+      }finally{input.disabled=false;}
+    });
     get("activities-reload")?.addEventListener("click",()=>void loadConnectedActivities(true));
     async function reload(){
       const state:Summary=await request("/api/prive/admin/defi");
@@ -351,6 +376,13 @@ import { chemin } from "../../lib/paths";
     .strava-item strong{font-size:.86rem}.strava-item small{color:var(--muted)}
     .strava-item a{font-size:.78rem;text-decoration:underline}
     .strava-item button{background:none;border:0;color:#9d4b37;text-decoration:underline;cursor:pointer}
+    .activity-publication{display:flex;align-items:flex-start;gap:13px;padding:16px;margin:16px 0;
+      border:1px solid var(--line);background:#f1f6ef;cursor:pointer}
+    .activity-publication input{flex:0 0 auto;width:20px;height:20px;margin:2px 0 0;
+      accent-color:var(--forest)}
+    .activity-publication span{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .activity-publication strong{font-size:.9rem;line-height:1.5;color:var(--forest)}
+    .activity-publication small{font-size:.76rem;line-height:1.5;color:var(--muted)}
     #activities-sync-list{margin-top:14px;display:grid;gap:8px}
     #activities-sync-list .connected-activity{display:grid;grid-template-columns:minmax(0,1fr) auto;
       gap:12px;align-items:center;padding:15px 17px;border:1px solid var(--line);
