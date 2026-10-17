@@ -142,7 +142,7 @@ const points = etapes
         }
         const currentDayColor = "#2563eb";
         let selectedDay = document.documentElement.dataset.voyageDay || "";
-        const updateSelectedDay = (date:string) => {
+        const updateSelectedDay = (date:string, fitMap = true) => {
           selectedDay = date;
           const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
             .filter((marker) => marker.dataset.date === selectedDay);
@@ -191,7 +191,7 @@ const points = etapes
             const lon = Number(marker.dataset.longitude);
             if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
           }
-          if (bounds.isEmpty()) return;
+          if (bounds.isEmpty() || !fitMap) return;
           if (dailyMarkers.length === 1) {
             map.easeTo({center: bounds.getCenter(), zoom: 10, duration: 650});
           } else {
@@ -511,7 +511,7 @@ const points = etapes
                 .setLngLat([memory.longitude,memory.latitude])
                 .setPopup(popup).addTo(map);
             }
-            if (selectedDay) updateSelectedDay(selectedDay);
+            if (selectedDay) updateSelectedDay(selectedDay, false);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
         if (points.length > 1) {
