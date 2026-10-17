@@ -84,7 +84,15 @@ import { chemin } from "../../lib/paths";
       </section>
 
       <section class="admin-panel admin-full">
-        <div class="admin-section-title"><div><p class="eyebrow">05 / ITINÉRAIRE</p><h2>Créer une nouvelle étape</h2></div></div>
+        <div class="admin-section-title"><div><p class="eyebrow">05 / JOURNAL</p><h2>Modifier le récit d’une étape</h2></div></div>
+        <form id="edit-story-form" class="admin-stack">
+          <label for="edit-story-step">Étape à modifier</label><select id="edit-story-step" required></select>
+          <label for="edit-story-text">Texte du journal</label><textarea id="edit-story-text" rows="6" maxlength="6000" placeholder="Raconter cette étape…"></textarea>
+          <button class="admin-primary" type="submit">Enregistrer le récit</button><p id="edit-story-feedback" role="status" class="admin-feedback"></p>
+        </form>
+      </section>
+      <section class="admin-panel admin-full">
+        <div class="admin-section-title"><div><p class="eyebrow">06 / ITINÉRAIRE</p><h2>Créer une nouvelle étape</h2></div></div>
         <form id="step-form" class="admin-stack">
           <div class="admin-double">
             <div><label for="step-ville">Ville</label><input id="step-ville" required maxlength="150" placeholder="Ex. Tunis"/></div>
@@ -117,7 +125,7 @@ import { chemin } from "../../lib/paths";
     type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null; prive:boolean };
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
     const status = $("admin-status");
-    const selectors = ["active-select","upload-etape","video-etape"];
+    const selectors = ["active-select","upload-etape","video-etape","edit-story-step"];
     let etapes:Etape[]=[];
     let photos:Photo[]=[];
     let selected:Chosen[]=[];
@@ -161,6 +169,8 @@ import { chemin } from "../../lib/paths";
       photos=library.photos;
       makeOptions();
       renderLibrary();
+      const storySelect=$<HTMLSelectElement>("edit-story-step");
+      if(storySelect){storySelect.replaceChildren(...etapes.map(e=>new Option(e.ville+" · "+e.pays,e.slug)));const active=etapes.find(e=>e.slug===storySelect.value)||etapes.find(e=>e.statut==="actuelle")||etapes[0];if(active)storySelect.value=active.slug;const text=$<HTMLTextAreaElement>("edit-story-text");if(text)text.value=(await api("/api/prive/etapes")).etapes.find((e:Etape)=>e.slug===active?.slug)?.texte||"";}
       await renderVideos();
       message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
@@ -433,6 +443,8 @@ import { chemin } from "../../lib/paths";
       try{await post("/api/prive/admin/actuelle",{slug:$<HTMLSelectElement>("active-select")?.value});await refresh();message("admin-status","Étape actuelle mise à jour.");}
       catch(err){message("admin-status",err instanceof Error?err.message:"Erreur.");}
     });
+    $("edit-story-step")?.addEventListener("change",async()=>{try{const slug=$<HTMLSelectElement>("edit-story-step")?.value;const data=await api("/api/prive/etapes");const step=data.etapes.find((e:Etape)=>e.slug===slug);const field=$<HTMLTextAreaElement>("edit-story-text");if(field)field.value=step?.texte||"";}catch(err){message("edit-story-feedback",String(err));}});
+    $<HTMLFormElement>("edit-story-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await post("/api/prive/admin/etape-modifier",{slug:$<HTMLSelectElement>("edit-story-step")?.value,texte:$<HTMLTextAreaElement>("edit-story-text")?.value||""});message("edit-story-feedback","Récit enregistré.");}catch(err){message("edit-story-feedback",err instanceof Error?err.message:"Erreur de sauvegarde.");}});
     $("find-coordinates")?.addEventListener("click",async()=>{
       const ville=$<HTMLInputElement>("step-ville")?.value.trim();
       const pays=$<HTMLInputElement>("step-pays")?.value.trim();
