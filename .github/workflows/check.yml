@@ -17,6 +17,8 @@ jobs:
           node-version: "22"
       - name: Installer les dépendances
         run: npm install --no-audit --no-fund
+      - name: Vérifier la logique de dates et vidéos
+        run: node --test tests/*.test.mjs
       - name: Compiler Astro
         run: npm run build
       - name: Vérifier le Worker et ses bindings sans le déployer
