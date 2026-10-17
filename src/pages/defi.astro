@@ -21,7 +21,7 @@ import Base from "../layouts/Base.astro";
         <div class="score"><small>JOURS SUIVIS</small><strong id="score-days">—</strong></div>
         <div class="score"><small>JOURS AVEC PARTIE</small><strong id="score-chess">—</strong></div>
         <div class="score"><small>JOURS AVEC ACTIVITÉ</small><strong id="score-activities">—</strong></div>
-        <div class="score score-highlight"><small>JOURNÉES COMPLÈTES</small><strong id="score-completed">—</strong><span class="score-note">Deux objectifs remplis</span></div>
+        <div class="score score-highlight"><small>JOURNÉES COMPLÈTES</small><strong id="score-completed">—</strong></div>
       </div>
       
 
@@ -361,7 +361,7 @@ import Base from "../layouts/Base.astro";
         set("score-days",String(stats.jours));
         set("score-chess",String(stats.joursEchecs));
         set("score-activities",String(stats.joursActivites));
-        set("score-completed",(stats.joursComplets||0)+" / "+(stats.joursTermines||0));
+        set("score-completed",(stats.joursComplets||0)+" / "+(stats.jours||0));
         const days=state.jours||[];
         set("hero-status",days[0]?status(days[0]).name:"En attente");
         if(days[0]){
