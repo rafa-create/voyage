@@ -56,7 +56,7 @@ import { chemin } from "../../lib/paths";
           <p>Toutes les activités synchronisées vers ton compte sportif arrivent ici : course, vélo, kitesurf, football ou marche. Aucune deuxième connexion Garmin à configurer. Ce tableau est réservé à ton administration.</p>
           <p id="activities-sync-status" class="fineprint" role="status">Chargement automatique des activités récentes…</p>
           <div id="activities-sync-list" class="strava-records"></div>
-          <button id="activities-reload" type="button">↻ Rafraîchir les activités</button>
+          <button id="activities-reload" type="button">↻ Vérifier maintenant</button>
           <p class="fineprint">Pour conserver durablement un tracé hors de la plateforme sportive, tu peux importer son fichier GPX dans l'archive ci-dessous. La liste connectée n'est pas une sauvegarde permanente.</p>
         </section>
         <section class="challenge-admin-panel full">
@@ -179,16 +179,19 @@ import { chemin } from "../../lib/paths";
       Walk:"Marche",Hike:"Randonnée",Kitesurf:"Kitesurf",Soccer:"Football",
       Swim:"Natation",Workout:"Entraînement",Sail:"Voile",Windsurf:"Planche à voile"
     };
-    async function loadConnectedActivities(){
+    async function loadConnectedActivities(force=false){
       write("activities-sync-status","Lecture des dernières activités…");
       const list=get("activities-sync-list");
       if(!list)return;
       list.replaceChildren();
       try{
+        if(force)await post("/api/prive/admin/defi/sports-synchroniser",{});
         const data=await request("/api/prive/admin/defi/strava-recentes");
         const items=Array.isArray(data?.items)?data.items:[];
         const archived=Number.isFinite(data.archives)?data.archives:0;
-        write("activities-sync-status",data.error
+        write("activities-sync-status",data.etat==="non_configure"
+          ?"Connexion sportive non activée : vérifier la clé Cloudflare commune aux deux sites."
+          :data.error
           ?"Synchronisation momentanément indisponible : "+data.error
           :items.length+" activités récentes détectées · "+archived+
             " copies personnelles enregistrées dans R2.");
@@ -216,7 +219,7 @@ import { chemin } from "../../lib/paths";
         }
       }catch(err){write("activities-sync-status",err instanceof Error?err.message:"Liste momentanément indisponible.");}
     }
-    get("activities-reload")?.addEventListener("click",()=>void loadConnectedActivities());
+    get("activities-reload")?.addEventListener("click",()=>void loadConnectedActivities(true));
     async function reload(){
       const state:Summary=await request("/api/prive/admin/defi");
       if(state.configured){
