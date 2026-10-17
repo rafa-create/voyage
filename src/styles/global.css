@@ -335,3 +335,23 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   .map-day-control #daily-date { width:auto; font-size:.65rem; }
   .map-day-control .daily-day-arrow { flex-basis:22px; width:22px; }
 }
+
+/* Garder les trois éléments de navigation du jour alignés dans un seul contrôle MapLibre. */
+.maplibregl-ctrl-bottom-left .map-day-control {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  clear: none !important;
+  float: none !important;
+  width: max-content;
+  min-height: 34px;
+}
+.map-day-control > button,
+.map-day-control > #daily-date {
+  position: static !important;
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin: 0 !important;
+  transform: none !important;
+}
