@@ -349,13 +349,14 @@ import Base from "../layouts/Base.astro";
       }
     }
     get("sport-widgets")?.addEventListener("toggle",loadWidgets);
-    async function load(force=false){
+    let backgroundChecks=0;
+    async function load(force=false,statusOnly=false){
       const button=get("refresh-defi") as HTMLButtonElement|null;
       if(button)button.disabled=true;
       set("defi-loading","Synchronisation…");
       ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}mapOwner=null;
       try{
-        const response=await fetch("/api/public/defi"+(force?"?actualiser=1":""),{cache:"no-store"});
+        const response=await fetch("/api/public/defi"+(statusOnly?"?statut=1":force?"?actualiser=1":""),{cache:"no-store"});
         if(!response.ok)throw Error("Impossible d'actualiser le défi.");
         state=await response.json() as Data;
         get("defi-content")!.hidden=!state.configured;
@@ -385,11 +386,15 @@ import Base from "../layouts/Base.astro";
         renderArchive(state.coursesRecentes||[],state.debut||days.at(-1)?.date||"");
         sportWidgets={feed:state.stravaFeed||"",summary:state.stravaSummary||""};
         loadWidgets();
-        const note=state.stravaSynchronisation?.etat==="erreur"?
-          "Dernières données conservées · synchronisation à réessayer.":
-          "Échecs et activités synchronisés.";
+        const note=state.synchronisation?.etat==="arriere_plan"||state.stravaSynchronisation?.etat==="arriere_plan"?
+          "Défi affiché · synchronisation des dernières données en arrière-plan…":
+          state.stravaSynchronisation?.etat==="erreur"?
+          "Données affichées · synchronisation à réessayer.":
+          statusOnly?"Défi actualisé.":"Défi affiché · vérification des dernières données en arrière-plan…";
         set("defi-loading",note);
         set("source-note","Une partie rapide et une activité comptent par jour. Appuie pour les détails.");
+        if(!statusOnly){backgroundChecks=0;setTimeout(()=>void load(false,true),5000);}
+        else if(backgroundChecks<3){backgroundChecks++;setTimeout(()=>void load(false,true),5000);}
       }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
       finally{if(button)button.disabled=false;}
     }
