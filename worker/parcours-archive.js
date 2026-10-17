@@ -50,8 +50,10 @@ export function parseGpx(source){
     start,end,pointCount:points.length};
 }
 function publicItem(item){
+  const parcours=item.source!=="import_automatique"||item.routeState==="disponible";
   return {id:item.id,date:item.date,fin:item.fin,km:item.km,
-    minutes:item.minutes,titre:item.titre,sport:item.sport||"course",url:"/defi/#courses",source:"archive"};
+    minutes:item.minutes,titre:item.titre,sport:item.sport||"course",
+    parcours,url:"/defi/#courses",source:"archive"};
 }
 export async function archiveIndex(env){
   const value=await getJSON(env.PHOTOS_PRIVEES,INDEX,{items:[]});
