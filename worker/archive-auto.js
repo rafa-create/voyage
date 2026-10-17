@@ -59,15 +59,22 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   }
   const history=additions.length?[...indexed,...additions].slice(-6000):indexed;
   let routes=0;
-  const pending=history.filter(a=>a.source==="import_automatique"&&a.routeState==="en_attente")
+  const pending=history.filter(a=>a.source==="import_automatique"&&
+    a.routeState==="en_attente"&&
+    (!a.routeRetryAt||Date.parse(a.routeRetryAt)<=Date.now()))
     .sort((a,b)=>b.fin-a.fin).slice(0,Math.max(0,maxRoutes));
   if(pending.length){
     for(const item of pending){
       const activityId=item.sourceId?.split(":")[1];
       const result=await privateStravaFetch(env,"activities/"+activityId+"/route");
-      if(result.status!==200)continue;
-      const route=validRoute(result.body);
-      const checked={...item,routeState:route.length>=2?"disponible":"absent"};
+      // En cas de refus temporaire, décaler l'essai pour ne pas bloquer
+      // toutes les autres activités du mois derrière le même parcours.
+      const route=result.status===200?validRoute(result.body):[];
+      const failed=result.status!==200;
+      const checked={...item,
+        routeState:failed?"en_attente":route.length>=2?"disponible":"absent",
+        routeRetryAt:failed?new Date(Date.now()+6*3600000).toISOString():null,
+        routeAttempts:Number(item.routeAttempts||0)+1};
       if(route.length>=2){
         checked.latitude=route[Math.floor(route.length/2)][0];
         checked.longitude=route[Math.floor(route.length/2)][1];
