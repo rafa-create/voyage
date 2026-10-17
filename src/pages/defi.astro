@@ -26,7 +26,7 @@ import Base from "../layouts/Base.astro";
       <div class="kpi-grid" aria-label="Statistiques du défi">
         <div class="kpi"><small>JOURS ÉCOULÉS</small><strong id="kpi-days">—</strong><span>depuis le départ</span></div>
         <div class="kpi"><small>ÉCHECS</small><strong id="kpi-chess">—</strong><span>jours joués</span></div>
-        <div class="kpi"><small>COURSES</small><strong id="kpi-runs">—</strong><span>jours courus</span></div>
+        <div class="kpi"><small>ACTIVITÉS</small><strong id="kpi-runs">—</strong><span>jours actifs</span></div>
         <div class="kpi kpi-accent"><small>DÉFIS RÉUSSIS</small><strong id="kpi-success">—</strong><span id="kpi-success-note">journées complètes</span></div>
       </div>
 
@@ -182,7 +182,7 @@ import Base from "../layouts/Base.astro";
       panel.replaceChildren();
       const header=el("div","today-top");
       const copy=el("div");
-      copy.append(el("span","today-overline","OBJECTIF : 1 PARTIE + 1 COURSE"));
+      copy.append(el("span","today-overline","OBJECTIF : 1 PARTIE + 1 ACTIVITÉ"));
       copy.append(el("strong","today-outcome",statusOf(day).label));
       header.append(copy,statusChip(day));
       const body=el("div","today-tasks");body.append(task("chess",day),task("run",day));
