@@ -11,6 +11,8 @@ const DEFAULT_CONFIG=Object.freeze({
 const CHESS_KEY="__meta/defi/chess.json";
 const STRAVA_KEY="__meta/defi/strava.json";
 const STRAVA_FEED_KEY="__meta/defi/strava-public-feed.json";
+const DEFAULT_STRAVA_FEED="https://www.strava.com/athletes/149399419/latest-rides/c85af98e34bbb4ad9d034058d986ba9dda5ae24f";
+const DEFAULT_STRAVA_SUMMARY="https://www.strava.com/athletes/149399419/activity-summary/c85af98e34bbb4ad9d034058d986ba9dda5ae24f";
 const MAX_DAYS=1095;
 const MAX_MONTHS_PER_SYNC=12;
 const usernamePattern=/^[a-zA-Z0-9_-]{3,30}$/;
@@ -158,15 +160,27 @@ export function parsePublicStravaFeed(input){
     return url.href;
   }catch{return null;}
 }
-export async function getPublicStravaFeed(env){
-  const stored=await getJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,{url:""});
-  return parsePublicStravaFeed(stored?.url||"")||"";
+// Ces deux widgets publics fournis par le propriétaire se mettent à jour
+// chez Strava : le site n'a pas besoin de télécharger leurs données.
+export async function getPublicStravaWidgets(env){
+  const stored=await getJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,null);
+  const feed=stored && Object.hasOwn(stored,"url")
+    ?parsePublicStravaFeed(stored.url)
+    :DEFAULT_STRAVA_FEED;
+  const summary=stored && Object.hasOwn(stored,"summary")
+    ?parsePublicStravaFeed(stored.summary)
+    :DEFAULT_STRAVA_SUMMARY;
+  return {
+    feed:feed??DEFAULT_STRAVA_FEED,
+    summary:summary??DEFAULT_STRAVA_SUMMARY
+  };
 }
 export async function setPublicStravaFeed(env,input){
-  const url=parsePublicStravaFeed(input);
-  if(url===null)throw Error("Copie le code d'intégration du flux ou du résumé de ton profil Strava, pas celui d'une seule activité.");
-  await putJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,{url});
-  return url;
+  const feed=parsePublicStravaFeed(typeof input==="string"?input:input?.feed);
+  const summary=parsePublicStravaFeed(typeof input==="string"?DEFAULT_STRAVA_SUMMARY:input?.summary);
+  if(feed===null||summary===null)throw Error("Colle les codes d'intégration officiels de ton profil Strava.");
+  await putJSON(env.PHOTOS_PRIVEES,STRAVA_FEED_KEY,{url:feed,summary});
+  return {feed,summary};
 }
 
 export function normalizeStravaActivity(input){
@@ -239,7 +253,8 @@ export async function publicChallenge(env){
     getJSON(env.PHOTOS_PRIVEES,STRAVA_KEY,[])
   ]);
   const result=summarizeChallenge(config,chess,activities,dateInZone(new Date(),config.timezone));
-  return {...result,stravaFeed:await getPublicStravaFeed(env)};
+  const widgets=await getPublicStravaWidgets(env);
+  return {...result,stravaFeed:widgets.feed,stravaSummary:widgets.summary};
 }
 export async function privateChallenge(env){
   const result=await publicChallenge(env);
