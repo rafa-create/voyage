@@ -276,8 +276,8 @@ export function summarizeChallenge(config,chess,activities,today){
     const existing=activityByDay.get(a.date);
     const time=Number(a.fin||Date.parse(a.ajouteLe||"")||0);
     const oldTime=Number(existing?.fin||Date.parse(existing?.ajouteLe||"")||0);
-    const auto=Boolean(a.id&&a.source==="strava");
-    const existingAuto=Boolean(existing?.id&&existing?.source==="strava");
+    const auto=Boolean(a.id&&["strava","archive"].includes(a.source));
+    const existingAuto=Boolean(existing?.id&&["strava","archive"].includes(existing.source));
     if(!existing||(auto&&!existingAuto)||
       (auto===existingAuto&&(time>oldTime||(time===oldTime&&String(a.url)>String(existing.url)))))
       activityByDay.set(a.date,{...a,kmTotal:Number(a.km),count:1});
