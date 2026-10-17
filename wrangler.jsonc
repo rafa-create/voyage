@@ -10,7 +10,8 @@
       "/api/*",
       "/espace/*",
       "/admin/*",
-      "/etapes/*"
+      "/etapes/*",
+      "/pays/*"
     ]
   },
   "workers_dev": true,
