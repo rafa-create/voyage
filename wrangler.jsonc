@@ -32,5 +32,6 @@
     "crons": [
       "0 4 * * *"
     ]
-  }
+  },
+  "keep_vars": true
 }
