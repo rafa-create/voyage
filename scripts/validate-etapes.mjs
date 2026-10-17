@@ -50,6 +50,14 @@ for (const [index, etape] of etapes.entries()) {
       }
     }
   }
+  if (etape.latitude !== undefined || etape.longitude !== undefined) {
+    if (typeof etape.latitude !== "number" || !Number.isFinite(etape.latitude) || etape.latitude < -90 || etape.latitude > 90 || typeof etape.longitude !== "number" || !Number.isFinite(etape.longitude) || etape.longitude < -180 || etape.longitude > 180) {
+      erreur(prefixe + " : latitude/longitude invalides.");
+    }
+  }
+  if (etape.statut !== undefined && !["passee", "actuelle", "future"].includes(etape.statut)) {
+    erreur(prefixe + " : statut invalide.");
+  }
   if (!Array.isArray(etape.photos)) {
     erreur(`${prefixe} : photos doit être une liste (éventuellement vide).`);
   } else {
@@ -60,10 +68,11 @@ for (const [index, etape] of etapes.entries()) {
         continue;
       }
       if (!estTexte(photo.alt)) erreur(`${etiquette} : ajouter un texte alternatif (alt).`);
-      if (!estTexte(photo.src) || !/^\/photos\/[a-zA-Z0-9/_-]+\.(?:webp|jpe?g|png|avif)$/i.test(photo.src)) {
+      if (!estTexte(photo.src) || !/^\/(?:photos|media)\/[a-zA-Z0-9/_-]+\.(?:webp|jpe?g|png|avif)$/i.test(photo.src)) {
         erreur(`${etiquette} : chemin invalide ; attendre /photos/... avec image webp, jpeg, png ou avif.`);
         continue;
       }
+      if (photo.src.startsWith("/media/")) continue;
       const basePhotos = resolve(racine, "public/photos");
       const fichierPhoto = resolve(racine, "public", photo.src.slice(1));
       if (!fichierPhoto.startsWith(basePhotos + sep)) {

@@ -16,6 +16,9 @@ export interface Etape {
   date: string; // AAAA-MM-JJ
   pays: string;
   ville: string;
+  latitude?: number;
+  longitude?: number;
+  statut?: "passee" | "actuelle" | "future";
   titre: string;
   texte: string;
   photos: Photo[];

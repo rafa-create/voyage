@@ -1,1 +1,51 @@
-[]
+[
+  {
+    "slug": "la-ciotat",
+    "date": "2026-10-17",
+    "pays": "France",
+    "ville": "La Ciotat",
+    "titre": "La Ciotat",
+    "texte": "Étape actuelle du voyage, à La Ciotat. Voici les sept premières photos ajoutées au carnet le 17 octobre 2026. Le récit et les légendes seront complétés progressivement.",
+    "latitude": 43.17353,
+    "longitude": 5.605174,
+    "statut": "actuelle",
+    "photos": [
+      {
+        "src": "/media/IMG_0240.jpeg",
+        "alt": "Photo 1 de la galerie de La Ciotat",
+        "legende": "Photo 1"
+      },
+      {
+        "src": "/media/IMG_0434.jpeg",
+        "alt": "Photo 2 de la galerie de La Ciotat",
+        "legende": "Photo 2"
+      },
+      {
+        "src": "/media/IMG_0652.jpeg",
+        "alt": "Photo 3 de la galerie de La Ciotat",
+        "legende": "Photo 3"
+      },
+      {
+        "src": "/media/IMG_0705.jpeg",
+        "alt": "Photo 4 de la galerie de La Ciotat",
+        "legende": "Photo 4"
+      },
+      {
+        "src": "/media/IMG_0727.jpeg",
+        "alt": "Photo 5 de la galerie de La Ciotat",
+        "legende": "Photo 5"
+      },
+      {
+        "src": "/media/cf7176d8-66fe-431d-a7a4-b1ebff39ecaa.jpeg",
+        "alt": "Photo 6 de la galerie de La Ciotat",
+        "legende": "Photo 6"
+      },
+      {
+        "src": "/media/fc3bd0fa-5eb5-4e0c-9064-0ddaa6b54697.jpeg",
+        "alt": "Photo 7 de la galerie de La Ciotat",
+        "legende": "Photo 7"
+      }
+    ],
+    "videos": []
+  }
+]
