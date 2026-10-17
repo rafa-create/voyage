@@ -1,0 +1,40 @@
+---
+import Base from "../../layouts/Base.astro";
+import { pays, dateFr, type Pays } from "../../lib/data";
+import { chemin } from "../../lib/paths";
+
+interface Props { paysItem: Pays; }
+
+export function getStaticPaths() {
+  return pays.map((paysItem) => ({
+    params: { slug: paysItem.slug },
+    props: { paysItem },
+  }));
+}
+
+const { paysItem } = Astro.props;
+---
+
+<Base title={paysItem.nom} active="pays">
+  <section class="page-intro container">
+    <p class="eyebrow"><a href={chemin("/pays/")}>TOUS LES PAYS</a> / DESTINATION</p>
+    <h1>{paysItem.nom}<span class="heading-dot">.</span></h1>
+    <p>{paysItem.etapes.length} {paysItem.etapes.length > 1 ? "étapes" : "étape"} dans ce pays.</p>
+  </section>
+  <section class="container section">
+    <div class="cards-grid">
+      {paysItem.etapes.map((etape) => (
+        <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
+          {etape.photos[0] ? (
+            <img src={chemin(etape.photos[0].src)} alt={etape.photos[0].alt} loading="lazy" width="720" height="480" />
+          ) : <div class="card-illustration"><span>✳</span></div>}
+          <div class="card-body">
+            <span class="card-meta">{dateFr(etape.date)} · {etape.ville}</span>
+            <h2>{etape.titre}</h2>
+            <span class="card-more">Voir l'étape ↗</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

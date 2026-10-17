@@ -1,0 +1,59 @@
+---
+import Base from "../layouts/Base.astro";
+import { galerie } from "../lib/data";
+import { chemin } from "../lib/paths";
+---
+
+<Base title="Galerie photo" active="galerie">
+  <section class="page-intro container">
+    <p class="eyebrow">INSTANTS CAPTURÉS</p>
+    <h1>La galerie photo<span class="heading-dot">.</span></h1>
+    <p>Les images du voyage, réunies au même endroit. Un clic pour les afficher en grand.</p>
+  </section>
+  <section class="container section">
+    {galerie.length ? (
+      <div class="photo-grid gallery-grid">
+        {galerie.map((photo) => (
+          <figure class="photo-tile">
+            <button
+              type="button"
+              class="photo-open"
+              data-photo={chemin(photo.src)}
+              data-alt={photo.alt}
+              aria-label={"Afficher en grand : " + photo.alt}
+            >
+              <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="960" height="720" />
+            </button>
+            <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
+          </figure>
+        ))}
+      </div>
+    ) : (
+      <div class="empty-state">
+        <div class="empty-symbol" aria-hidden="true">▧</div>
+        <h2>Une galerie à remplir</h2>
+        <p>Les photos apparaîtront ici automatiquement quand elles seront ajoutées aux étapes.</p>
+      </div>
+    )}
+  </section>
+  <dialog id="visionneuse" class="lightbox" aria-label="Photo agrandie">
+    <button type="button" class="lightbox-close" aria-label="Fermer la photo">Fermer ✕</button>
+    <img src="" alt="" />
+  </dialog>
+  <script>
+    const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
+    const agrandissement = dialog?.querySelector("img");
+    document.querySelectorAll<HTMLButtonElement>(".photo-open").forEach((bouton) => {
+      bouton.addEventListener("click", () => {
+        if (!dialog || !agrandissement) return;
+        agrandissement.src = bouton.dataset.photo || "";
+        agrandissement.alt = bouton.dataset.alt || "";
+        dialog.showModal();
+      });
+    });
+    dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
+    dialog?.addEventListener("click", (evenement) => {
+      if (evenement.target === dialog) dialog.close();
+    });
+  </script>
+</Base>

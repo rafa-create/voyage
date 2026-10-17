@@ -1,0 +1,36 @@
+---
+import Base from "../layouts/Base.astro";
+import { etapes, dateFr } from "../lib/data";
+import { chemin } from "../lib/paths";
+---
+
+<Base title="Journal" active="journal">
+  <section class="page-intro container">
+    <p class="eyebrow">AU FIL DES JOURS</p>
+    <h1>Le journal de route<span class="heading-dot">.</span></h1>
+    <p>Chaque étape à sa place, dans l'ordre du voyage. Du premier départ aux dernières découvertes.</p>
+  </section>
+  <section class="container section journal-list" aria-label="Étapes du voyage">
+    {etapes.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-symbol" aria-hidden="true">↝</div>
+        <h2>Pas encore d'étape publiée</h2>
+        <p>Les journées de voyage apparaîtront ici, de la plus récente à la plus ancienne.</p>
+      </div>
+    ) : (
+      <ol class="timeline">
+        {etapes.map((etape) => (
+          <li>
+            <span class="timeline-date">{dateFr(etape.date)}</span>
+            <a href={chemin("/etapes/" + etape.slug + "/")} class="timeline-card">
+              <span class="eyebrow">{etape.pays} · {etape.ville}</span>
+              <h2>{etape.titre}</h2>
+              <p>{etape.texte.slice(0, 180)}{etape.texte.length > 180 ? "…" : ""}</p>
+              <span class="card-more">Lire cette étape ↗</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+</Base>

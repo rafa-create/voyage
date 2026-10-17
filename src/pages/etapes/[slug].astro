@@ -1,0 +1,74 @@
+---
+import Base from "../../layouts/Base.astro";
+import { etapes, dateFr, idYoutube, slugifier, type Etape } from "../../lib/data";
+import { chemin } from "../../lib/paths";
+
+interface Props { etape: Etape; }
+
+export function getStaticPaths() {
+  return etapes.map((etape) => ({
+    params: { slug: etape.slug },
+    props: { etape },
+  }));
+}
+
+const { etape } = Astro.props;
+---
+
+<Base title={etape.titre} description={etape.texte.slice(0, 155)} active="journal">
+  <article>
+    <header class="page-intro container story-intro">
+      <p class="eyebrow"><a href={chemin("/journal/")}>JOURNAL</a> / <a href={chemin("/pays/" + slugifier(etape.pays) + "/")}>{etape.pays}</a></p>
+      <p class="story-date">{dateFr(etape.date)} · {etape.ville}</p>
+      <h1>{etape.titre}<span class="heading-dot">.</span></h1>
+    </header>
+    <section class="container story-content">
+      <p class="story-text">{etape.texte}</p>
+    </section>
+
+    {etape.photos.length > 0 && (
+      <section class="container section">
+        <div class="section-heading"><div><p class="eyebrow">SOUVENIRS EN IMAGES</p><h2>Les photos</h2></div></div>
+        <div class="photo-grid">
+          {etape.photos.map((photo) => (
+            <figure class="photo-tile">
+              <a href={chemin(photo.src)} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo en grand">
+                <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" width="960" height="720" />
+              </a>
+              {photo.legende && <figcaption>{photo.legende}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {etape.videos.length > 0 && (
+      <section class="container section">
+        <div class="section-heading"><div><p class="eyebrow">CARNET VIDÉO</p><h2>Les vidéos</h2></div></div>
+        <div class="video-grid">
+          {etape.videos.map((video) => {
+            const youtubeId = idYoutube(video.url);
+            return (
+              <div class="video-card">
+                {youtubeId ? (
+                  <div class="video-frame">
+                    <iframe
+                      src={"https://www.youtube-nocookie.com/embed/" + youtubeId}
+                      title={video.titre}
+                      loading="lazy"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                ) : <p>Impossible d'intégrer ce lien vidéo.</p>}
+                <p><a href={video.url} target="_blank" rel="noopener noreferrer">{video.titre} ↗</a></p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    )}
+    <div class="container story-end"><a class="text-link" href={chemin("/journal/")}>← Retour au journal</a></div>
+  </article>
+</Base>

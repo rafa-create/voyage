@@ -1,0 +1,59 @@
+---
+import "../styles/global.css";
+import { chemin } from "../lib/paths";
+
+interface Props {
+  title: string;
+  description?: string;
+  active?: "accueil" | "journal" | "pays" | "galerie";
+}
+
+const { title, description = "Un carnet de voyage en images, en mots et en vidéos.", active } = Astro.props;
+const nav = [
+  { label: "Accueil", href: "/", id: "accueil" },
+  { label: "Journal", href: "/journal/", id: "journal" },
+  { label: "Pays", href: "/pays/", id: "pays" },
+  { label: "Galerie", href: "/galerie/", id: "galerie" },
+];
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f6f3eb" />
+    <link rel="icon" type="image/svg+xml" href={chemin("/favicon.svg")} />
+    <title>{title} · Carnet de voyage</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href={chemin("/")} aria-label="Carnet de voyage, accueil">
+          <span class="brand-mark" aria-hidden="true">✳</span>
+          <span>Carnet<span class="brand-accent">.</span>voyage</span>
+        </a>
+        <nav class="main-nav" aria-label="Navigation principale">
+          {nav.map((lien) => (
+            <a
+              href={chemin(lien.href)}
+              class:list={{ selected: active === lien.id }}
+              aria-current={active === lien.id ? "page" : undefined}
+            >
+              {lien.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+    <main id="contenu"><slot /></main>
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>Un voyage à la fois, un souvenir après l'autre.</span>
+        <span>© {new Date().getFullYear()} · Carnet de voyage</span>
+      </div>
+    </footer>
+  </body>
+</html>
