@@ -19,3 +19,5 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Compiler Astro
         run: npm run build
+      - name: Vérifier le Worker et ses bindings sans le déployer
+        run: npx wrangler deploy --dry-run --outdir=/tmp/voyage-worker-test
