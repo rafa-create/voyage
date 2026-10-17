@@ -22,7 +22,7 @@ const { paysItem } = Astro.props;
     <p>{paysItem.etapes.length} {paysItem.etapes.length > 1 ? "étapes" : "étape"} dans ce pays.</p>
   </section>
   <section class="container section">
-    <div class="cards-grid">
+    <div class="cards-grid" id="country-stages" data-pays={paysItem.slug}>
       {paysItem.etapes.map((etape) => (
         <a class="step-card" href={chemin("/etapes/" + etape.slug + "/")}>
           {etape.photos[0] ? (
@@ -37,4 +37,24 @@ const { paysItem } = Astro.props;
       ))}
     </div>
   </section>
+
+  <script>
+    function slugify(x:string){return x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+    const grid=document.getElementById("country-stages");
+    if(grid){
+      fetch("/api/public/etapes").then(r=>r.ok?r.json():null).then(data=>{
+        if(!data)return;
+        const matching=data.etapes.filter((e:{pays:string})=>slugify(e.pays)===grid.dataset.pays);
+        grid.replaceChildren();
+        for(const e of matching){
+          const a=document.createElement("a");a.className="step-card";a.href="/etapes/"+encodeURIComponent(e.slug)+"/";
+          const card=document.createElement("div");card.className="card-body";
+          const meta=document.createElement("span");meta.className="card-meta";meta.textContent=e.date+" · "+e.ville;
+          const h=document.createElement("h2");h.textContent=e.titre;
+          const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape ↗";
+          card.append(meta,h,more);a.append(card);grid.append(a);
+        }
+      }).catch(()=>{});
+    }
+  </script>
 </Base>
