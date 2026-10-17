@@ -164,6 +164,9 @@ const points = etapes
             map.setPaintProperty("tous-les-traces", "line-width", selectedDay
               ? ["case", ["==", ["get", "date"], selectedDay], 5, 2.5]
               : 3.5);
+            map.setLayoutProperty("tous-les-traces", "line-sort-key", selectedDay
+              ? ["case", ["==", ["get", "date"], selectedDay], 1, 0]
+              : 0);
           }
           if (map.getLayer("trace-sportive")) {
             map.setPaintProperty("trace-sportive", "line-color", selectedDay
