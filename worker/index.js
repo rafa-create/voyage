@@ -298,9 +298,9 @@ export default {
       const extension=type==="image/jpeg"?"jpeg":Object.entries(types).find(([e,t])=>t===type)?.[0];
       if(!extension)return error("Utiliser JPEG, PNG, WebP, AVIF, HEIC ou HEIF.");
       const advertised=Number(request.headers.get("Content-Length"));
-      if(advertised>12*1024*1024)return error("12 Mo maximum par photo.",413);
+      if(advertised>30*1024*1024)return error("30 Mo maximum par photo.",413);
       const body=await request.arrayBuffer();
-      if(!body.byteLength||body.byteLength>12*1024*1024)return error("Image vide ou trop volumineuse.",413);
+      if(!body.byteLength||body.byteLength>30*1024*1024)return error("Image vide ou supérieure à 30 Mo.",413);
       const d=url.searchParams.get("datePrise");
       let captured=validDate(d)?d:null;
       // L'admin essaie d'extraire la date EXIF avant l'envoi; la valeur d'origine
