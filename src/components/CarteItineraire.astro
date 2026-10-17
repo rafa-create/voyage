@@ -73,6 +73,7 @@ const points = etapes
         const marker = document.createElement("button");
         marker.type = "button";
         marker.className = "map-marker map-marker-" + p.statut;
+        marker.style.zIndex = "1";
         marker.setAttribute("aria-label", "Ouvrir l'étape " + p.ville);
         marker.title = p.ville;
         marker.textContent = p.statut === "actuelle" ? "●" : "•";
@@ -354,6 +355,7 @@ const points = etapes
               const marker=document.createElement("button");
               marker.type="button";
               marker.classList.add("memory-map-marker");
+              marker.style.zIndex = memory.type==="photo" && memory.src ? "3" : "2";
               marker.dataset.date=memory.date;
               marker.dataset.latitude=String(memory.latitude);
               marker.dataset.longitude=String(memory.longitude);
