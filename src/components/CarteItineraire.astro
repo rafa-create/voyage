@@ -1,0 +1,135 @@
+---
+import type { Etape } from "../lib/data";
+
+interface Props { etapes: Etape[]; }
+const { etapes } = Astro.props;
+const points = etapes
+  .filter((etape) => Number.isFinite(etape.latitude) && Number.isFinite(etape.longitude))
+  .sort((a, b) => a.date.localeCompare(b.date))
+  .map((etape) => ({
+    slug: etape.slug,
+    titre: etape.titre,
+    ville: etape.ville,
+    pays: etape.pays,
+    latitude: etape.latitude,
+    longitude: etape.longitude,
+    statut: etape.statut || "passee",
+  }));
+---
+<div class="voyage-map-shell">
+  <div id="carte-voyage" class="voyage-map" data-etapes={JSON.stringify(points)} role="region" aria-label="Carte interactive des étapes du voyage">
+    <div class="map-loading">Chargement de la carte…</div>
+  </div>
+  <noscript><p>Activez JavaScript pour explorer la carte. Les étapes restent accessibles dans le journal.</p></noscript>
+  <div class="map-footer">
+    <span><span class="legend-dot legend-current" aria-hidden="true"></span> Étape actuelle</span>
+    <span><span class="legend-dot legend-past" aria-hidden="true"></span> Parcouru</span>
+    <span><span class="legend-dot legend-future" aria-hidden="true"></span> À venir</span>
+  </div>
+</div>
+<script>
+  import maplibregl, { setWorkerUrl } from "maplibre-gl";
+  import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+  import "maplibre-gl/dist/maplibre-gl.css";
+  setWorkerUrl(workerUrl);
+
+  type Point = {
+    slug: string;
+    titre: string;
+    ville: string;
+    pays: string;
+    latitude: number;
+    longitude: number;
+    statut: "passee" | "actuelle" | "future";
+  };
+
+  const element = document.getElementById("carte-voyage");
+  if (element) {
+    const points: Point[] = JSON.parse(element.dataset.etapes || "[]");
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const central = points.find((p) => p.statut === "actuelle") || points[points.length - 1];
+    if (central) {
+      const map = new maplibregl.Map({
+        container: element,
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [central.longitude, central.latitude],
+        zoom: points.length === 1 ? 10 : 5,
+        cooperativeGestures: true,
+        scrollZoom: false,
+        dragRotate: false,
+        pitchWithRotate: false,
+      });
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      map.addControl(new maplibregl.FullscreenControl(), "top-right");
+
+      for (const p of points) {
+        const marker = document.createElement("button");
+        marker.type = "button";
+        marker.className = "map-marker map-marker-" + p.statut;
+        marker.setAttribute("aria-label", "Ouvrir l'étape " + p.ville);
+        marker.title = p.ville;
+        marker.textContent = p.statut === "actuelle" ? "●" : "•";
+
+        const contenu = document.createElement("div");
+        contenu.className = "map-popup-content";
+        const label = document.createElement("span");
+        label.textContent = p.statut === "actuelle" ? "Étape actuelle" : p.statut === "future" ? "À venir" : "Étape parcourue";
+        label.className = "map-popup-label";
+        const titre = document.createElement("strong");
+        titre.textContent = p.titre;
+        const pays = document.createElement("span");
+        pays.textContent = p.pays;
+        const lien = document.createElement("a");
+        lien.href = base + "/etapes/" + encodeURIComponent(p.slug) + "/";
+        lien.textContent = "Voir les photos et le récit ↗";
+        contenu.append(label, titre, pays, lien);
+
+        new maplibregl.Marker({ element: marker, anchor: "center" })
+          .setLngLat([p.longitude, p.latitude])
+          .setPopup(new maplibregl.Popup({ offset: 22 }).setDOMContent(contenu))
+          .addTo(map);
+      }
+
+      const parcours = points.filter((p) => p.statut !== "future");
+      const futur = points.filter((p) => p.statut === "future");
+      map.on("load", () => {
+        const traces: { id: string; points: Point[]; couleur: string; tirets?: number[] }[] = [
+          { id: "trajet-parcouru", points: parcours, couleur: "#bb714c" },
+          { id: "trajet-prevu", points: [...parcours.slice(-1), ...futur], couleur: "#52746a", tirets: [2, 2] },
+        ];
+        for (const trace of traces) {
+          if (trace.points.length < 2) continue;
+          map.addSource(trace.id, {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: trace.points.map((p) => [p.longitude, p.latitude]),
+              },
+            },
+          });
+          map.addLayer({
+            id: trace.id,
+            type: "line",
+            source: trace.id,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": trace.couleur,
+              "line-width": 3.5,
+              ...(trace.tirets ? { "line-dasharray": trace.tirets } : {}),
+            },
+          });
+        }
+        if (points.length > 1) {
+          const bornes = new maplibregl.LngLatBounds();
+          points.forEach((p) => bornes.extend([p.longitude, p.latitude]));
+          map.fitBounds(bornes, { padding: 55, maxZoom: 10, duration: 0 });
+        }
+      });
+    } else {
+      element.textContent = "La carte apparaîtra lorsque les premières étapes seront ajoutées.";
+    }
+  }
+</script>
