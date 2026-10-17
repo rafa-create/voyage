@@ -89,6 +89,28 @@ Cloudflare reconstruire le site. Une Preview doit être testée avant de publier
 **Alternative non utilisée :** GitHub Pages, avec `GITHUB_PAGES=true` pour le préfixe
 `/voyage/`. Ne pas activer les deux hébergements par erreur.
 
+
+## Photos publiques dans Cloudflare R2
+
+Un seul binding R2 est actif : `PHOTOS_PUBLIQUES`, lié au bucket
+`voyage-photos` dans `wrangler.jsonc`. Wrangler crée automatiquement
+cette liaison lors du déploiement. Le bucket **privé** `voyage-photos-prive`
+ne doit pas être lié à ce Worker public tant que l'authentification et les
+autorisations ne sont pas implémentées.
+
+Pour ajouter une photo publique :
+
+1. Dans Cloudflare > R2 > `voyage-photos` > Objects, téléverser le fichier
+   (exemple de clé : `japon/tokyo-01.webp`).
+2. Dans `src/data/etapes.json`, référencer son URL locale via
+   `"src": "/media/japon/tokyo-01.webp"`.
+3. Valider et publier le changement sur GitHub. Le site affiche alors la photo
+   à `https://voyage.site-ready.workers.dev/media/japon/tokyo-01.webp`.
+
+Le code `worker/index.js` n'autorise que la lecture des images publiques
+(`GET` et `HEAD`). Il ne permet ni d'écrire ni de lister les fichiers.
+Ne pas mettre de photo privée dans ce bucket. Conserver les originaux ailleurs.
+
 ## Évolutions prévues
 
 1. Publier des photos et des textes publics depuis ChatGPT, via des modifications du dépôt.
