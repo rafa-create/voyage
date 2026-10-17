@@ -123,6 +123,41 @@ Lorsque l'on connaît la date, le pays et le lieu, déplacer la référence corr
 dans `src/data/etapes.json` et la retirer de `photos-a-classer.json` pour éviter
 les doublons. Les photos doivent être publiques et non sensibles.
 
+## Connexion privée et interface d'administration (à activer dans Cloudflare)
+
+Le site contient maintenant trois pages :
+- `/connexion/` : entrée publique vers le formulaire Cloudflare Access (code e-mail).
+- `/espace/` : galerie de photos privées réservée aux proches.
+- `/admin/` : choisir l'étape actuelle, créer des étapes et téléverser des photos dans R2.
+
+**Sécurité fermée par défaut** : sans jeton Cloudflare Access signé et variables de configuration, toutes les routes privées renvoient une erreur ; cela ne signifie pas que les droits sont configurés.
+
+1. Dans Cloudflare Zero Trust > Access controls > Applications, créer **une application self-hosted** associée à `voyage.site-ready.workers.dev` avec **les chemins protégés** :
+   - `/espace` et `/espace/*`
+   - `/admin` et `/admin/*`
+   - `/api/prive/*`
+   - `/media-prive/*`
+   Les autres chemins, dont `/`, `/galerie/` et `/connexion/`, restent publics.
+2. Dans la politique Allow, ajouter **uniquement** les adresses e-mail des invités (y compris celle de l'administrateur). Ajouter une méthode de connexion **One-time PIN** par e-mail.
+3. Dans **Workers & Pages > voyage > Settings > Variables and Secrets**, définir :
+   - `ACCESS_TEAM_DOMAIN` = URL complète `https://NOM-EQUIPE.cloudflareaccess.com`
+   - `ACCESS_AUD` = **Application Audience (AUD)** de cette unique application Access
+   - `ADMIN_EMAIL` = adresse e-mail complète du propriétaire (l'adresse que tu utilises pour te connecter).
+   Ne pas committer ces valeurs dans le dépôt public. Aucun mot de passe ni clé R2 n'est nécessaire.
+4. La configuration `wrangler.jsonc` attache `PHOTOS_PRIVEES` au bucket **voyage-photos-prive**, sans activer ses URL publiques.
+5. Choisir une durée de session Access (par exemple 7 jours). Une session n'est pas permanente : il faudra se reconnecter après expiration.
+6. Tester : sans connexion, `/espace/` et `/media-prive/*` doivent être bloqués ; invité connecté = galerie privée mais pas admin ; e-mail administrateur = accès à `/admin/`.
+
+Le Worker **vérifie cryptographiquement le JWT Access** (signature, audience et émetteur) et compare l'adresse à `ADMIN_EMAIL` pour autoriser les modifications. La protection des routes en amont dans Access reste importante. **Ne jamais protéger le Worker entier** : cela rendrait le site public inaccessible.
+
+### Publication et classement
+
+L'admin sélectionne une étape (étape active sélectionnée par défaut), puis ajoute plusieurs photos. Un fichier va dans `voyage-photos/etapes/SLUG/` s'il est public, ou `voyage-photos-prive/etapes/SLUG/` s'il est privé. Chaque objet R2 mémorise son étape dans ses métadonnées. Les galeries récupèrent les nouvelles images depuis l'API Worker sans déploiement GitHub ni D1. Le site limite chaque image à 12 Mo.
+
+Les étapes créées depuis l'admin sont enregistrées dans les métadonnées du bucket privé et accessibles publiquement par leur page d'étape, la carte étant mise à jour depuis l'API publique. Les images du bucket privé ne sont jamais publiées par cette API.
+
+**Important** : un transfert réalisé directement dans le tableau de bord R2 n'est **pas** encore automatiquement classé ; seuls les transferts effectués depuis l'admin le sont. Pour automatiser les changements faits depuis le tableau de bord R2, on pourra plus tard configurer R2 Event Notifications et Cloudflare Queues (vérifier les limites gratuites). Les albums privés sont communs à tous les invités autorisés pour l'instant ; une autorisation par album serait une étape supplémentaire.
+
 ## Évolutions prévues
 
 1. Publier des photos et des textes publics depuis ChatGPT, via des modifications du dépôt.
