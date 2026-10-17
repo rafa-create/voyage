@@ -1,5 +1,6 @@
 import { requireAccess } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
+import * as exifr from "exifr";
 import {importGpx,publicArchives,archiveMapPoints} from "./parcours-archive.js";
 import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
@@ -67,10 +68,33 @@ async function synchroniserR2(env) {
   return {ok:true,examined,matched,unclassified};
 }
 
+async function enrichirPositionsPhotos(env){
+  // Traitement lent et borné : jusqu'à quatre photos publiques anciennes par jour.
+  // Une photo sans GPS est marquée comme examinée pour ne plus être relue.
+  const items=await env.PHOTOS_PUBLIQUES.list({limit:1000,include:["customMetadata"]});
+  const todo=items.objects.filter(item=>imageKey(item.key)&&
+    item.customMetadata?.geoScanned!=="1").slice(0,4);
+  for(const item of todo){
+    const photo=await env.PHOTOS_PUBLIQUES.get(item.key);
+    if(!photo)continue;
+    const buffer=await photo.arrayBuffer();
+    let coords=null;
+    try{coords=await exifr.gps(buffer);}catch{}
+    const valid=coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
+      Math.abs(coords.latitude)<=85&&Math.abs(coords.longitude)<=180;
+    await env.PHOTOS_PUBLIQUES.put(item.key,buffer,{
+      httpMetadata:photo.httpMetadata,
+      customMetadata:{...(photo.customMetadata||{}),geoScanned:"1",
+        ...(valid?{latitude:String(coords.latitude),longitude:String(coords.longitude)}:{})}
+    });
+  }
+}
+
 export default {
   async scheduled(event,env,ctx){
     // Chaque jour, examiner les nouveaux objets R2 non classés (sans connexion humaine).
     ctx.waitUntil(synchroniserR2(env));
+    ctx.waitUntil(enrichirPositionsPhotos(env).catch(e=>console.warn("Localisation photos:",String(e))));
     ctx.waitUntil(syncChess(env).catch(e=>console.warn("Synchronisation Chess.com:",String(e))));
     ctx.waitUntil((async()=>{
       const marker="__meta/defi/cache-api-nettoye.json";
@@ -235,7 +259,14 @@ export default {
       const bucket=bucketFor(env,visibilite);
       const key="etapes/"+slug+"/"+crypto.randomUUID()+"."+extension;
       const alt="Photo de "+all.find(x=>x.slug===slug).ville;
-      await bucket.put(key,body,{httpMetadata:{contentType:type},customMetadata:{alt,etape:slug,...(captured?{datePrise:captured}:{})}});
+      let coords=null;
+      try{coords=await exifr.gps(body);}catch{}
+      const valid=coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
+        Math.abs(coords.latitude)<=85&&Math.abs(coords.longitude)<=180;
+      await bucket.put(key,body,{httpMetadata:{contentType:type},
+        customMetadata:{alt,etape:slug,geoScanned:"1",
+          ...(captured?{datePrise:captured}:{}),
+          ...(valid?{latitude:String(coords.latitude),longitude:String(coords.longitude)}:{})}});
       return json({ok:true,etape:slug,visibilite,datePrise:captured,src:photoPath(key,visibilite)},201);
     }
     if(path==="/api/prive/admin/video-ajouter"){
