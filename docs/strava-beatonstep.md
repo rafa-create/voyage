@@ -12,14 +12,14 @@ Les activités sont enregistrées soit avec une montre Garmin, puis synchronisé
 ## Chargement et copies personnelles
 
 - L'ouverture de `/defi/` déclenche une synchronisation serveur, limitée à une requête par dix minutes. Le cron vérifie également toutes les deux heures.
-- Jusqu'à 100 activités récentes sont récupérées dans l'espace privé, quelle que soit leur origine Garmin ou Strava, avec un cache API transitoire de sept jours dans R2.
-- Les nouvelles activités détectées sont copiées dans l'archive personnelle R2 : résumé, date de départ, sport, distance, durée et, lorsque disponible, un tracé simplifié. L'import est limité à huit nouveaux résumés et deux tracés par passage pour respecter le forfait gratuit Cloudflare.
-- Les copies sont privées par défaut, avec déduplication selon l'ID de l'activité. La page administration indique le total archivé.
+- Les 100 premières activités sont lues à chaque synchronisation ; une pagination supplémentaire (jusqu'à dix pages de 100) permet le rattrapage des activités des 90 derniers jours au fil des passages, y compris si elles ne sont arrivées sur le compte sportif qu'un mois après leur réalisation. Le cache API des activités récentes conserve seulement les sept derniers jours.
+- Les nouvelles activités détectées sont copiées dans l'archive personnelle R2 : résumé, date de départ, sport, distance, durée et, lorsque disponible, un tracé simplifié. L'import est limité à huit nouveaux résumés par page et quelques parcours par passage, pour respecter le forfait gratuit Cloudflare. Le rattrapage complet peut donc demander plusieurs synchronisations (toutes les deux heures).
+- Les copies sont enregistrées dans le bucket R2 privé, avec déduplication selon l'ID de l'activité. Seules les activités dont la visibilité à la source est `everyone` peuvent apparaître dans le journal public. La page administration indique le total archivé.
 - Cette copie API n'est **pas** le FIT/GPX original Garmin/Strava : elle comporte au plus 120 points GPS. L'import GPX manuel conserve l'original, et reste disponible pour compléter l'archive.
 
 ## Public
 
-- Le journal public et la carte grand public utilisent uniquement les fichiers GPX personnels explicitement publiés par l'administrateur et les entrées manuelles existantes. Les nouvelles copies automatiques restent privées.
+- Le journal public et la carte grand public utilisent les fichiers GPX personnels explicitement publiés, les entrées manuelles existantes et les copies d'activités marquées `everyone` par le propriétaire à la source. Les données réservées aux abonnés, privées ou de visibilité inconnue ne sont jamais publiées. Les copies sources restent toutes conservées dans le bucket privé.
 - Les widgets officiels Strava restent accessibles mais repliés.
 - Chaque journée retient la dernière activité et la dernière partie Chess.com Rapid ; la carte principale accueille toutes les activités GPS et les photos publiques.
 - La publication de données issues de l'API, ainsi que la durée de conservation de ces copies API, devront être revues vis-à-vis des conditions du fournisseur avant diffusion publique. Le fait d'être propriétaire des activités ne supprime pas les conditions d'utilisation de l'API.
