@@ -41,7 +41,7 @@ import { chemin } from "../lib/paths";
       </>
     )}
 
-    {galerie.length > 0 && (
+    {galerie.filter(photo => !photo.src.startsWith("/media/")).length > 0 && (
       <>
         <div class="section-heading" style={photosAClasser.length ? "margin-top: 5rem;" : undefined}>
           <div>
@@ -50,7 +50,7 @@ import { chemin } from "../lib/paths";
           </div>
         </div>
         <div class="photo-grid gallery-grid">
-          {galerie.map((photo) => (
+          {galerie.filter(photo => !photo.src.startsWith("/media/")).map((photo) => (
             <figure class="photo-tile">
               <button
                 type="button"
