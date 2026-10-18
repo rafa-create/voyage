@@ -145,7 +145,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const step = etapes.find(item=>item.slug===video.etape);
           if (!step) return false;
           const nextStepDate = [...etapes].filter(item=>item.date>step.date).sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;
-          return day >= step.date && (step.dateFin ? day <= step.dateFin : !nextStepDate || day < nextStepDate);
+          return day >= step.date && (!nextStepDate || day < nextStepDate);
         });
         const dailyVideosWrap = document.querySelector<HTMLElement>("#daily-videos-wrap");
         const dailyVideosGrid = document.querySelector<HTMLElement>("#daily-videos");
