@@ -216,7 +216,6 @@ import { chemin } from "../lib/paths";
   </script>
   <dialog id="visionneuse" class="lightbox" aria-label="Photo agrandie">
     <button type="button" class="lightbox-close" aria-label="Fermer la photo" title="Fermer">✕</button>
-    <button type="button" class="lightbox-fullscreen" aria-label="Passer en plein écran" title="Plein écran">⛶</button>
     <button type="button" class="lightbox-edit" aria-label="Modifier cette photo" title="Modifier cette photo" hidden>✎</button>
     <button type="button" class="lightbox-prev" aria-label="Photo précédente">←</button>
     <img src="" alt="" />
@@ -381,42 +380,11 @@ import { chemin } from "../lib/paths";
       const delta = (event.changedTouches[0]?.clientX || 0) - touchX;
       if (Math.abs(delta) > 45) afficher(index + (delta < 0 ? 1 : -1));
     }, { passive: true });
-    const fullscreenButton = dialog?.querySelector<HTMLButtonElement>(".lightbox-fullscreen");
-    const updateFullscreenButton = () => {
-      if (!fullscreenButton) return;
-      const active = !!dialog && (document.fullscreenElement === dialog || dialog.classList.contains("lightbox-fullscreen-mode"));
-      fullscreenButton.textContent = active ? "⤢" : "⛶";
-      fullscreenButton.setAttribute("aria-label", active ? "Quitter le plein écran" : "Passer en plein écran");
-      fullscreenButton.title = active ? "Quitter le plein écran" : "Plein écran";
-    };
-    fullscreenButton?.addEventListener("click", async () => {
-      if (!dialog) return;
-      try {
-        if (document.fullscreenElement === dialog) {
-          await document.exitFullscreen();
-          dialog.classList.remove("lightbox-fullscreen-mode");
-        } else if (dialog.classList.contains("lightbox-fullscreen-mode")) {
-          dialog.classList.remove("lightbox-fullscreen-mode");
-        } else if (dialog.requestFullscreen) {
-          await dialog.requestFullscreen();
-        } else {
-          dialog.classList.add("lightbox-fullscreen-mode");
-        }
-      } catch {
-        dialog.classList.toggle("lightbox-fullscreen-mode");
-      }
-      updateFullscreenButton();
-    });
-    document.addEventListener("fullscreenchange", updateFullscreenButton);
     dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
     dialog?.querySelector(".lightbox-edit")?.addEventListener("click", () => { if(editor) editor.hidden=!editor.hidden; });
-    dialog?.addEventListener("click", (evenement) => {
-      if (evenement.target === dialog) dialog.close();
-    });
     dialog?.addEventListener("close", () => {
       if (document.fullscreenElement === dialog) void document.exitFullscreen().catch(() => {});
       dialog.classList.remove("lightbox-fullscreen-mode");
-      updateFullscreenButton();
       if (agrandissement) { agrandissement.removeAttribute("src"); agrandissement.hidden=false; }
       if(videoPlayer){videoPlayer.src="";videoPlayer.hidden=true;}
       if(details){details.textContent="";details.hidden=true;}
