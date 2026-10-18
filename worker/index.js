@@ -7,7 +7,7 @@ import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeCo
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
-  getCaptureDate, movePhoto, legacyPhotos
+  movePhoto, legacyPhotos
 } from "./content.js";
 
 const noStore = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -50,23 +50,16 @@ function makePublicSteps(all){
   return all.map(e=>({slug:e.slug,date:e.date,dateFin:e.dateFin||null,pays:e.pays,ville:e.ville,titre:e.titre,texte:e.texte||"",latitude:e.latitude,longitude:e.longitude,statut:e.statut,videos:[],photos:[]}));
 }
 async function synchroniserR2(env) {
-  // Une passe courte et bornée pour respecter les quotas gratuits.
-  const all=await steps(env);
-  let matched=0,unclassified=0,examined=0;
+  // La synchronisation détecte les souvenirs sans étape, mais ne les rattache
+  // jamais automatiquement : l'organisation par étape reste facultative.
+  let unclassified=0,examined=0;
   for(const visibility of ["public","prive"]){
-    const bucket=bucketFor(env,visibility);
     const photos=await listedPhotos(env,visibility);
-    for(const photo of photos.filter(p=>!p.etape).sort((a,b)=>(b.ajouteLe||"").localeCompare(a.ajouteLe||"")).slice(0,4)){
-      examined++;
-      const date=photo.datePrise||await getCaptureDate(bucket,photo.key);
-      const stage=matchStep(date,all);
-      if(!stage){unclassified++;continue;}
-      const name="etapes/"+stage.slug+"/"+crypto.randomUUID()+"."+photo.key.split(".").pop().toLowerCase();
-      await movePhoto(bucket,bucket,photo.key,name,{etape:stage.slug,...(date?{datePrise:date}:{})});
-      matched++;
-    }
+    const loose=photos.filter(p=>!p.etape).sort((a,b)=>(b.ajouteLe||"").localeCompare(a.ajouteLe||"")).slice(0,4);
+    examined+=loose.length;
+    unclassified+=loose.length;
   }
-  return {ok:true,examined,matched,unclassified};
+  return {ok:true,examined,matched:0,unclassified};
 }
 
 async function enrichirPositionsPhotos(env){
