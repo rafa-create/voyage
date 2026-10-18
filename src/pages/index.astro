@@ -25,6 +25,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
               <button type="button" id="daily-heading-previous" aria-label="Jour précédent" disabled>←</button>
             </div>
             <h2 id="daily-heading">Souvenir du jour</h2>
+            <input type="date" id="daily-date-picker" aria-label="Choisir la journée mise en avant" title="Choisir une journée" />
             <div class="daily-heading-arrows" aria-label="Jour suivant">
               <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
             </div>
@@ -66,6 +67,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const next = document.querySelector<HTMLButtonElement>("#day-next");
     const headingPrevious = document.querySelector<HTMLButtonElement>("#daily-heading-previous");
     const headingNext = document.querySelector<HTMLButtonElement>("#daily-heading-next");
+    const dailyDatePicker = document.querySelector<HTMLInputElement>("#daily-date-picker");
     async function initDailyView() {
       if (!grid || !empty || !previous || !next) return;
       const safeJson = async (url:string) => {
@@ -100,13 +102,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       // Toujours inclure aujourd'hui et hier, même sans photo ni activité associée.
       dates.add(todayKey);
       dates.add(yesterdayKey);
-      const ordered = Array.from(dates).sort((a,b)=>b.localeCompare(a));
+      let ordered = Array.from(dates).sort((a,b)=>b.localeCompare(a));
       const todayIndex = ordered.indexOf(todayKey);
       const yesterdayIndex = ordered.indexOf(yesterdayKey);
       // À l’arrivée, afficher les souvenirs d’hier, comme le bouton « Hier » de la carte.
       let index = yesterdayIndex >= 0 ? yesterdayIndex : todayIndex;
       const render = () => {
         const day = ordered[index];
+        if (dailyDatePicker) dailyDatePicker.value = day || "";
         if (dateText) dateText.textContent = dateLabel(day);
         const heading = document.querySelector<HTMLElement>("#daily-heading");
         if (heading) heading.textContent = dateLabel(day);
@@ -196,6 +199,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const goNext = () => { if(index > 0){ index--; render(); } };
       headingPrevious?.addEventListener("click",goPrevious);
       headingNext?.addEventListener("click",goNext);
+      dailyDatePicker?.addEventListener("change",()=>{
+        const day=dailyDatePicker.value;
+        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(day))return;
+        if(!ordered.includes(day)) ordered=[...ordered,day].sort((a,b)=>b.localeCompare(a));
+        index=ordered.indexOf(day);
+        render();
+      });
       previous.addEventListener("click",goPrevious);
       next.addEventListener("click",goNext);
       window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
@@ -212,6 +222,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .home-map-control-row .section-heading { display: flex; align-items: center; gap: 12px; margin: 0; min-width: 0; flex-wrap: wrap; }
     .home-map-control-row .section-heading h2 { margin: 0; white-space: nowrap; }
     .daily-map-controls .daily-heading-title { display: flex; align-items: center; gap: 8px; }
+    #daily-date-picker { width: 42px; min-width: 42px; height: 32px; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); cursor: pointer; }
+    #daily-date-picker:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .daily-heading-arrows { display: flex; align-items: center; }
     .daily-heading-arrows button { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); font: 500 1rem 'DM Sans',sans-serif; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
     .daily-heading-arrows button:hover:not(:disabled) { background: #f2f0e9; border-color: #b9b3a5; }
