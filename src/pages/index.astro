@@ -22,7 +22,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
               <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
             </div>
           </div>
-          <p id="daily-date" aria-live="polite">Chargement des souvenirs…</p>
         </div>
         <div class="daily-controls" aria-label="Choisir une journée">
           <button type="button" id="day-previous" disabled>← Jour précédent</button>
@@ -66,7 +65,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const headingPrevious = document.querySelector<HTMLButtonElement>("#daily-heading-previous");
     const headingNext = document.querySelector<HTMLButtonElement>("#daily-heading-next");
     async function initDailyView() {
-      if (!grid || !dateText || !empty || !previous || !next) return;
+      if (!grid || !empty || !previous || !next) return;
       const [photoResponse, eventResponse] = await Promise.all([
         fetch("/api/public/photos",{cache:"no-store"}),
         fetch("/api/public/carte-evenements",{cache:"no-store"})
@@ -94,7 +93,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const yesterdayIndex = ordered.indexOf(yesterdayKey);
       const render = () => {
         const day = ordered[index];
-        dateText.textContent = dateLabel(day);
+        if (dateText) dateText.textContent = dateLabel(day);
         const heading = document.querySelector<HTMLElement>("#daily-heading");
         if (heading) heading.textContent = dateLabel(day);
         if (headingDate) headingDate.textContent = new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(day+"T12:00:00"));
