@@ -188,9 +188,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       progress.textContent=(index+1)+" / "+sequence.length;
       memory.replaceChildren();
       if(item.kind!=="activite"){
-        const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="photo"?"Photo":"Étape";
+        if(item.kind!=="photo"){
+          const tag=document.createElement("span");tag.className="film-kind";tag.textContent="Étape";
+          memory.append(tag);
+        }
         const title=document.createElement("h3");title.textContent=item.title;
-        memory.append(tag,title);
+        memory.append(title);
       }
       if(item.src){
         const img=document.createElement("img");img.src=item.src;img.alt=item.title;img.loading=index<2?"eager":"lazy";img.decoding="async";memory.append(img);
