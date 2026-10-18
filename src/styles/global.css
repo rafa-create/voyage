@@ -529,6 +529,7 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   cursor: pointer;
 }
 .daily-heading-arrows button:hover:not(:disabled) { background: #ebe6da; }
+.daily-heading-arrows button:focus:not(:focus-visible) { outline: none; box-shadow: none; background: var(--white); color: var(--forest); }
 .daily-heading-arrows button:disabled { opacity: .35; cursor: not-allowed; }
 .daily-view .daily-controls { display: flex; flex-wrap: nowrap; gap: 10px; }
 .daily-view .daily-controls button {
