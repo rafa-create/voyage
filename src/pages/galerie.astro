@@ -323,16 +323,16 @@ import { chemin } from "../lib/paths";
     .page-intro{padding-top:36px;padding-bottom:0}
     .page-intro h1{margin:0}
     .page-intro + .section{padding-top:20px;padding-bottom:60px}
-    .gallery-months{display:flex;flex-direction:column;gap:0}
-    .gallery-month{border:0;border-bottom:1px solid var(--line,#deded6);background:transparent}
-    .gallery-month>summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem .15rem;cursor:pointer;list-style:none;font-family:'Playfair Display',Georgia,serif;font-size:1.25rem}
-    .gallery-month>summary::-webkit-details-marker{display:none}
-    .gallery-month>summary::before{content:"+";display:inline-grid;place-items:center;width:1.6rem;height:1.6rem;border:1px solid var(--line,#deded6);border-radius:50%;font:1rem 'DM Sans',sans-serif;flex-shrink:0}
-    .gallery-month[open]>summary::before{content:"−"}
-    .gallery-month>summary>span:first-of-type{flex:1}
-    .gallery-month-count{font:.75rem 'DM Sans',sans-serif;color:var(--muted,#777);white-space:nowrap;text-align:right}
-    .gallery-month .gallery-grid{padding:0 0 1.1rem}
-    @media(max-width:600px){.gallery-month>summary{padding:.95rem 0;font-size:1.1rem}.gallery-month .gallery-grid{padding:0 0 .8rem}}
+    :global(.gallery-months){display:flex;flex-direction:column;gap:0}
+    :global(.gallery-month){border:0;border-bottom:1px solid var(--line,#deded6);background:transparent}
+    :global(.gallery-month>summary){display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem .15rem;cursor:pointer;list-style:none;font-family:'Playfair Display',Georgia,serif;font-size:1.25rem}
+    :global(.gallery-month>summary::-webkit-details-marker){display:none}
+    :global(.gallery-month>summary::before){content:"+";display:inline-grid;place-items:center;width:1.6rem;height:1.6rem;border:1px solid var(--line,#deded6);border-radius:50%;font:1rem 'DM Sans',sans-serif;flex-shrink:0}
+    :global(.gallery-month[open]>summary::before){content:"−"}
+    :global(.gallery-month>summary>span:first-of-type){flex:1;min-width:0}
+    :global(.gallery-month-count){font:.75rem 'DM Sans',sans-serif;color:var(--muted,#777);white-space:nowrap;text-align:right;flex-shrink:0}
+    :global(.gallery-month .gallery-grid){padding:0 0 1.1rem}
+    @media(max-width:600px){:global(.gallery-month>summary){padding:.95rem 0;font-size:1.1rem;gap:.65rem}:global(.gallery-month .gallery-grid){padding:0 0 .8rem}}
   </style>
   <style>
     .lightbox:not([open]){display:none}
