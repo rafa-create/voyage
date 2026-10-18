@@ -119,139 +119,14 @@ const nav = [
       });
     </script>
     <script>
-      // Édition en place des textes éditoriaux : réservée aux administrateurs.
-      // Désactivée sur l'accueil pendant le diagnostic du chargement infini de la carte.
+      // Crayon de modification des photos : conservé uniquement dans la galerie.
       (async () => {
-        if (window.location.pathname === "/" || window.location.pathname === "/index.html") return;
+        if (!/\/galerie\/?$/.test(window.location.pathname)) return;
         const main = document.querySelector<HTMLElement>("main");
         if (!main) return;
         try {
           const me = await fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" });
           if (!me.ok || !(await me.json()).isAdmin) return;
-          const response = await fetch("/api/prive/admin/textes-site", { credentials: "same-origin", cache: "no-store" });
-          if (!response.ok) return;
-          const textes: Record<string, string> = (await response.json()).textes || {};
-          const selector = "main h1, main h2, main h3, main h4, main p, main .eyebrow, main .card-more";
-          const excluded = ".photo-tile, .daily-activity, .journal-day-card, .timeline-date, .journal-day-count, .daily-heading-title, #daily-date, #daily-empty, .empty-state, .admin-inline-editor";
-          const cleanText = (element: HTMLElement) => {
-            const clone = element.cloneNode(true) as HTMLElement;
-            clone.querySelectorAll(".heading-dot, .admin-inline-pencil, .admin-photo-pencil, .admin-inline-editor").forEach(node => node.remove());
-            return (clone.textContent || "").trim();
-          };
-          const hash = (value: string) => {
-            let n = 2166136261;
-            for (let i = 0; i < value.length; i++) { n ^= value.charCodeAt(i); n = Math.imul(n, 16777619); }
-            return (n >>> 0).toString(16).padStart(8, "0");
-          };
-          const isEligible = (element: HTMLElement) => {
-            if (element.closest(excluded) || element.dataset.adminEditing === "true") return false;
-            const children = Array.from(element.children);
-            if (children.some(child => !(child instanceof HTMLElement) || !child.classList.contains("heading-dot"))) return false;
-            const value = cleanText(element);
-            return !!value && !/^chargement/i.test(value);
-          };
-          const setText = (element: HTMLElement, value: string) => {
-            const hadDot = !!element.querySelector<HTMLElement>(":scope > .heading-dot") || element.dataset.adminHasHeadingDot === "true";
-            element.textContent = value;
-            if (hadDot) {
-              const marker = document.createElement("span");
-              marker.className = "heading-dot";
-              marker.textContent = ".";
-              element.append(marker);
-            }
-          };
-          const position = (button: HTMLButtonElement, target: HTMLElement) => {
-            const rect = target.getBoundingClientRect();
-            button.style.left = Math.max(4, Math.min(window.innerWidth - 32, rect.right - 25)) + "px";
-            button.style.top = Math.max(4, Math.min(window.innerHeight - 32, rect.top - 3)) + "px";
-            button.hidden = rect.width === 0 || rect.height === 0;
-          };
-          const openEditor = (target: HTMLElement, key: string, pencil: HTMLButtonElement) => {
-            if (target.dataset.adminEditing === "true") return;
-            target.dataset.adminEditing = "true";
-            const oldValue = cleanText(target);
-            const textarea = document.createElement("textarea");
-            textarea.className = "admin-inline-textarea";
-            textarea.value = oldValue;
-            textarea.setAttribute("aria-label", "Modifier le texte");
-            textarea.rows = Math.max(2, Math.min(8, oldValue.split("\n").length + 1));
-            const toolbar = document.createElement("div");
-            toolbar.className = "admin-inline-editor";
-            const save = document.createElement("button");
-            save.type = "button"; save.textContent = "Enregistrer"; save.className = "admin-inline-save";
-            const cancel = document.createElement("button");
-            cancel.type = "button"; cancel.textContent = "Annuler"; cancel.className = "admin-inline-cancel";
-            const status = document.createElement("span");
-            status.setAttribute("role", "status");
-            toolbar.append(save, cancel, status);
-            target.replaceChildren(textarea);
-            document.body.append(toolbar);
-            const placeToolbar = () => {
-              const rect = target.getBoundingClientRect();
-              toolbar.style.left = Math.max(8, Math.min(window.innerWidth - Math.min(340, window.innerWidth - 16) - 8, rect.left)) + "px";
-              toolbar.style.top = Math.max(8, Math.min(window.innerHeight - 60, rect.bottom + 6)) + "px";
-            };
-            placeToolbar(); textarea.focus(); textarea.select();
-            const finish = (value: string) => {
-              setText(target, value);
-              delete target.dataset.adminEditing;
-              toolbar.remove();
-              position(pencil, target);
-            };
-            cancel.addEventListener("click", () => finish(oldValue));
-            save.addEventListener("click", async () => {
-              save.disabled = true; status.textContent = "Enregistrement…";
-              try {
-                const result = await fetch("/api/prive/admin/textes-site", {
-                  method: "POST", credentials: "same-origin",
-                  headers: { "Content-Type": "application/json", "X-Voyage-Admin": "1" },
-                  body: JSON.stringify({ key, text: textarea.value })
-                });
-                const data = await result.json().catch(() => ({}));
-                if (!result.ok) throw new Error(data.error || "Enregistrement impossible.");
-                textes[key] = textarea.value;
-                finish(textarea.value);
-              } catch (error) {
-                status.textContent = error instanceof Error ? error.message : "Erreur de sauvegarde.";
-                save.disabled = false;
-              }
-            });
-            window.addEventListener("resize", placeToolbar, { passive: true });
-            window.addEventListener("scroll", placeToolbar, { passive: true });
-          };
-          const scanTexts = () => {
-            const elements = Array.from(main.querySelectorAll<HTMLElement>(selector)).filter(isEligible);
-            const counts = new Map<string, number>();
-            for (const element of elements) {
-              const original = element.dataset.adminOriginalText ?? cleanText(element);
-              element.dataset.adminOriginalText = original;
-              if (element.querySelector(":scope > .heading-dot")) element.dataset.adminHasHeadingDot = "true";
-              if (!element.dataset.adminTextKey) {
-                const signature = element.tagName.toLowerCase() + "|" + hash(original);
-                const occurrence = counts.get(signature) || 0;
-                counts.set(signature, occurrence + 1);
-                const key = location.pathname + "|" + element.tagName.toLowerCase() + "|" + hash(original) + "|" + occurrence;
-                element.dataset.adminTextKey = key;
-              } else {
-                const signature = element.tagName.toLowerCase() + "|" + hash(original);
-                counts.set(signature, (counts.get(signature) || 0) + 1);
-              }
-              const key = element.dataset.adminTextKey;
-              if (key && Object.prototype.hasOwnProperty.call(textes, key) && cleanText(element) === original) setText(element, textes[key]);
-              if (!element.dataset.adminPencil) {
-                element.dataset.adminPencil = "true";
-                const pencil = document.createElement("button");
-                pencil.type = "button"; pencil.className = "admin-inline-pencil";
-                pencil.textContent = "✎"; pencil.title = "Modifier ce texte"; pencil.setAttribute("aria-label", "Modifier ce texte");
-                pencil.addEventListener("click", () => openEditor(element, key || "", pencil));
-                document.body.append(pencil);
-                element.dataset.adminPencilId = "1";
-                (element as any).__adminPencil = pencil;
-              }
-              const pencil = (element as any).__adminPencil as HTMLButtonElement | undefined;
-              if (pencil && element.dataset.adminEditing !== "true") position(pencil, element);
-            }
-          };
           const addPhotoPencils = () => {
             for (const figure of main.querySelectorAll<HTMLElement>("figure.photo-tile")) {
               if (figure.dataset.adminPhotoPencil) continue;
@@ -262,62 +137,37 @@ const nav = [
               figure.dataset.adminPhotoPencil = "true";
               figure.style.position = figure.style.position || "relative";
               const pencil = document.createElement("button");
-              pencil.type = "button"; pencil.className = "admin-photo-pencil"; pencil.textContent = "✎";
+              pencil.type = "button";
+              pencil.className = "admin-photo-pencil";
+              pencil.textContent = "✎";
               pencil.title = "Modifier le commentaire de cette photo";
               pencil.setAttribute("aria-label", "Modifier le commentaire de cette photo");
               pencil.addEventListener("click", () => {
                 const src = image.getAttribute("src") || "";
                 if (!src) return;
-                if (/\/galerie\/?$/.test(location.pathname)) {
-                  const target = figure.querySelector<HTMLButtonElement>("button.photo-open[data-photo]");
-                  if (target) {
-                    target.click();
-                    let attempts = 0;
-                    const openEditor = () => {
-                      const edit = document.querySelector<HTMLButtonElement>(".lightbox-edit");
-                      if (edit && !edit.hidden) { edit.click(); return; }
-                      if (++attempts < 30) window.setTimeout(openEditor, 100);
-                    };
-                    window.setTimeout(openEditor, 100);
-                    return;
-                  }
-                }
-                const photoUrl = new URL("/galerie/", location.origin);
-                photoUrl.searchParams.set("photo", new URL(src, location.origin).pathname);
-                photoUrl.searchParams.set("edit", "1");
-                location.href = photoUrl.pathname + photoUrl.search;
+                const target = figure.querySelector<HTMLButtonElement>("button.photo-open[data-photo]");
+                if (!target) return;
+                target.click();
+                let attempts = 0;
+                const openEditor = () => {
+                  const edit = document.querySelector<HTMLButtonElement>(".lightbox-edit");
+                  if (edit && !edit.hidden) { edit.click(); return; }
+                  if (++attempts < 30) window.setTimeout(openEditor, 100);
+                };
+                window.setTimeout(openEditor, 100);
               });
               figure.append(pencil);
             }
           };
-          scanTexts(); addPhotoPencils();
-          const observer = new MutationObserver(() => { scanTexts(); addPhotoPencils(); });
+          addPhotoPencils();
+          // Surveillance limitée à la galerie pour les photos chargées dynamiquement.
+          const observer = new MutationObserver(addPhotoPencils);
           observer.observe(main, { childList: true, subtree: true });
-          const reposition = () => {
-            for (const element of main.querySelectorAll<HTMLElement>("[data-admin-text-key]")) {
-              const pencil = (element as any).__adminPencil as HTMLButtonElement | undefined;
-              if (pencil && element.dataset.adminEditing !== "true") position(pencil, element);
-            }
-          };
-          window.addEventListener("resize", reposition, { passive: true });
-          window.addEventListener("scroll", reposition, { passive: true });
         } catch {}
       })();
     </script>
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <span>© {new Date().getFullYear()} · Carnet de voyage</span>
-      </div>
-    </footer>
     <style is:global>
-      .admin-inline-pencil,.admin-photo-pencil{position:fixed;z-index:1200;display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border:1px solid #397a70;border-radius:50%;background:#fff;color:#24534f;font:700 16px/1 sans-serif;box-shadow:0 2px 8px #0002;cursor:pointer}
-      .admin-inline-pencil[hidden]{display:none}
-      .admin-photo-pencil{position:absolute;top:7px;right:7px;z-index:8}
-      .admin-inline-textarea{display:block;box-sizing:border-box;width:100%;min-width:220px;min-height:64px;padding:9px;border:1px solid #397a70;border-radius:4px;background:#fff;color:#202820;font:inherit;line-height:1.5;resize:vertical}
-      .admin-inline-editor{position:fixed;z-index:1201;display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-width:calc(100vw - 16px);padding:8px;border:1px solid #cbd4ca;border-radius:6px;background:#fff;box-shadow:0 4px 18px #0002;font:12px sans-serif}
-      .admin-inline-editor button{padding:7px 10px;border:1px solid #b8c7bc;border-radius:4px;background:#fff;color:#24534f;font:600 12px sans-serif;cursor:pointer}
-      .admin-inline-editor .admin-inline-save{background:#397a70;color:#fff;border-color:#397a70}
-      .admin-inline-editor span{color:#8b3f2b}
+      .admin-photo-pencil{position:absolute;top:7px;right:7px;z-index:8;display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border:1px solid #397a70;border-radius:50%;background:#fff;color:#24534f;font:700 16px/1 sans-serif;box-shadow:0 2px 8px #0002;cursor:pointer}
     </style>
   </body>
 </html>
