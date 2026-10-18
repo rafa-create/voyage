@@ -75,7 +75,40 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
     const sequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
     if(!sequence.length){progress.textContent="Aucun souvenir disponible pour le moment.";return;}
-    let index=0,playing=false,timer:number|undefined;
+    let index=0,playing=false,timer:number|undefined,routeRequest=0;
+    const clearActivityRoute=()=>{
+      const source=map.getSource("film-activity-route") as maplibregl.GeoJSONSource|undefined;
+      source?.setData({type:"FeatureCollection",features:[]});
+    };
+    const showActivityRoute=async(item:FilmItem)=>{
+      const request=++routeRequest;
+      clearActivityRoute();
+      if(item.kind!=="activite"||!item.id)return;
+      try{
+        const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(item.id)+"?precision=detail",{cache:"no-store"});
+        if(!response.ok)return;
+        const result=await response.json();
+        const route=(Array.isArray(result.route)?result.route:[]).filter(
+          (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
+        if(request!==routeRequest||route.length<2)return;
+        const feature={type:"Feature" as const,properties:{},geometry:{
+          type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
+        const source=map.getSource("film-activity-route") as maplibregl.GeoJSONSource|undefined;
+        if(source)source.setData(feature);
+        else{
+          map.addSource("film-activity-route",{type:"geojson",data:feature});
+          map.addLayer({id:"film-activity-route-casing",type:"line",source:"film-activity-route",
+            layout:{"line-cap":"round","line-join":"round"},
+            paint:{"line-color":"#fffdf8","line-width":8,"line-opacity":.95}});
+          map.addLayer({id:"film-activity-route-line",type:"line",source:"film-activity-route",
+            layout:{"line-cap":"round","line-join":"round"},
+            paint:{"line-color":"#df784a","line-width":5,"line-opacity":1}});
+        }
+        const bounds=new maplibregl.LngLatBounds();
+        route.forEach(p=>bounds.extend([p[1],p[0]]));
+        if(!bounds.isEmpty())map.fitBounds(bounds,{padding:55,maxZoom:14,duration:650});
+      }catch{/* Le film continue même si le tracé GPS n'est pas disponible. */}
+    };
     const render=(animate=true)=>{
       const item=sequence[index];
       place.textContent=item.title;
@@ -93,6 +126,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       if(item.detail){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       map.stop();
+      if(item.kind==="activite") void showActivityRoute(item); else {routeRequest++;clearActivityRoute();}
       map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
       prevButton.disabled=index===0;
       nextButton.disabled=index===sequence.length-1;
