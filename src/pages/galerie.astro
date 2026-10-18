@@ -180,7 +180,7 @@ import { chemin } from "../lib/paths";
         const photoDate = stamp.slice(0, 10);
         if (Number.isFinite(latitude) && Math.abs(latitude) <= 85 &&
             Number.isFinite(longitude) && Math.abs(longitude) <= 180 &&
-            /^\\d{4}-\\d{2}-\\d{2}$/.test(photoDate)) {
+            /^\d{4}-\d{2}-\d{2}$/.test(photoDate)) {
           const mapLink = document.createElement("button");
           mapLink.type = "button";
           mapLink.className = "gallery-view-on-map";
