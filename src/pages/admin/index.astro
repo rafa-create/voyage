@@ -91,9 +91,9 @@ import { chemin } from "../../lib/paths";
           <label for="site-access-mode">Visibilité du site</label>
           <select id="site-access-mode" required>
             <option value="open">Ouvert à tous — aucune connexion demandée</option>
-            <option value="restricted">Restreint — connexion Cloudflare Access requise</option>
+            <option value="restricted">Restreint — adresse e-mail approuvée requise</option>
           </select>
-          <p class="admin-note">Ce réglage concerne l’accès au site public. Les photos privées restent protégées séparément et ne sont jamais publiées par ce réglage. Le mode restreint nécessite que Cloudflare Access protège aussi les pages publiques et autorise les personnes souhaitées.</p>
+          <p class="admin-note">En mode restreint, les visiteurs saisissent leur adresse e-mail. Tu approuves les demandes ci-dessus ; les adresses approuvées peuvent ensuite consulter le carnet. Les photos privées de l’espace administrateur restent protégées séparément.</p>
           <button class="admin-primary" type="submit">Enregistrer les paramètres d’accès</button>
           <p id="site-access-feedback" role="status" class="admin-feedback"></p>
         </form>
