@@ -4,13 +4,6 @@ import { etapes } from "../lib/data";
 ---
 
 <Base title="Journal" active="journal">
-  <section class="container section journal-list journal-recent-section" aria-labelledby="journal-recent-heading">
-    <h2 id="journal-recent-heading">Photos récentes <span class="heading-dot">.</span></h2>
-    <div id="journal-photos-recentes" class="photo-grid gallery-grid journal-recent-photos" aria-live="polite">
-      <p class="empty-state">Chargement des photos récentes…</p>
-    </div>
-  </section>
-
   <section class="container section journal-list" aria-label="Souvenirs par date">
     <div id="journal-souvenirs">
       <p class="empty-state">Chargement des souvenirs…</p>
@@ -31,27 +24,7 @@ import { etapes } from "../lib/data";
       ]);
       if(!photoResponse.ok)throw new Error("Chargement des photos impossible");
       const photoData=await photoResponse.json();
-      const allPhotos:Souvenir[] = photoData.photos || [];
-      const recentRoot = document.querySelector<HTMLElement>("#journal-photos-recentes");
-      if (recentRoot) {
-        const recentPhotos = [...allPhotos].sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||""))).slice(0,6);
-        recentRoot.replaceChildren();
-        if (!recentPhotos.length) {
-          const empty = document.createElement("p"); empty.className = "empty-state"; empty.textContent = "Les photos récentes apparaîtront ici.";
-          recentRoot.append(empty);
-        } else {
-          for (const photo of recentPhotos) {
-            const figure = document.createElement("figure"); figure.className = "photo-tile";
-            const link = document.createElement("a"); link.className = "photo-open"; link.href = "/galerie/?photo="+encodeURIComponent(photo.src); link.setAttribute("aria-label","Afficher la photo dans la galerie");
-            const img = document.createElement("img"); img.src = photo.src; img.alt = photo.alt || "Souvenir du voyage"; img.loading = "lazy"; img.decoding = "async";
-            link.append(img); figure.append(link);
-            const caption = document.createElement("figcaption"); caption.textContent = String(photo.legende || photo.alt || "").trim();
-            if (caption.textContent) figure.append(caption);
-            recentRoot.append(figure);
-          }
-        }
-      }
-      const photos:Souvenir[]=allPhotos.filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
+      const photos:Souvenir[]=(photoData.photos||[]).filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
       const videoGroups = await Promise.all(etapes.map(async step => {
         try {
           const response=await fetch("/api/public/videos?etape="+encodeURIComponent(step.slug),{cache:"no-store"});
@@ -139,14 +112,6 @@ import { etapes } from "../lib/data";
     .journal-stages-heading > h2 { margin: 0; }
     .journal-stages > h2 { margin: 0 0 8px; }
     .journal-stages-intro { color: var(--muted); margin: 0 0 28px; max-width: 620px; }
-    .journal-recent-section { padding-bottom: 12px; }
-    .journal-recent-section h2 { margin: 0 0 18px; }
-    .journal-recent-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-    .journal-recent-photos .photo-tile { min-width: 0; width: 100%; }
-    .journal-recent-photos .photo-open { display: block; }
-    .journal-recent-photos .photo-open img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
-    .journal-recent-photos figcaption { margin-top: 7px; color: var(--muted); font-size: .78rem; }
-    @media (max-width: 650px) { .journal-recent-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
     .journal-day-card { min-width: 0; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
