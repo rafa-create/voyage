@@ -165,7 +165,9 @@ export async function publicArchivedRoute(env,id,precision="overview"){
   // Les archives anciennes sans GPX source restent accessibles à leur résolution disponible.
   const points=Array.isArray(record?.[requested])?record[requested]:record?.route;
   if(!Array.isArray(points)||points.length<2)return null;
-  // Les premières et dernières portions ne sont jamais livrées au navigateur public.
+  // La résolution maximale restitue tous les points de l’original.
+  // Les résolutions overview/detail gardent une petite marge aux extrémités.
+  if(requested==="routeFull")return points;
   const cut=points.length>=20?Math.ceil(points.length*.07):0;
   return points.slice(cut,points.length-cut);
 }
