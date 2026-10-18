@@ -134,5 +134,26 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     }
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
   </script>
+  <style is:global>
+    .daily-view { padding-top: 48px; }
+    .daily-view .section-heading { margin-bottom: 24px; }
+    .daily-view .section-heading .eyebrow { margin-bottom: 7px; }
+    .daily-view .section-heading h2 { margin: 0; }
+    .daily-view #daily-date { margin-top: 8px; font-size: .8rem; }
+    .daily-activities { margin-top: 22px; }
+    .daily-activities[hidden] { display: none !important; }
+    .daily-activities h3 { font: 700 .8rem 'DM Sans',sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+    #daily-activities { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+    .daily-activity { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 13px 15px; border: 1px solid var(--line); background: var(--white); }
+    .daily-activity strong { font-size: .88rem; color: var(--forest); }
+    .daily-activity span { grid-column: 1; color: var(--muted); font-size: .76rem; }
+    .daily-activity a { grid-column: 2; grid-row: 1 / span 2; color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+    .daily-all { margin-top: 20px; }
+    @media(max-width:650px) {
+      .daily-view { padding-top: 38px; }
+      #daily-activities { grid-template-columns: 1fr; }
+      .daily-activity { padding: 11px 12px; }
+    }
+  </style>
 </Base>
 
