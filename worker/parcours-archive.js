@@ -47,7 +47,7 @@ export function parseGpx(source){
     if(points.length>MAX_POINTS)return null;
   }
   if(points.length<2)return null;
-  return {route:sample(points,500),routeDetail:sample(points,4000),routeFull:sample(points,12000),
+  return {route:sample(points,500),routeDetail:sample(points,5000),routeFull:sample(points,MAX_POINTS),
     distanceKm:Math.round(length*100)/100,start,end,pointCount:points.length};
 }
 function publicItem(item){
@@ -144,7 +144,14 @@ export async function publicArchivedRoute(env,id,precision="overview"){
   const requested=precision==="full"?"routeFull":precision==="detail"?"routeDetail":"route";
   // À la première demande détaillée, reconstruire les niveaux des anciennes
   // archives à partir du GPX original conservé dans R2, puis les mettre en cache.
-  if(requested!=="route"&&!Array.isArray(record?.[requested])){
+  const expectedDetailCount=Number.isFinite(record?.pointCount)?Math.min(record.pointCount,5000):null;
+  const expectedFullCount=Number.isFinite(record?.pointCount)?Math.min(record.pointCount,MAX_POINTS):null;
+  const needsRefresh=requested==="routeDetail"
+    ?!Array.isArray(record?.routeDetail)||record.routeDetail.length!==expectedDetailCount
+    :requested==="routeFull"
+      ?!Array.isArray(record?.routeFull)||record.routeFull.length!==expectedFullCount
+      :false;
+  if(requested!=="route"&&needsRefresh){
     const original=await env.PHOTOS_PRIVEES.get(SOURCE+id+".gpx");
     if(original){
       const parsed=parseGpx(await original.text());
