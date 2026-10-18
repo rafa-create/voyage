@@ -180,9 +180,13 @@ const points = etapes
               ? ["case", ["==", ["get", "date"], selectedDay], 7, 3]
               : 5);
           }
-          // Remonter les couches de tracés pour que le jour sélectionné soit au premier plan.
-          if (selectedDay && map.getLayer("tous-les-traces")) map.moveLayer("tous-les-traces");
-          if (selectedDay && map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
+          // Garder les lignes sous les flèches pour qu'elles restent lisibles.
+          // Remonter ensuite les couches de flèches au-dessus de toutes les lignes.
+          if (map.getLayer("tous-les-traces")) map.moveLayer("tous-les-traces");
+          if (map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
+          if (map.getLayer("fil-des-souvenirs-fleches")) map.moveLayer("fil-des-souvenirs-fleches");
+          if (map.getLayer("tous-les-traces-fleches")) map.moveLayer("tous-les-traces-fleches");
+          if (map.getLayer("trace-sportive-fleches")) map.moveLayer("trace-sportive-fleches");
           const dateLabel = document.querySelector<HTMLElement>("#daily-date");
           if (dateLabel) {
             dateLabel.style.backgroundColor = selectedDay ? currentDayColor : "transparent";
@@ -330,9 +334,9 @@ const points = etapes
                 layout:{"line-cap":"round","line-join":"round"},
                 paint:{"line-color":"#b78369","line-width":2,"line-dasharray":[2,3],"line-opacity":.68}});
               map.addLayer({id:"fil-des-souvenirs-fleches",type:"symbol",source:"fil-des-souvenirs",
-                layout:{"symbol-placement":"line","symbol-spacing":90,"text-field":"›","text-size":14,
-                  "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":false},
-                paint:{"text-color":"#b78369","text-halo-color":"#fffdf8","text-halo-width":1.1,"text-opacity":.82}});
+                layout:{"symbol-placement":"line","symbol-spacing":150,"text-field":"›","text-size":18,
+                  "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":true},
+                paint:{"text-color":"#b78369","text-halo-color":"#fffdf8","text-halo-width":1.6,"text-opacity":1}});
               syncVoyageLinkVisibility();
             }
             type RoutePrecision = "overview" | "detail" | "full";
@@ -375,7 +379,7 @@ const points = etapes
                         ? ["case",["==",["get","date"],selectedDay],6,4]
                         : 5}});
                   map.addLayer({id:"trace-sportive-fleches",type:"symbol",source:"trace-sportive",
-                    layout:{"symbol-placement":"line","symbol-spacing":110,"text-field":"›","text-size":16,
+                    layout:{"symbol-placement":"line","symbol-spacing":170,"text-field":"›","text-size":20,
                       "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":false},
                     paint:{"text-color":"#df784a","text-halo-color":"#fffdf8","text-halo-width":1.2,"text-opacity":0.82}});
                   syncVoyageLinkVisibility();
@@ -429,9 +433,9 @@ const points = etapes
                     : 3.5,
                   "line-opacity":.85}});
                 map.addLayer({id:"tous-les-traces-fleches",type:"symbol",source:"tous-les-traces",
-                  layout:{"symbol-placement":"line","symbol-spacing":110,"text-field":"›","text-size":15,
+                  layout:{"symbol-placement":"line","symbol-spacing":170,"symbol-sort-key":["case",["==",["get","date"],selectedDay],1,0],"text-field":"›","text-size":19,
                     "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":false},
-                  paint:{"text-color":"#df784a","text-halo-color":"#fffdf8","text-halo-width":1.2,"text-opacity":.78}});
+                  paint:{"text-color":"#df784a","text-halo-color":"#fffdf8","text-halo-width":1.7,"text-opacity":1}});
                 syncVoyageLinkVisibility();
               }
               const bounds=new maplibregl.LngLatBounds();
