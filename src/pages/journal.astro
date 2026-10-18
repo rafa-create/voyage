@@ -5,47 +5,89 @@ import { chemin } from "../lib/paths";
 ---
 
 <Base title="Journal" active="journal">
-  <section class="container section journal-list" aria-label="Étapes du voyage">
-    {etapes.length === 0 ? (
-      <div class="empty-state">
-        <div class="empty-symbol" aria-hidden="true">↝</div>
-        <h2>Pas encore d'étape publiée</h2>
-        <p>Les journées de voyage apparaîtront ici, de la plus récente à la plus ancienne.</p>
-      </div>
-    ) : (
-      <ol class="timeline" id="timeline-live">
+  <section class="container section journal-list" aria-label="Souvenirs par date">
+    <div id="journal-souvenirs">
+      <p class="empty-state">Chargement des souvenirs…</p>
+    </div>
+  </section>
+
+  {etapes.length > 0 && (
+    <section class="container section journal-list journal-stages" aria-label="Étapes facultatives du voyage">
+      <h2>Étapes du voyage <span class="heading-dot">.</span></h2>
+      <p class="journal-stages-intro">Quelques repères pour raconter le parcours — les souvenirs n'ont pas besoin d'être associés à une étape.</p>
+      <ol class="timeline">
         {etapes.map((etape) => (
           <li>
             <span class="timeline-date">{dateFr(etape.date)}</span>
             <a href={chemin("/etapes/" + etape.slug + "/")} class="timeline-card">
               <span class="eyebrow">{etape.pays} · {etape.ville}</span>
-              <h2>{etape.titre}</h2>
+              <h3>{etape.titre}</h3>
               <p>{etape.texte.slice(0, 180)}{etape.texte.length > 180 ? "…" : ""}</p>
               <span class="card-more">Lire cette étape</span>
             </a>
           </li>
         ))}
       </ol>
-    )}
-  </section>
+    </section>
+  )}
 
   <script>
-    fetch("/api/public/etapes").then(r=>r.ok?r.json():null).then(data=>{
-      if(!data)return;
-      const list=document.querySelector<HTMLOListElement>("#timeline-live");
-      if(!list)return;
-      list.replaceChildren();
-      const sorted=[...data.etapes].sort((a:{date:string},b:{date:string})=>b.date.localeCompare(a.date));
-      for(const e of sorted){
-        const li=document.createElement("li");
-        const date=document.createElement("span");date.className="timeline-date";date.textContent=e.date;
-        const link=document.createElement("a");link.className="timeline-card";link.href="/etapes/"+encodeURIComponent(e.slug)+"/";
-        const label=document.createElement("span");label.className="eyebrow";label.textContent=e.pays+" · "+e.ville;
-        const h=document.createElement("h2");h.textContent=e.titre;
-        const text=document.createElement("p");text.textContent=e.texte?.slice(0,150)||"Découvrir cette étape";
-        const more=document.createElement("span");more.className="card-more";more.textContent="Lire cette étape";
-        link.append(label,h,text,more);li.append(date,link);list.append(li);
+    type Souvenir = {src:string;alt?:string;legende?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;lieu?:string;etape?:string};
+    const root=document.querySelector<HTMLElement>("#journal-souvenirs");
+    const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.ajouteLe||"").slice(0,10);
+    const formatDate=(value:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
+    async function renderJournal(){
+      if(!root)return;
+      const response=await fetch("/api/public/photos",{cache:"no-store"});
+      if(!response.ok)throw new Error("Chargement impossible");
+      const data=await response.json();
+      const photos:Souvenir[]=(data.photos||[]).filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
+      photos.sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||"")));
+      const groups=new Map<string,Souvenir[]>();
+      for(const photo of photos){const key=dateOf(photo);if(!groups.has(key))groups.set(key,[]);groups.get(key)!.push(photo);}
+      root.replaceChildren();
+      if(!groups.size){
+        const empty=document.createElement("div");empty.className="empty-state";
+        const title=document.createElement("h2");title.textContent="Pas encore de souvenirs datés";
+        const copy=document.createElement("p");copy.textContent="Les photos apparaîtront ici, classées par date, même sans étape associée.";
+        empty.append(title,copy);root.append(empty);return;
       }
-    }).catch(()=>{});
+      const list=document.createElement("ol");list.className="timeline journal-days";
+      for(const [day,items] of groups){
+        const entry=document.createElement("li");
+        const date=document.createElement("span");date.className="timeline-date";date.textContent=formatDate(day);
+        const card=document.createElement("div");card.className="timeline-card journal-day-card";
+        const heading=document.createElement("h2");heading.textContent=formatDate(day);
+        const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
+        for(const photo of items){
+          const figure=document.createElement("figure");figure.className="photo-tile";
+          const link=document.createElement("a");link.className="photo-open";link.href="/galerie/?photo="+encodeURIComponent(photo.src);link.setAttribute("aria-label","Afficher la photo dans la galerie");
+          const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Souvenir du voyage";img.loading="lazy";img.decoding="async";
+          link.append(img);figure.append(link);
+          if(photo.legende||photo.alt||photo.lieu){
+            const caption=document.createElement("figcaption");caption.textContent=[photo.legende||photo.alt,photo.lieu].filter(Boolean).join(" · ");figure.append(caption);
+          }
+          grid.append(figure);
+        }
+        const count=document.createElement("p");count.className="journal-day-count";count.textContent=items.length+" "+(items.length>1?"souvenirs":"souvenir");
+        card.append(heading,count,grid);entry.append(date,card);list.append(entry);
+      }
+      root.append(list);
+    }
+    renderJournal().catch(()=>{
+      if(root){root.replaceChildren();const p=document.createElement("p");p.className="empty-state";p.textContent="Impossible de charger les souvenirs pour le moment.";root.append(p);}
+    });
   </script>
+  <style is:global>
+    .journal-stages { border-top: 1px solid var(--line); }
+    .journal-stages > h2 { margin: 0 0 8px; }
+    .journal-stages-intro { color: var(--muted); margin: 0 0 28px; max-width: 620px; }
+    .journal-day-card { min-width: 0; }
+    .journal-day-card > h2 { margin: 0; font-size: 1.2rem; }
+    .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
+    .journal-day-photos { margin-top: 12px; }
+    .journal-day-photos .photo-open { display: block; overflow: hidden; }
+    .journal-day-photos .photo-open img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; }
+    .journal-day-photos figcaption { margin-top: 7px; color: var(--muted); font-size: .78rem; }
+  </style>
 </Base>
