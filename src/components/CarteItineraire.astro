@@ -711,7 +711,7 @@ const points = etapes
                 .setPopup(popup).addTo(map);
             }
             window.addEventListener("voyage:voir-sur-carte",(event)=>{
-              const detail=(event as CustomEvent<{date?:string;kind?:string;key?:string}>).detail;
+              const detail=(event as CustomEvent<{date?:string;kind?:string;key?:string;latitude?:number;longitude?:number}>).detail;
               if(!detail?.date)return;
               if(element.style.display==="none") mapVisibilityToggle?.click();
               element.scrollIntoView({behavior:"smooth",block:"start"});
@@ -736,9 +736,28 @@ const points = etapes
                   }else{
                     target.click();
                   }
+                } else if (Number.isFinite(detail.latitude) && Number.isFinite(detail.longitude) &&
+                    Math.abs(Number(detail.latitude)) <= 85 && Math.abs(Number(detail.longitude)) <= 180) {
+                  map.stop();
+                  map.easeTo({center:[Number(detail.longitude),Number(detail.latitude)],zoom:Math.max(map.getZoom(),11),duration:450});
                 }
               }
             });
+            const mapRequest = new URLSearchParams(window.location.search);
+            const requestedPhoto = mapRequest.get("photoMap");
+            const requestedDate = mapRequest.get("date");
+            const requestedLat = Number(mapRequest.get("lat"));
+            const requestedLon = Number(mapRequest.get("lon"));
+            if (requestedPhoto && requestedDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDate) &&
+                Number.isFinite(requestedLat) && Math.abs(requestedLat) <= 85 &&
+                Number.isFinite(requestedLon) && Math.abs(requestedLon) <= 180) {
+              window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte", {detail:{
+                date:requestedDate,kind:"photo",key:requestedPhoto,latitude:requestedLat,longitude:requestedLon
+              }}));
+              mapRequest.delete("photoMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
+              const remaining = mapRequest.toString();
+              window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
+            }
             if (selectedDay) updateSelectedDay(selectedDay, false);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
