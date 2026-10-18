@@ -409,6 +409,46 @@ export default {
       await putJSON(env.PHOTOS_PRIVEES,key,[...current,next]);
       return json({ok:true,video:next},201);
     }
+    if(path==="/api/prive/admin/video-modifier"&&request.method==="POST"){
+      if(!mutationOk(request))return error("Action non autorisée.",403);
+      const input=await readBody(request);
+      if(typeof input?.id!=="string"||!input.id.trim())return error("Vidéo invalide.");
+      const youtubeId=urlYoutube(input.url);
+      if(!youtubeId||typeof input.titre!=="string"||!input.titre.trim()||input.titre.length>180)return error("Lien YouTube ou titre invalide.");
+      const date=input.date===""||input.date==null?null:input.date;
+      if(date!==null&&!validDate(date))return error("Date invalide.");
+      if(typeof input.lieu!=="string"||input.lieu.length>240)return error("Lieu invalide.");
+      const latitude=input.latitude===""||input.latitude==null?null:Number(input.latitude);
+      const longitude=input.longitude===""||input.longitude==null?null:Number(input.longitude);
+      if((latitude===null)!==(longitude===null)||(latitude!==null&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>85||Math.abs(longitude)>180)))return error("Coordonnées GPS invalides.");
+      const all=await steps(env);
+      const etape=typeof input.etape==="string"?input.etape:"";
+      if(!etape||!slugOk(etape)||!all.some(s=>s.slug===etape))return error("Choisissez une étape valide pour cette vidéo.");
+      let sourceSlug=null,sourceList=null,video=null;
+      for(const step of all){
+        const key="__meta/videos/"+step.slug+".json";
+        const list=await getJSON(env.PHOTOS_PRIVEES,key,[]);
+        if(!Array.isArray(list))continue;
+        const found=list.find(v=>v.id===input.id);
+        if(found){sourceSlug=step.slug;sourceList=list;video=found;break;}
+      }
+      if(!video)return error("Vidéo introuvable.",404);
+      const updated={...video,url:"https://www.youtube.com/watch?v="+youtubeId,titre:input.titre.trim(),
+        ...(date?{date}:{date:null}),
+        ...(input.lieu.trim()?{lieu:input.lieu.trim()}:{lieu:""}),
+        ...(latitude!==null?{latitude,longitude}:{latitude:null,longitude:null})};
+      if(sourceSlug===etape){
+        const key="__meta/videos/"+sourceSlug+".json";
+        await putJSON(env.PHOTOS_PRIVEES,key,sourceList.map(v=>v.id===input.id?updated:v));
+      }else{
+        const targetKey="__meta/videos/"+etape+".json";
+        const target=await getJSON(env.PHOTOS_PRIVEES,targetKey,[]);
+        if(!Array.isArray(target)||target.length>=200)return error("Trop de vidéos sur cette étape.");
+        await putJSON(env.PHOTOS_PRIVEES,"__meta/videos/"+sourceSlug+".json",sourceList.filter(v=>v.id!==input.id));
+        await putJSON(env.PHOTOS_PRIVEES,targetKey,[...target,updated]);
+      }
+      return json({ok:true,video:updated,etape});
+    }
     if(path==="/api/prive/admin/video-supprimer"){
       const input=await readBody(request);
       if(!await stageExists(env,input?.slug)||typeof input?.id!=="string")return error("Vidéo invalide.");
