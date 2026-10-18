@@ -481,6 +481,28 @@ import { chemin } from "../../lib/paths";
     });
   </script>
   <script>
+    // En mode intégré, ne montrer que l’action correspondant à la page publique d’origine.
+    const adminContext = new URLSearchParams(window.location.search).get("context");
+    if (adminContext === "photos" || adminContext === "etapes") {
+      const journey = document.querySelector<HTMLElement>(".admin-journey");
+      const head = document.querySelector<HTMLElement>(".admin-head");
+      const topline = document.querySelector<HTMLElement>(".admin-topline");
+      const app = document.querySelector<HTMLElement>("#admin-app");
+      if (journey) { journey.style.maxWidth = "none"; journey.style.width = "100%"; journey.style.paddingTop = "18px"; }
+      if (head) head.hidden = true;
+      if (topline) topline.hidden = true;
+      if (app) { app.style.gridTemplateColumns = "minmax(0, 1fr)"; app.style.gap = "0"; }
+      const panels = Array.from(document.querySelectorAll<HTMLElement>("#admin-app .admin-panel"));
+      panels.forEach((panel, index) => {
+        const keep = adminContext === "photos" ? index === 1 : index === 5;
+        panel.hidden = !keep;
+        if (keep) { panel.style.gridColumn = "1 / -1"; panel.style.width = "100%"; }
+      });
+      const dock = document.getElementById("admin-quick-tools");
+      if (dock) dock.hidden = true;
+    }
+  </script>
+  <script>
     // Chaque rubrique admin peut se replier sans quitter la page ni perdre les formulaires.
     document.querySelectorAll<HTMLElement>("#admin-app .admin-panel").forEach((panel, index) => {
       const heading = panel.querySelector<HTMLElement>(".admin-section-title");
