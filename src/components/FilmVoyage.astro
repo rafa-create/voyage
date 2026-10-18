@@ -157,7 +157,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       nextButton.disabled=index===sequence.length-1;
     };
     const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="▶ Reprendre le film";};
-    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;playing=true;playButton.textContent="Ⅱ Pause";render();timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},4500);};
+    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;playing=true;playButton.textContent="Ⅱ Pause";render();timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},5500);};
     playButton.disabled=false;playButton.textContent="▶ Lancer le film";
     playButton.addEventListener("click",()=>playing?stop():start());
     prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
