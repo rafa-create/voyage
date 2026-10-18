@@ -553,7 +553,7 @@ import { chemin } from "../../lib/paths";
       if(!w.FFmpeg?.createFFmpeg)throw new Error("Le moteur de conversion vidéo n’est pas disponible dans ce navigateur.");
       // Match ffmpeg.wasm 0.11.6 with its compatible single-thread core.
       // Avoid the threaded core, which requires SharedArrayBuffer and COOP/COEP headers.
-      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,corePath:"https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"});
+      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,mainName:"main",corePath:"https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js"});
       await ffmpegInstance.load();
       return ffmpegInstance;
     }
