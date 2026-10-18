@@ -233,25 +233,25 @@ const points = etapes
             onRemove: () => dayControl.remove()
           } as maplibregl.IControl, "bottom-left");
 
-          // Bouton indépendant à droite pour revenir à la journée par défaut.
-          const todayButton = document.createElement("button");
-          todayButton.type = "button";
-          todayButton.className = "map-today-control maplibregl-ctrl";
-          todayButton.textContent = "Aujourd’hui";
-          todayButton.setAttribute("aria-label", "Revenir à aujourd’hui");
-          todayButton.addEventListener("click", (event) => {
+          // Bouton indépendant à droite pour afficher directement la journée d’hier.
+          const yesterdayButton = document.createElement("button");
+          yesterdayButton.type = "button";
+          yesterdayButton.className = "map-today-control maplibregl-ctrl";
+          yesterdayButton.textContent = "Hier";
+          yesterdayButton.setAttribute("aria-label", "Afficher la journée d’hier");
+          yesterdayButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            window.dispatchEvent(new CustomEvent("voyage:aujourdhui"));
+            window.dispatchEvent(new CustomEvent("voyage:hier"));
           });
           for (const eventName of ["pointerdown", "mousedown", "touchstart", "dblclick"]) {
-            todayButton.addEventListener(eventName, (event) => {
+            yesterdayButton.addEventListener(eventName, (event) => {
               event.stopPropagation();
               if (eventName === "dblclick") event.preventDefault();
             });
           }
           map.addControl({
-            onAdd: () => todayButton,
-            onRemove: () => todayButton.remove()
+            onAdd: () => yesterdayButton,
+            onRemove: () => yesterdayButton.remove()
           } as maplibregl.IControl, "bottom-right");
         }
         // Frise de voyage : chacune des photos publiques et toutes les activités
