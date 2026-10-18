@@ -603,6 +603,8 @@ const points = etapes
             window.addEventListener("voyage:voir-sur-carte",(event)=>{
               const detail=(event as CustomEvent<{date?:string;kind?:string;key?:string}>).detail;
               if(!detail?.date)return;
+              if(element.style.display==="none") mapVisibilityToggle?.click();
+              element.scrollIntoView({behavior:"smooth",block:"start"});
               updateSelectedDay(detail.date,true);
               if(detail.key){
                 const target=Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
