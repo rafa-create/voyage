@@ -278,8 +278,9 @@ import Base from "../layouts/Base.astro";
       const icon=create("span","goal-marker "+(done?"done":"undone"),done?"":"·");
       const description=create("span","goal-info");
       description.append(create("small",undefined,isChess?"ÉCHECS RAPIDES":"ACTIVITÉ PHYSIQUE"));
+      const chessCount=day.partiesEchecs?.length||Number(Boolean(day.echecs));
       description.append(create("strong",undefined,isChess
-        ?done?"Partie jouée":"Pas de partie"
+        ?done?chessCount+" partie"+(chessCount>1?"s":"")+" jouée"+(chessCount>1?"s":""):"Pas de partie"
         :done?km(day.activite!.km):"Pas d'activité"));
       const caret=create("span","goal-caret","⌄");
       summary.append(icon,description,caret);
