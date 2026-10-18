@@ -286,7 +286,30 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       if(item.youtubeId){
         const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(item.youtubeId)+"?rel=0";frame.title=item.title;frame.loading="lazy";frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";frame.allowFullscreen=true;frame.className="film-video-frame";memory.append(frame);
       }else if(item.fileVideoSrc){
-        const player=document.createElement("video");player.src=item.fileVideoSrc;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",item.title);player.className="film-video-frame";memory.append(player);
+        const player=document.createElement("video");
+        player.src=item.fileVideoSrc;
+        player.controls=true;
+        player.preload="metadata";
+        player.playsInline=true;
+        player.setAttribute("aria-label",item.title);
+        player.className="film-video-frame";
+        // Cet élément est créé en JavaScript et ne reçoit pas les attributs CSS scopés d'Astro.
+        // Appliquer les dimensions directement pour le contenir dans le panneau inférieur.
+        Object.assign(player.style,{
+          display:"block",
+          width:"100%",
+          minWidth:"0",
+          maxWidth:"100%",
+          height:"auto",
+          minHeight:"0",
+          maxHeight:"min(42vh, 360px)",
+          aspectRatio:"16 / 9",
+          objectFit:"contain",
+          boxSizing:"border-box",
+          background:"#000",
+          borderRadius:"4px"
+        });
+        memory.append(player);
       }else if(item.src){
         const img=document.createElement("img");img.src=item.src;img.alt=item.title;img.loading=index<2?"eager":"lazy";img.decoding="async";memory.append(img);
       }else if(item.kind!=="activite"){
@@ -382,6 +405,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-memory img{width:100%;height:clamp(130px,20vw,190px);object-fit:cover;border-radius:2px;animation:filmReveal .6s ease both}
   .film-memory .film-video-frame{display:block;flex:0 0 auto;width:100%;max-width:100%;height:min(42vh,360px);max-height:min(42vh,360px);min-height:180px;aspect-ratio:16/9;object-fit:contain;border:0;border-radius:4px;background:#000}
   .voyage-film.film-browser-fullscreen .film-memory .film-video-frame{max-height:38vh;min-height:0;align-self:stretch}
+  /* Le lecteur est créé côté client : ces règles doivent être globales, pas scopées par Astro. */
+  :global(.voyage-film.film-browser-fullscreen .film-memory .film-video-frame){max-height:38vh;min-height:0;align-self:stretch}
   .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
   .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
   .film-memory-placeholder{color:var(--muted);font-size:.9rem}
