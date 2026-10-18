@@ -355,9 +355,12 @@ const points = etapes
               const stage=(video.etape?points.find(p=>p.slug===video.etape):undefined)||
                 [...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||
                 points.find(p=>p.date===date);
-              if(!stage||!valid(stage.latitude,stage.longitude))continue;
-              memories.push({type:"video-fichier",date,order:date+"T23:58",latitude:stage.latitude,
-                longitude:stage.longitude,precision:"Emplacement indicatif de l'étape",
+              const hasVideoGps=valid(video.latitude,video.longitude);
+              if(!hasVideoGps&&(!stage||!valid(stage.latitude,stage.longitude)))continue;
+              memories.push({type:"video-fichier",date,order:date+"T23:58",
+                latitude:hasVideoGps?Number(video.latitude):stage!.latitude,
+                longitude:hasVideoGps?Number(video.longitude):stage!.longitude,
+                precision:hasVideoGps?"GPS vidéo":"Emplacement indicatif de l'étape",
                 titre:video.titre||"Vidéo du voyage",src:video.src,key:video.key,etape:video.etape});
             }
             const parisToday = new Intl.DateTimeFormat("en-CA", {
