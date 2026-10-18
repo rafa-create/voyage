@@ -480,6 +480,34 @@ import { chemin } from "../../lib/paths";
       }catch(err){message("step-feedback",err instanceof Error?err.message:"Erreur.");}
     });
   </script>
+  <script>
+    // Chaque rubrique admin peut se replier sans quitter la page ni perdre les formulaires.
+    document.querySelectorAll<HTMLElement>("#admin-app .admin-panel").forEach((panel, index) => {
+      const heading = panel.querySelector<HTMLElement>(".admin-section-title");
+      if (!heading || heading.dataset.collapseReady) return;
+      heading.dataset.collapseReady = "true";
+      const content = document.createElement("div");
+      content.className = "admin-panel-content";
+      const siblings = Array.from(panel.children).filter((node) => node !== heading);
+      siblings.forEach((node) => content.append(node));
+      panel.append(content);
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "admin-collapse-toggle";
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute("aria-label", "Replier cette rubrique");
+      toggle.textContent = "−";
+      heading.append(toggle);
+      toggle.addEventListener("click", () => {
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!expanded));
+        toggle.setAttribute("aria-label", expanded ? "Déplier cette rubrique" : "Replier cette rubrique");
+        toggle.textContent = expanded ? "+" : "−";
+        content.hidden = expanded;
+        panel.classList.toggle("is-collapsed", expanded);
+      });
+    });
+  </script>
   <style>
     .admin-journey{padding:40px 0 110px;max-width:1060px}
     .admin-head{display:flex;justify-content:space-between;gap:20px;align-items:end}
@@ -497,7 +525,7 @@ import { chemin } from "../../lib/paths";
     .admin-panel{padding:clamp(19px,3vw,30px);background:var(--white);border:1px solid var(--line);min-width:0}
     .admin-now,.admin-full{grid-column:1/-1}
     .admin-now{background:#e8efe4}
-    .admin-section-title{display:flex;justify-content:space-between;align-items:start;gap:14px;margin-bottom:18px}
+    .admin-section-title{position:relative;display:flex;justify-content:space-between;align-items:start;gap:14px;margin-bottom:18px}
     .admin-section-title .eyebrow{margin-bottom:8px}
     .admin-section-title h2{font-size:1.8rem;margin:0}
     .admin-pill{font-size:.72rem;background:var(--forest);color:white;padding:8px 10px;border-radius:20px}
@@ -531,6 +559,10 @@ import { chemin } from "../../lib/paths";
     .admin-video-item{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:.81rem}
     .admin-video-item a{text-decoration:underline;text-decoration-color:var(--orange)}
     .admin-video-item button{border:0;background:none;color:#b35e40;font-size:1rem;cursor:pointer}
+    .admin-collapse-toggle{flex:0 0 auto;margin-left:auto;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--ink);font-size:1.2rem;line-height:1;cursor:pointer}
+    .admin-panel-content[hidden]{display:none}
+    .admin-panel.is-collapsed{padding-bottom:14px}
+    .admin-panel.is-collapsed .admin-section-title{margin-bottom:0}
     .admin-double{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .admin-double>div{min-width:0;display:flex;flex-direction:column;gap:9px}
     .admin-geocode{align-self:start;margin:5px 0}
