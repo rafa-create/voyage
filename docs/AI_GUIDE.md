@@ -48,12 +48,12 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 3. Tester mobile, navigation clavier, états sans photos et photos sans métadonnées.
 4. Ne pas supposer qu'une PR est déployée : l'URL de production ne change qu'après un déploiement réussi.
 
-## Incident — accueil figé en mode administrateur (2026-10-18)
-- **Symptôme rapporté :** le site public fonctionnait, mais l'accueil se figeait en session administrateur avec la carte qui semblait charger à l'infini. Le problème se reproduisait dans Brave et Safari; le Journal restait utilisable.
-- **Correctif appliqué :** dans `src/layouts/Base.astro`, le script d'édition inline (crayons pour textes et photos) retourne immédiatement sur `/` et `/index.html`. Les stylos sont donc désactivés sur l'accueil uniquement; les autres pages conservent leur mécanisme d'édition.
-- **Commit correctif :** [`834f4d23`](https://github.com/rafa-create/voyage/commit/834f4d23f80f30b17dec1b9db834b743cb510100).
-- **Résultat rapporté par l'utilisateur :** le problème est réglé après ce changement.
-- **Interprétation prudente :** cela indique que le script des stylos / son interaction avec le DOM dynamique de l'accueil était impliqué, mais la cause précise n'a pas été isolée. Le script utilisait un `MutationObserver` sur `main` et relançait le scan des textes et des photos lors des mutations; l'accueil met à jour dynamiquement ses contenus.
-- **Ne pas réactiver les stylos sur l'accueil sans test.** Si l'édition inline sur l'accueil redevient nécessaire, diagnostiquer et optimiser l'observateur (limiter les nœuds surveillés, ignorer les mutations produites par les boutons admin, éviter un scan global répétitif) puis tester en admin sur Safari et Brave, sur mobile et ordinateur.
-- **Vérification de suivi recommandée :** confirmer que le déploiement correspondant au commit est actif; tester l'accueil public, l'accueil admin, le Journal et la Galerie. Vérifier que les fonctions d'édition des pages hors accueil restent disponibles et que les photos, activités et données R2 n'ont pas été affectées.
+## Incident — accueil figé et retrait de l'édition générique (2026-10-18)
+- **Symptôme initial :** le site public fonctionnait, mais l'accueil se figeait en session administrateur avec la carte qui semblait charger à l'infini, notamment dans Brave et Safari; le Journal restait utilisable.
+- **Correctif initial :** le commit [`834f4d23`](https://github.com/rafa-create/voyage/commit/834f4d23f80f30b17dec1b9db834b743cb510100) a désactivé l'édition inline sur l'accueil. L'utilisateur a confirmé que le problème était réglé.
+- **Décision suivante :** retirer entièrement l'édition générique des textes (crayons flottants, éditeur inline, appel à `/api/prive/admin/textes-site`, repositionnement et observateur associés), car les changements de labels n'étaient pas répercutés sur le site public.
+- **État actuel du code :** dans `src/layouts/Base.astro`, le script d'édition générique a été remplacé par un script réservé à la Galerie. Il ajoute uniquement le crayon de modification des commentaires de photos, après vérification de la session administrateur. Le `MutationObserver` est conservé exclusivement sur la Galerie afin de prendre en charge ses photos chargées dynamiquement. Les boutons d'ajout de photos et de vidéos et les outils d'administration dédiés ne sont pas visés par ce retrait.
+- **Commit de retrait :** à renseigner après le commit correspondant.
+- **Limite de vérification :** le code a été modifié sur `main`; le site n'a pas été déployé automatiquement. Tester en production après déploiement autorisé : absence de crayons de texte sur les pages, ajout photo/vidéo dans la Galerie, édition d'une description de photo, fonctionnement du Journal, de la carte et des outils d'administration.
+- **Prudence :** la cause exacte du gel initial n'a pas été isolée. Ne pas réintroduire l'édition générique sans une solution explicite et des tests dédiés.
 
