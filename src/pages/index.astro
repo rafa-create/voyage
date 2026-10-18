@@ -201,7 +201,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       headingNext?.addEventListener("click",goNext);
       dailyDatePicker?.addEventListener("change",()=>{
         const day=dailyDatePicker.value;
-        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(day))return;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
         if(!ordered.includes(day)) ordered=[...ordered,day].sort((a,b)=>b.localeCompare(a));
         index=ordered.indexOf(day);
         render();
