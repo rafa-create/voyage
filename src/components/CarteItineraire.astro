@@ -109,10 +109,19 @@ const points = etapes
         titre.textContent = p.titre;
         const pays = document.createElement("span");
         pays.textContent = p.pays;
+        const jour = document.createElement("button");
+        jour.type = "button";
+        jour.className = "map-popup-day-button";
+        jour.style.cssText = "display:block;margin:8px 0;padding:7px 10px;border:1px solid #d8d8d0;border-radius:3px;background:#f8f6f0;color:#274c41;font:inherit;font-size:.8rem;cursor:pointer;text-align:left";
+        jour.textContent = "Voir les souvenirs de cette journée";
+        jour.addEventListener("click", () => {
+          window.dispatchEvent(new CustomEvent("voyage:jour", { detail: { date: p.date } }));
+          document.querySelector("#daily-view")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
         const lien = document.createElement("a");
         lien.href = base + "/etapes/" + encodeURIComponent(p.slug) + "/";
         lien.textContent = "Voir les photos et le récit";
-        contenu.append(label, titre, pays, lien);
+        contenu.append(label, titre, pays, jour, lien);
 
         new maplibregl.Marker({ element: marker, anchor: "center" })
           .setLngLat([p.longitude, p.latitude])
