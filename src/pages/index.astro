@@ -152,7 +152,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
             const poster = document.createElement("img"); poster.src="https://i.ytimg.com/vi/"+id+"/hqdefault.jpg"; poster.alt=video.titre || "Vidéo du voyage"; poster.loading="lazy"; poster.decoding="async";
             const play = document.createElement("span"); play.className="daily-video-play"; play.setAttribute("aria-hidden","true"); play.textContent="▶";
             link.append(poster,play); figure.append(link);
-            const caption=document.createElement("figcaption"); caption.textContent=video.titre || "Vidéo du voyage"; figure.append(caption);
+            const caption=document.createElement("figcaption"); caption.textContent=video.titre || "Vidéo du voyage"; figure.append(caption); dailyVideosGrid.append(figure);
           }
           dailyVideosWrap.hidden = dailyVideosGrid.childElementCount===0;
         }
