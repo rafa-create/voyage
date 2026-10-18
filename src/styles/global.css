@@ -537,3 +537,19 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   .daily-view .daily-controls { width: 100%; }
   .daily-view .daily-controls button { min-width: 0; flex: 1 1 0; padding-inline: 10px; }
 }
+
+
+/* Flèches de navigation dans la carte : zone de clic plus confortable. */
+.map-day-control .daily-day-arrow {
+  flex-basis: 34px;
+  width: 34px;
+  min-height: 30px;
+  font-size: 1.15rem;
+}
+@media(max-width:600px) {
+  .map-day-control .daily-day-arrow {
+    flex-basis: 30px;
+    width: 30px;
+    min-height: 30px;
+  }
+}
