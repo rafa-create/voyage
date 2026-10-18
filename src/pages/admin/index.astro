@@ -429,29 +429,39 @@ import { chemin } from "../../lib/paths";
         const body=document.createElement("div");body.className="admin-photo-body";
         const title=document.createElement("strong");title.textContent=photo.etape?etapes.find(x=>x.slug===photo.etape)?.ville||photo.etape:"Sans étape";
         const date=document.createElement("small");date.textContent=photo.datePrise?"Prise le "+photo.datePrise+(photo.dateHeure?" à "+photo.dateHeure.slice(11,16):""):"Date EXIF inconnue";
-        const dateEditor=document.createElement("div");dateEditor.className="admin-photo-date-editor";
-        const dateInput=document.createElement("input");dateInput.type="date";dateInput.value=photo.datePrise||"";dateInput.setAttribute("aria-label","Date de prise de la photo");
-        const timeInput=document.createElement("input");timeInput.type="time";timeInput.value=photo.dateHeure?.slice(11,16)||"";timeInput.setAttribute("aria-label","Heure de prise de la photo");
-        const saveDate=document.createElement("button");saveDate.type="button";saveDate.className="admin-secondary";saveDate.textContent="Enregistrer date/heure";
-        saveDate.addEventListener("click",async()=>{
-          saveDate.disabled=true;
+        const editor=document.createElement("details");editor.className="admin-photo-editor";
+        const summary=document.createElement("summary");summary.textContent="Modifier les informations";
+        const fields=document.createElement("div");fields.className="admin-photo-edit-grid";
+        const makeField=(labelText:string,type:string,value:string,placeholder="")=>{
+          const wrap=document.createElement("label");wrap.className="admin-photo-field";wrap.append(document.createTextNode(labelText));
+          const input=document.createElement("input");input.type=type;input.value=value;input.placeholder=placeholder;wrap.append(input);fields.append(wrap);return input;
+        };
+        const dateInput=makeField("Date","date",photo.datePrise||"");
+        const timeInput=makeField("Heure","time",photo.dateHeure?.slice(11,16)||"");
+        const placeInput=makeField("Lieu","text",photo.lieu||"","Ville ou lieu");
+        const captionInput=makeField("Légende","text",photo.legende||"","Légende de la photo");
+        const commentWrap=document.createElement("label");commentWrap.className="admin-photo-field admin-photo-field-wide";commentWrap.append(document.createTextNode("Commentaire"));
+        const commentInput=document.createElement("textarea");commentInput.value=photo.commentaire||"";commentInput.rows=2;commentInput.placeholder="Commentaire ou souvenir";commentWrap.append(commentInput);fields.append(commentWrap);
+        const latitudeInput=makeField("Latitude","number",photo.latitude==null?"":String(photo.latitude),"Ex. 48.8566");latitudeInput.step="any";
+        const longitudeInput=makeField("Longitude","number",photo.longitude==null?"":String(photo.longitude),"Ex. 2.3522");longitudeInput.step="any";
+        const stepWrap=document.createElement("label");stepWrap.className="admin-photo-field admin-photo-field-wide";stepWrap.append(document.createTextNode("Étape associée"));
+        const stepSelect=document.createElement("select");stepSelect.add(new Option("Sans étape",""));for(const e of etapes)stepSelect.add(new Option(e.ville+" · "+e.pays,e.slug));stepSelect.value=photo.etape||"";stepWrap.append(stepSelect);fields.append(stepWrap);
+        const save=document.createElement("button");save.type="button";save.className="admin-secondary";save.textContent="Enregistrer les modifications";
+        save.addEventListener("click",async()=>{
+          save.disabled=true;
           try{
-            const dateValue=dateInput.value;
-            const timeValue=timeInput.value;
+            const dateValue=dateInput.value,timeValue=timeInput.value;
             await post("/api/prive/admin/photo-modifier",{
               key:photo.key,visibilite:photo.visibilite,datePrise:dateValue,
               dateHeure:dateValue&&timeValue?dateValue+"T"+timeValue:"",
-              etape:photo.etape||"",
-              lieu:photo.lieu||"",legende:photo.legende||"",commentaire:photo.commentaire||"",
-              latitude:photo.latitude??"",longitude:photo.longitude??""
+              etape:stepSelect.value,lieu:placeInput.value,legende:captionInput.value,commentaire:commentInput.value,
+              latitude:latitudeInput.value,longitude:longitudeInput.value
             });
-            await refresh();
-            message("sync-result","Date et heure de la photo enregistrées.");
-          }catch(err){message("sync-result",err instanceof Error?err.message:"Impossible d’enregistrer la date et l’heure.");}
-          finally{saveDate.disabled=false;}
+            await refresh();message("sync-result","Informations de la photo enregistrées.");
+          }catch(err){message("sync-result",err instanceof Error?err.message:"Impossible d’enregistrer les modifications.");}
+          finally{save.disabled=false;}
         });
-        dateEditor.append(dateInput,timeInput,saveDate);
-        const actions=document.createElement("div");actions.className="admin-photo-actions";
+        const editorActions=document.createElement("div");editorActions.className="admin-photo-editor-actions";
         const privateLabel=document.createElement("label");privateLabel.className="chosen-private";
         const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=photo.visibilite==="prive";checkbox.setAttribute("aria-label","Photo privée");
         checkbox.addEventListener("change",async()=>{
@@ -460,51 +470,32 @@ import { chemin } from "../../lib/paths";
           checkbox.disabled=true;
           try{
             if(photo.visibilite==="prive"&&target==="public"){
-              // Réencoder l'original privé sans EXIF/GPS avant la publication.
               const imageResponse=await fetch(photo.src,{credentials:"same-origin"});
               if(!imageResponse.ok)throw Error("Impossible de lire la photo privée.");
               const original=await imageResponse.blob();
               const filename=new File([original],"photo-privee",{type:original.type||"image/jpeg"});
               const clean=await optimizedPublic(filename);
               const args=new URLSearchParams({visibilite:"public",auto:"0"});
-              if(photo.etape)args.set("etape",photo.etape);
-              if(photo.datePrise)args.set("datePrise",photo.datePrise);
-              const uploaded=await api("/api/prive/admin/upload?"+args.toString(),{
-                method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body:clean
-              });
-              // L'original privé est supprimé seulement après réussite de la publication.
+              if(photo.etape)args.set("etape",photo.etape);if(photo.datePrise)args.set("datePrise",photo.datePrise);
+              await api("/api/prive/admin/upload?"+args.toString(),{method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body:clean});
               await post("/api/prive/admin/supprimer-photo",{key:photo.key,visibilite:"prive"});
-            }else{
-              await post("/api/prive/admin/visibilite",{key:photo.key,visibilite:photo.visibilite,nouvelleVisibilite:target});
-            }
+            }else await post("/api/prive/admin/visibilite",{key:photo.key,visibilite:photo.visibilite,nouvelleVisibilite:target});
             await refresh();
-          }
-          catch(e){checkbox.checked=!checkbox.checked;message("sync-result",String(e));}
+          }catch(e){checkbox.checked=!checkbox.checked;message("sync-result",String(e));}
           finally{checkbox.disabled=false;}
         });
-        privateLabel.append(checkbox," Privée");
-        const del=document.createElement("button");del.type="button";del.className="admin-small-danger";del.textContent="Supprimer";
+        privateLabel.append(checkbox," Photo privée");
+        const del=document.createElement("button");del.type="button";del.className="admin-small-danger";del.textContent="Supprimer la photo";
         del.addEventListener("click",async()=>{
           if(!window.confirm("Supprimer définitivement cette photo de R2 ?"))return;
           del.disabled=true;
           try{await post("/api/prive/admin/supprimer-photo",{key:photo.key,visibilite:photo.visibilite});await refresh();message("sync-result","Photo supprimée du stockage.");}
           catch(e){message("sync-result",String(e));del.disabled=false;}
         });
-        actions.append(privateLabel,del);
-        {
-          const select=document.createElement("select");select.setAttribute("aria-label","Étape de destination");
-          select.add(new Option("Sans étape",""));
-          for(const e of etapes)select.add(new Option(e.ville+" · "+e.pays,e.slug));
-          select.value=photo.etape||"";
-          const assign=document.createElement("button");assign.type="button";assign.className="admin-secondary";
-          assign.textContent="Enregistrer";
-          assign.addEventListener("click",async()=>{
-            try{await post("/api/prive/admin/assigner",{key:photo.key,visibilite:photo.visibilite,etape:select.value||null});await refresh();}
-            catch(e){message("sync-result",String(e));}
-          });
-          actions.append(select,assign);
-        }
-        body.append(title,date,dateEditor,actions);card.append(img,body);list.append(card);
+        editorActions.append(privateLabel,del);
+        const saveRow=document.createElement("div");saveRow.className="admin-photo-save-row";saveRow.append(save);
+        editor.append(summary,fields,saveRow,editorActions);
+        body.append(title,date,editor);card.append(img,body);list.append(card);
       }
       if(visible.length>300){const more=document.createElement("p");more.textContent="Affichage limité aux 300 premières photos. Filtre par étape pour en voir davantage.";list.append(more);}
     }
@@ -830,7 +821,18 @@ import { chemin } from "../../lib/paths";
     .chosen-details span,.admin-photo-body small{color:var(--muted);font-size:.68rem}
     .chosen-private{font-size:.76rem;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap}
     .chosen-private input{accent-color:#a4563b;width:17px;height:17px}
-    .admin-photo-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px}.admin-photo-date-editor{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}.admin-photo-date-editor input{min-width:0;width:auto;max-width:145px;min-height:32px;padding:6px;border:1px solid #bdc3ba;background:white;color:var(--ink);border-radius:3px;font:inherit;font-size:.78rem}.admin-photo-date-editor button{padding:7px 9px;font-size:.72rem}
+    .admin-photo-editor{margin-top:7px;border-top:1px solid var(--line);padding-top:7px}
+    .admin-photo-editor summary{cursor:pointer;color:var(--forest);font-size:.75rem;font-weight:700;padding:4px 0}
+    .admin-photo-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:9px 0}
+    .admin-photo-field{display:flex;flex-direction:column;gap:4px;min-width:0;color:var(--muted);font-size:.68rem;font-weight:700}
+    .admin-photo-field-wide{grid-column:1/-1}
+    .admin-photo-field input,.admin-photo-field textarea,.admin-photo-field select{width:100%;min-width:0;box-sizing:border-box;min-height:34px;padding:7px;border:1px solid #bdc3ba;background:white;color:var(--ink);border-radius:3px;font:inherit;font-size:.78rem;font-weight:400}
+    .admin-photo-field textarea{resize:vertical}
+    .admin-photo-save-row{margin:8px 0}
+    .admin-photo-save-row button{width:100%;padding:9px;font-size:.75rem}
+    .admin-photo-editor-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding-top:7px;border-top:1px solid var(--line)}
+    .admin-photo-list{max-height:550px;overflow-y:auto;margin-top:15px}
+    @media(max-width:430px){.admin-photo-edit-grid{gap:7px}.admin-photo-field input,.admin-photo-field textarea,.admin-photo-field select{font-size:16px;min-height:38px}.admin-photo-field-wide{grid-column:1/-1}}
     .admin-photo-actions select{max-width:170px;font-size:.72rem;padding:7px;min-height:32px}
     .admin-small-danger{background:none;border:0;color:#a74732;text-decoration:underline;font-size:.75rem;cursor:pointer}
     .admin-photo-list{max-height:550px;overflow-y:auto;margin-top:15px}
