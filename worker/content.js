@@ -92,6 +92,9 @@ export async function listedVideos(env,visibility="public"){
     titre:x.customMetadata?.titre||x.key.split("/").pop().replace(/\.[^.]+$/,""),
     etape:x.customMetadata?.etape||null,
     date:x.customMetadata?.datePrise||x.uploaded?.toISOString().slice(0,10)||null,
+    lieu:x.customMetadata?.lieu||"",
+    latitude:x.customMetadata?.latitude!==undefined?Number(x.customMetadata.latitude):null,
+    longitude:x.customMetadata?.longitude!==undefined?Number(x.customMetadata.longitude):null,
     ajouteLe:x.uploaded?.toISOString()||null,
   }));
 }
