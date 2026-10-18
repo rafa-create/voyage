@@ -8,8 +8,15 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 ---
 
 <Base title="Mon itinéraire" headerTitle="Mon itinéraire" active="accueil">
-  <section class="container section daily-view daily-map-controls" aria-label="Choisir le jour du souvenir">
+  <section class="container section daily-view daily-map-controls" aria-label="Carte du voyage">
     <h1 id="home-map-heading">Où j'étais hier</h1>
+  </section>
+  <section class="route-section home-map-only" aria-labelledby="home-map-heading">
+    <div class="route-map-card home-full-width-map">
+      <CarteItineraire etapes={etapes}/>
+    </div>
+  </section>
+  <section class="container section daily-view daily-map-controls daily-map-controls-bottom" aria-label="Choisir le jour du souvenir">
     <div class="home-map-control-row">
       <div class="section-heading">
         <div>
@@ -29,11 +36,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         </div>
       </div>
       <button type="button" id="map-visibility-toggle" aria-expanded="true">Masquer la carte</button>
-    </div>
-  </section>
-  <section class="route-section home-map-only" aria-labelledby="home-map-heading">
-    <div class="route-map-card home-full-width-map">
-      <CarteItineraire etapes={etapes}/>
     </div>
   </section>
 
@@ -88,9 +90,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       dates.add(todayKey);
       dates.add(yesterdayKey);
       const ordered = Array.from(dates).sort((a,b)=>b.localeCompare(a));
-      let index = ordered.indexOf(todayKey);
-      const todayIndex = index;
+      const todayIndex = ordered.indexOf(todayKey);
       const yesterdayIndex = ordered.indexOf(yesterdayKey);
+      // À l’arrivée, afficher les souvenirs d’hier, comme le bouton « Hier » de la carte.
+      let index = yesterdayIndex >= 0 ? yesterdayIndex : todayIndex;
       const render = () => {
         const day = ordered[index];
         if (dateText) dateText.textContent = dateLabel(day);
@@ -178,6 +181,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   </script>
   <style is:global>
     .daily-map-controls { padding-top: 18px; padding-bottom: 8px; }
+    .daily-map-controls-bottom { padding-top: 12px; padding-bottom: 4px; }
     .daily-map-controls > h1 { margin: 0 0 12px; color: var(--forest); font-size: clamp(1.55rem, 2.5vw, 2rem); line-height: 1.2; }
     .home-map-control-row { display: flex; align-items: center; justify-content: flex-start; gap: 12px; flex-wrap: wrap; }
     .home-map-control-row .section-heading { display: flex; align-items: center; gap: 12px; margin: 0; min-width: 0; flex-wrap: wrap; }
