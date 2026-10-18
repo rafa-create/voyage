@@ -551,7 +551,9 @@ import { chemin } from "../../lib/paths";
         });
       }
       if(!w.FFmpeg?.createFFmpeg)throw new Error("Le moteur de conversion vidéo n’est pas disponible dans ce navigateur.");
-      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,corePath:"https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"});
+      // Use the single-thread core: the threaded core requires SharedArrayBuffer,
+      // which is unavailable on some browsers (notably Safari/iOS) without COOP/COEP headers.
+      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,corePath:"https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js"});
       await ffmpegInstance.load();
       return ffmpegInstance;
     }
