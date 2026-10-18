@@ -17,7 +17,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     <div class="section-heading">
       <div>
         <div class="daily-heading-title">
-          <h2 id="daily-heading">Journal de route</h2>
+          <h2 id="daily-heading">Souvenir du jour</h2>
           <div class="daily-heading-arrows" aria-label="Changer de journée">
             <button type="button" id="daily-heading-previous" aria-label="Jour précédent" disabled>←</button>
             <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
@@ -41,7 +41,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 
   <script>
     type DailyPhoto = {src:string;alt?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
-    const dateLabel = (value:string) => "Souvenir du " + new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
+    const dateLabel = (value:string) => "Souvenir du " + new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
     const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
     const grid = document.querySelector<HTMLElement>("#daily-photos");
     const dateText = document.querySelector<HTMLElement>("#daily-date");
@@ -83,6 +83,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const render = () => {
         const day = ordered[index];
         dateText.textContent = dateLabel(day);
+        const heading = document.querySelector<HTMLElement>("#daily-heading");
+        if (heading) heading.textContent = dateLabel(day);
         if (headingDate) headingDate.textContent = new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(day+"T12:00:00"));
         grid.replaceChildren();
         const dayPhotos = photos.filter(p=>dateKey(p)===day)
