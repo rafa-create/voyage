@@ -73,7 +73,7 @@ const points = etapes
       // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
       // Masquer les liens entre les étapes dès l'ouverture de la carte.
       let voyageLinksHidden = true;
-      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "fil-des-souvenirs-fleches", "tous-les-traces", "tous-les-traces-fleches", "trace-sportive", "trace-sportive-fleches"];
+      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "fil-des-souvenirs-fleches"];
       const syncVoyageLinkVisibility = () => {
         for (const id of voyageLinkLayers) {
           if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", voyageLinksHidden ? "none" : "visible");
@@ -392,8 +392,8 @@ const points = etapes
                 if(eventName==="dblclick") event.preventDefault();
               });
             }
-            allTracesButton.textContent="Afficher tous les liens entre les étapes";
-            allTracesButton.setAttribute("aria-label","Afficher tous les liens entre les étapes");
+            allTracesButton.textContent="Afficher les liens";
+            allTracesButton.setAttribute("aria-label","Afficher les liens");
             allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
             const loadAllTraces=async(fitMap=true)=>{
@@ -442,8 +442,8 @@ const points = etapes
               voyageLinksHidden = !voyageLinksHidden;
               syncVoyageLinkVisibility();
               allTracesButton.textContent = voyageLinksHidden
-                ? "Afficher tous les liens entre les étapes"
-                : "Masquer tous les liens entre les étapes";
+                ? "Afficher les liens"
+                : "Masquer les liens";
               allTracesButton.setAttribute("aria-label", allTracesButton.textContent);
               allTracesButton.setAttribute("aria-pressed", String(voyageLinksHidden));
             });
