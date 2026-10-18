@@ -264,15 +264,15 @@ export function summarizeChallenge(config,chess,activities,today){
   const gamesByDay=new Map(),activityByDay=new Map();
   const orderedGames=[...games].filter(g=>g.mode==="rapid"&&validDate(g.date)&&g.date>=config.debut&&g.date<=today)
     .sort((a,b)=>a.fin-b.fin);
-  // Elo de la cadence exacte du jour, pas un mélange blitz/rapid.
+  // Conserver toutes les parties rapides du jour, avec l'évolution Elo partie par partie.
   const previousModeRating=new Map();
   for(const g of orderedGames){
     const previous=previousModeRating.get(g.mode);
     const delta=g.rating!=null&&previous!=null?g.rating-previous:null;
     if(g.rating!=null&&g.mode)previousModeRating.set(g.mode,g.rating);
-    const existing=gamesByDay.get(g.date);
-    if(!existing||Number(g.fin)>Number(existing.fin))
-      gamesByDay.set(g.date,{...g,eloDelta:delta,count:1});
+    const existing=gamesByDay.get(g.date)||[];
+    existing.push({...g,eloDelta:delta});
+    gamesByDay.set(g.date,existing);
   }
   for(const a of runs){
     if(!validDate(a.date)||a.date<config.debut||a.date>today)continue;
@@ -289,8 +289,9 @@ export function summarizeChallenge(config,chess,activities,today){
   }
   const days=[];
   for(let date=config.debut;date<=today&&days.length<MAX_DAYS;date=addDays(date)){
-    const game=gamesByDay.get(date)||null,activity=activityByDay.get(date)||null;
-    days.push({date,echecs:game,activite:activity,
+    const partiesEchecs=gamesByDay.get(date)||[];
+    const game=partiesEchecs.at(-1)||null,activity=activityByDay.get(date)||null;
+    days.push({date,echecs:game,partiesEchecs,activite:activity,
       resultat:game&&activity?"reussi":date===today?"en_cours":"manque"});
   }
   const finished=days.filter(d=>d.date<today);
