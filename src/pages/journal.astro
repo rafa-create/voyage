@@ -47,10 +47,13 @@ import { chemin } from "../lib/paths";
     const addStageDialog = document.querySelector<HTMLElement>("#add-stage-dialog");
     const addStageFrame = document.querySelector<HTMLIFrameElement>("#add-stage-frame");
     const closeStageDialog = () => { if (addStageDialog) addStageDialog.hidden = true; document.body.classList.remove("stage-dialog-open"); };
+    // Le bouton de création est réservé aux administrateurs ; il reste masqué par défaut.
     fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
       .then(async response => response.ok ? response.json() : null)
-      .then(user => { if (user?.isAdmin && addStageButton) addStageButton.hidden = false; })
-      .catch(() => {});
+      .then(user => {
+        if (addStageButton) addStageButton.hidden = user?.isAdmin !== true;
+      })
+      .catch(() => { if (addStageButton) addStageButton.hidden = true; });
     addStageButton?.addEventListener("click", () => {
       if (!addStageDialog || !addStageFrame) return;
       if (!addStageFrame.src) addStageFrame.src = "/admin/?context=etapes";
