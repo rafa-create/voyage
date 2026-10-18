@@ -50,7 +50,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const filmSection = document.querySelector<HTMLElement>(".voyage-film");
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
-  const formatClock = (value:unknown):string => { if(value===null||value===undefined||value==="")return ""; let d:Date; if(typeof value==="number"||(typeof value==="string"&&/^\\d+(?:\\.\\d+)?$/.test(value.trim()))){const n=Number(value);d=new Date(n<1e12?n*1000:n);}else{d=new Date(String(value));} return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(d); };
+  const formatClock = (value:unknown):string => { if(value===null||value===undefined||value==="")return ""; let d:Date; if(typeof value==="number"||(typeof value==="string"&&/^\d+(?:\.\d+)?$/.test(value.trim()))){const n=Number(value);d=new Date(n<1e12?n*1000:n);}else{d=new Date(String(value));} return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(d); };
   const activityPlaceCache=new Map<string,string>();
   async function reverseGeocode(lat:number,lon:number):Promise<string>{
     const key=lat.toFixed(3)+","+lon.toFixed(3);
