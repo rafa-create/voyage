@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
-import { etapes } from "../lib/data";
+import { etapes, dateFr } from "../lib/data";
+import { chemin } from "../lib/paths";
 ---
 
 <Base title="Journal" active="journal">
@@ -10,57 +11,56 @@ import { etapes } from "../lib/data";
     </div>
   </section>
 
+  {etapes.length > 0 && (
+    <section class="container section journal-list journal-stages" aria-label="Étapes facultatives du voyage">
+      <div class="journal-stages-heading">
+        <h2>Étapes du voyage <span class="heading-dot">.</span></h2>
+      </div>
+      <p class="journal-stages-intro">Quelques repères pour raconter le parcours — les souvenirs n'ont pas besoin d'être associés à une étape.</p>
+      <ol class="timeline">
+        {etapes.map((etape) => (
+          <li>
+            <span class="timeline-date">{dateFr(etape.date)}</span>
+            <a href={chemin("/etapes/" + etape.slug + "/")} class="timeline-card">
+              <span class="eyebrow">{etape.pays} · {etape.ville}</span>
+              <h3>{etape.titre}</h3>
+              <p>{etape.texte.slice(0, 180)}{etape.texte.length > 180 ? "…" : ""}</p>
+              <span class="card-more">Lire cette étape</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+
   <script>
     type Souvenir = {src:string;alt?:string;legende?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;lieu?:string;etape?:string};
-    type VideoSouvenir = {id?:string;url:string;titre:string;date?:string|null;lieu?:string;etape?:string;stepDate?:string};
-    type FichierVideo = {src:string;titre:string;date?:string|null;etape?:string|null};
     const root=document.querySelector<HTMLElement>("#journal-souvenirs");
     const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.ajouteLe||"").slice(0,10);
     const formatDate=(value:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
     async function renderJournal(){
       if(!root)return;
-      const [photoResponse, looseVideoResponse, fileVideoResponse] = await Promise.all([
-        fetch("/api/public/photos",{cache:"no-store"}),
-        fetch("/api/public/videos",{cache:"no-store"}),
-        fetch("/api/public/videos-fichiers",{cache:"no-store"})
-      ]);
-      if(!photoResponse.ok)throw new Error("Chargement des photos impossible");
-      const photoData=await photoResponse.json();
-      const photos:Souvenir[]=(photoData.photos||[]).filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
-      const videoGroups = await Promise.all(etapes.map(async step => {
-        try {
-          const response=await fetch("/api/public/videos?etape="+encodeURIComponent(step.slug),{cache:"no-store"});
-          const data=response.ok?await response.json():{videos:[]};
-          return (data.videos||[]).map((video:VideoSouvenir)=>({...video,etape:step.slug,stepDate:step.date}));
-        } catch { return []; }
-      }));
-      const looseVideos:VideoSouvenir[]=looseVideoResponse.ok?(await looseVideoResponse.json()).videos||[]:[];
-      const videos:VideoSouvenir[]=[...looseVideos,...videoGroups.flat()];
-      const fileVideos:FichierVideo[]=fileVideoResponse.ok?(await fileVideoResponse.json()).videos||[]:[];
-      const videoDate=(video:VideoSouvenir)=>String(video.date||video.stepDate||"").slice(0,10);
-      const fileVideoDate=(video:FichierVideo)=>String(video.date||"").slice(0,10);
-      const days=new Set<string>();
-      for(const photo of photos)days.add(dateOf(photo));
-      for(const video of videos){const day=videoDate(video);if(/^\d{4}-\d{2}-\d{2}$/.test(day))days.add(day);}
-      for(const video of fileVideos){const day=fileVideoDate(video);if(/^\d{4}-\d{2}-\d{2}$/.test(day))days.add(day);}
+      const response=await fetch("/api/public/photos",{cache:"no-store"});
+      if(!response.ok)throw new Error("Chargement impossible");
+      const data=await response.json();
+      const photos:Souvenir[]=(data.photos||[]).filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
       photos.sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||"")));
+      const groups=new Map<string,Souvenir[]>();
+      for(const photo of photos){const key=dateOf(photo);if(!groups.has(key))groups.set(key,[]);groups.get(key)!.push(photo);}
       root.replaceChildren();
-      if(!days.size){
+      if(!groups.size){
         const empty=document.createElement("div");empty.className="empty-state";
         const title=document.createElement("h2");title.textContent="Pas encore de souvenirs datés";
-        const copy=document.createElement("p");copy.textContent="Les photos et vidéos apparaîtront ici, classées par date.";
+        const copy=document.createElement("p");copy.textContent="Les photos apparaîtront ici, classées par date, même sans étape associée.";
         empty.append(title,copy);root.append(empty);return;
       }
       const list=document.createElement("ol");list.className="timeline journal-days";
-      for(const day of [...days].sort((a,b)=>b.localeCompare(a))){
-        const dayPhotos=photos.filter(photo=>dateOf(photo)===day);
-        const dayVideos=videos.filter(video=>videoDate(video)===day);
-        const dayFileVideos=fileVideos.filter(video=>fileVideoDate(video)===day);
+      for(const [day,items] of groups){
         const entry=document.createElement("li");
         const date=document.createElement("span");date.className="timeline-date";date.textContent=formatDate(day);
         const card=document.createElement("div");card.className="timeline-card journal-day-card";
         const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
-        for(const photo of dayPhotos){
+        for(const photo of items){
           const figure=document.createElement("figure");figure.className="photo-tile";
           const link=document.createElement("a");link.className="photo-open";link.href="/galerie/?photo="+encodeURIComponent(photo.src);link.setAttribute("aria-label","Afficher la photo dans la galerie");
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Souvenir du voyage";img.loading="lazy";img.decoding="async";
@@ -68,56 +68,17 @@ import { etapes } from "../lib/data";
           const caption=document.createElement("figcaption");
           const timeSource=String(photo.dateHeure||photo.datePrise||"");
           const timeMatch=timeSource.match(/T(\d{2}:\d{2})/);
-          const time=timeMatch?timeMatch[1]:"";
+          const time=timeMatch ? timeMatch[1] : "";
           const place=String(photo.lieu||"").trim();
           const description=String(photo.legende||photo.alt||"").trim();
           caption.textContent=[description,time,place].filter(Boolean).filter((value,index,all)=>all.indexOf(value)===index).join(" · ");
           if(caption.textContent)figure.append(caption);
           grid.append(figure);
         }
-        for(const video of dayVideos){
-          const id=String(video.url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/)?.[1];
-          if(!id)continue;
-          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
-          const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.className="journal-video-link";link.setAttribute("aria-label","Lire la vidéo : "+video.titre);
-          const img=document.createElement("img");img.src="https://i.ytimg.com/vi/"+id+"/hqdefault.jpg";img.alt=video.titre||"Vidéo du voyage";img.loading="lazy";img.decoding="async";
-          const play=document.createElement("span");play.className="journal-video-play";play.textContent="▶";play.setAttribute("aria-hidden","true");
-          link.append(img,play);figure.append(link);
-          const caption=document.createElement("figcaption");caption.textContent=String(video.titre||"Vidéo du voyage");figure.append(caption);grid.append(figure);
-        }
-        for(const video of dayFileVideos){
-          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
-          const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",video.titre||"Vidéo du voyage");
-          const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(player,caption);grid.append(figure);
-        }
-        const total=dayPhotos.length+dayVideos.length+dayFileVideos.length;
-        const count=document.createElement("p");count.className="journal-day-count";count.textContent=total+" "+(total>1?"souvenirs":"souvenir");
+        const count=document.createElement("p");count.className="journal-day-count";count.textContent=items.length+" "+(items.length>1?"souvenirs":"souvenir");
         card.append(count,grid);entry.append(date,card);list.append(entry);
       }
       root.append(list);
-      const undatedVideos=videos.filter(video=>!(/^\d{4}-\d{2}-\d{2}$/.test(videoDate(video))));
-      const undatedFileVideos=fileVideos.filter(video=>!(/^\d{4}-\d{2}-\d{2}$/.test(fileVideoDate(video))));
-      if(undatedVideos.length||undatedFileVideos.length){
-        const section=document.createElement("section");section.className="journal-undated-videos";
-        const heading=document.createElement("h2");heading.textContent="Vidéos sans date";
-        const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
-        for(const video of undatedVideos){
-          const id=String(video.url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/)?.[1];
-          if(!id)continue;
-          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
-          const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.className="journal-video-link";
-          const img=document.createElement("img");img.src="https://i.ytimg.com/vi/"+id+"/hqdefault.jpg";img.alt=video.titre||"Vidéo du voyage";img.loading="lazy";img.decoding="async";
-          const play=document.createElement("span");play.className="journal-video-play";play.textContent="▶";play.setAttribute("aria-hidden","true");
-          link.append(img,play);figure.append(link);
-          const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(caption);grid.append(figure);
-        }
-        for(const video of undatedFileVideos){
-          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
-          const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",video.titre||"Vidéo du voyage");
-          const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(player,caption);grid.append(figure);
-        }
-        if(grid.childElementCount){section.append(heading,grid);root.append(section);}
-      }
     }
     renderJournal().catch(()=>{
       if(root){root.replaceChildren();const p=document.createElement("p");p.className="empty-state";p.textContent="Impossible de charger les souvenirs pour le moment.";root.append(p);}
@@ -132,13 +93,6 @@ import { etapes } from "../lib/data";
     .journal-day-card { min-width: 0; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
-    .journal-video-link { display:block;position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:6px;background:#222; }
-    .journal-video-link img { display:block;width:100%;height:100%;object-fit:cover; }
-    .journal-video-tile video { display:block;width:100%;height:auto;max-height:75vh;aspect-ratio:16/9;background:#111;border-radius:6px; }
-    .journal-video-play { position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:48px;height:34px;border-radius:9px;background:#d71920;color:#fff;font-size:1.2rem; }
-    .journal-video-tile { min-width:0; }
-    .journal-undated-videos{margin-top:2rem}.journal-undated-videos h2{font-size:1.25rem;margin-bottom:1rem}
-
     .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
     .journal-day-photos .photo-open { display: block; }
     .journal-day-photos .photo-tile { min-width: 0; width: 100%; }
