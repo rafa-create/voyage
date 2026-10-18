@@ -176,6 +176,7 @@ export default {
     }
     if(path==="/api/public/videos"&&request.method==="GET"){
       const slug=url.searchParams.get("etape");
+      if(slug===null)return json({videos:await videos(env,"sans-etape")});
       if(!await stageExists(env,slug))return error("Étape inconnue.",404);
       return json({videos:await videos(env,slug)});
     }
@@ -291,6 +292,7 @@ export default {
     }
     if(path==="/api/prive/admin/videos"&&request.method==="GET"){
       const slug=url.searchParams.get("etape");
+      if(slug==="sans-etape")return json({videos:await videos(env,"sans-etape")});
       if(!await stageExists(env,slug))return error("Étape inconnue.");
       return json({videos:await videos(env,slug)});
     }
@@ -399,12 +401,13 @@ export default {
     }
     if(path==="/api/prive/admin/video-ajouter"){
       const input=await readBody(request);
-      if(!await stageExists(env,input?.slug))return error("Étape inconnue.");
+      const slug=typeof input?.slug==="string"&&input.slug?input.slug:"sans-etape";
+      if(slug!=="sans-etape"&&!await stageExists(env,slug))return error("Étape inconnue.");
       const id=urlYoutube(input?.url);
       if(!id||typeof input.titre!=="string"||!input.titre.trim()||input.titre.length>180)return error("Lien YouTube ou titre invalide.");
-      const key="__meta/videos/"+input.slug+".json";
+      const key="__meta/videos/"+slug+".json";
       const current=await getJSON(env.PHOTOS_PRIVEES,key,[]);
-      if(current.length>=200)return error("Trop de vidéos sur cette étape.");
+      if(!Array.isArray(current)||current.length>=200)return error("Trop de vidéos dans cette catégorie.");
       const next={id:crypto.randomUUID(),url:"https://www.youtube.com/watch?v="+id,titre:input.titre.trim()};
       await putJSON(env.PHOTOS_PRIVEES,key,[...current,next]);
       return json({ok:true,video:next},201);
@@ -451,8 +454,9 @@ export default {
     }
     if(path==="/api/prive/admin/video-supprimer"){
       const input=await readBody(request);
-      if(!await stageExists(env,input?.slug)||typeof input?.id!=="string")return error("Vidéo invalide.");
-      const key="__meta/videos/"+input.slug+".json";
+      const slug=typeof input?.slug==="string"?input.slug:"";
+      if((slug!=="sans-etape"&&!await stageExists(env,slug))||typeof input?.id!=="string")return error("Vidéo invalide.");
+      const key="__meta/videos/"+slug+".json";
       const current=await getJSON(env.PHOTOS_PRIVEES,key,[]);
       if(!current.some(v=>v.id===input.id))return error("Vidéo introuvable.",404);
       await putJSON(env.PHOTOS_PRIVEES,key,current.filter(v=>v.id!==input.id));
