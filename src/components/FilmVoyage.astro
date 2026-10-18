@@ -229,6 +229,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .voyage-film.film-browser-fullscreen{position:fixed;inset:0;z-index:9999;box-sizing:border-box;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;padding:clamp(12px,2.5vh,28px) clamp(12px,3vw,40px);background:var(--paper,#f8f6f0);display:flex;flex-direction:column;overflow:auto}
   :global(body.film-browser-fullscreen-open){overflow:hidden}
   .voyage-film.film-browser-fullscreen .film-heading{margin-bottom:12px;flex:0 0 auto}
+  .voyage-film.film-browser-fullscreen .film-heading{display:none}
   .voyage-film.film-browser-fullscreen .film-heading h2{font-size:clamp(1.5rem,3vh,2.5rem)}
   .voyage-film.film-browser-fullscreen .film-heading>p:last-child{margin:5px 0}
   .voyage-film.film-browser-fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
