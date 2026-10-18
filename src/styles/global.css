@@ -411,3 +411,21 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   .home-full-width-map { width:calc(100% - 20px); }
   .home-full-width-map .voyage-map { height: 520px; }
 }
+
+
+/* Administration contextuelle : commande immédiatement sous l’en-tête, alignée sur la page. */
+.admin-quick-tools { display:block; width:100%; margin:0; padding:0; }
+.admin-quick-tools[hidden] { display:none !important; }
+.admin-quick-tools-inner { width:min(100% - 48px, 1180px); margin:0 auto; }
+.admin-tools-toggle { display:block; width:100%; min-height:44px; padding:11px 16px; border:1px solid var(--forest); background:var(--forest); color:#fff; text-align:left; font:700 .82rem 'DM Sans',sans-serif; cursor:pointer; }
+.admin-tools-toggle:hover { background:#24534f; }
+.admin-tools-panel { width:100%; margin:0 0 20px; padding:14px; border:1px solid var(--line); border-top:0; background:var(--white); }
+.admin-tools-panel[hidden] { display:none !important; }
+.admin-tools-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; color:var(--forest); }
+.admin-tools-heading button { width:34px; height:34px; border:1px solid var(--line); background:transparent; color:var(--ink); font-size:1.3rem; cursor:pointer; }
+#admin-tools-frame { display:block; width:100%; height:min(72vh, 820px); min-height:580px; border:0; background:var(--white); }
+@media(max-width:650px) {
+  .admin-quick-tools-inner { width:calc(100% - 20px); }
+  .admin-tools-panel { padding:8px; }
+  #admin-tools-frame { height:72vh; min-height:520px; }
+}
