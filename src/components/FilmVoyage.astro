@@ -15,10 +15,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
-      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select></div>
+      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span></div>
     </div>
     <div class="film-memory" id="film-memory">
-      <div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div>
+      <div class="film-memory-day"><label for="film-day-select">Jour du film</label><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select></div>
+      <div class="film-memory-content" id="film-memory-content"><div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div></div>
     </div>
   </div>
   <div class="film-controls">
@@ -41,7 +42,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
   const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
   const mapElement = document.querySelector<HTMLElement>("#film-map");
-  const memory = document.querySelector<HTMLElement>("#film-memory");
+  const memory = document.querySelector<HTMLElement>("#film-memory-content");
   const place = document.querySelector<HTMLElement>("#film-place");
   const dateLabel = document.querySelector<HTMLElement>("#film-date");
   const progress = document.querySelector<HTMLElement>("#film-progress");
@@ -265,9 +266,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
   .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
   #film-map{position:absolute;inset:0}
-  .film-map-caption{position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:12px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}.film-map-caption #film-day-select{pointer-events:auto;cursor:pointer;max-width:100%;border:1px solid var(--line);border-radius:3px;padding:4px 7px;background:var(--white);color:var(--forest);font:inherit}
+  .film-map-caption{position:absolute;left:16px;bottom:16px;max-width:calc(100% - 32px);padding:10px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
   #film-place{font-weight:700}
   .film-memory{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:clamp(20px,3vw,38px);min-width:0}
+  .film-memory-day{display:flex;align-items:center;gap:10px;width:100%;padding-bottom:10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.78rem}
+  .film-memory-day label{flex:0 0 auto;font-weight:600}
+  .film-memory-day select{width:100%;min-width:0;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:3px;background:var(--white);color:var(--forest);font:inherit;cursor:pointer}
+  .film-memory-content{display:flex;flex-direction:column;align-items:flex-start;gap:12px;width:100%;min-width:0}
   .film-memory .film-kind{color:var(--muted);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
   .film-memory h3{margin:0;color:var(--forest);font-family:Georgia,serif;font-size:clamp(1.35rem,2.4vw,2rem);font-weight:500;line-height:1.2}
   .film-memory img{width:100%;height:clamp(130px,20vw,190px);object-fit:cover;border-radius:2px;animation:filmReveal .6s ease both}
@@ -293,7 +298,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .voyage-film.film-browser-fullscreen .film-memory{overflow:auto}
   .voyage-film.film-browser-fullscreen .film-memory img{height:auto;max-height:48vh;object-fit:contain}
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-stage{grid-template-rows:minmax(0,1fr) auto;align-items:stretch}
-  .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory{height:auto;max-height:18vh;min-height:0;overflow:auto;align-self:end;justify-content:flex-start;padding:8px 16px;gap:4px}
+  .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory{height:auto;max-height:24vh;min-height:0;overflow:auto;align-self:end;justify-content:flex-start;padding:8px 16px;gap:4px}
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory h3{font-size:clamp(1rem,2.2vh,1.5rem);line-height:1.15}
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory p{font-size:.78rem;line-height:1.3}
   .voyage-film.film-browser-fullscreen .film-controls{flex:0 0 auto}
