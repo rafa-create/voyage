@@ -18,10 +18,6 @@ const points = etapes
   }));
 ---
 <div class="voyage-map-shell">
-  <div class="map-visibility-toolbar" aria-label="Commandes de la carte">
-    <button type="button" id="map-visibility-toggle" aria-expanded="true">Masquer la carte</button>
-    <div id="map-links-control-slot"></div>
-  </div>
   <div id="carte-voyage" class="voyage-map" data-etapes={JSON.stringify(points)} role="region" aria-label="Carte interactive des étapes du voyage">
     <div class="map-loading">Chargement de la carte…</div>
   </div>
