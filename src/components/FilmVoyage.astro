@@ -103,7 +103,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     playButton.addEventListener("click",()=>playing?stop():start());
     prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
     nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render();});
-    map.once("load",()=>{if(points.length>1){const bounds=new maplibregl.LngLatBounds();points.forEach(p=>bounds.extend([p.longitude,p.latitude]));map.fitBounds(bounds,{padding:45,maxZoom:6,duration:0});}render(false);});
+    const showInitialFrame=()=>{if(points.length>1){const bounds=new maplibregl.LngLatBounds();points.forEach(p=>bounds.extend([p.longitude,p.latitude]));map.fitBounds(bounds,{padding:45,maxZoom:6,duration:0});}render(false);};
+    if(map.loaded()) showInitialFrame(); else map.once("load",showInitialFrame);
   }
   initFilm().catch(()=>{if(progress)progress.textContent="Impossible de préparer le film pour le moment.";});
 </script>
