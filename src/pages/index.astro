@@ -48,6 +48,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   </section>
 
   <script>
+    // Défense contre un ancien rendu qui ajouterait encore un second bouton dans la carte.
+    document.querySelectorAll<HTMLButtonElement>("#map-visibility-toggle").forEach((button, index) => {
+      if (index > 0) button.remove();
+    });
     type DailyPhoto = {src:string;alt?:string;legende?:string;commentaire?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
     const dateLabel = (value:string) => "Souvenir du " + new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
     const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
