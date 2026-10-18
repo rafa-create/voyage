@@ -33,7 +33,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   type FilmPoint = {slug?:string;date:string;titre:string;ville:string;pays:string;latitude:number;longitude:number;statut:string};
-  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;src?:string;slug?:string;id?:string;zoom:number};
+  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
   const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
   const mapElement = document.querySelector<HTMLElement>("#film-map");
   const memory = document.querySelector<HTMLElement>("#film-memory");
@@ -103,7 +103,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const date=String(activity.date||(Number.isFinite(timestamp)?new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(timestamp)):"")).slice(0,10);
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const details=[activity.sport,typeof activity.km==="number"?activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"",typeof activity.minutes==="number"?activity.minutes+" min":""].filter(Boolean).join(" · ");
-        items.push({kind:"activite",date,title:activity.titre||"Activité du voyage",lat:activity.latitude,lon:activity.longitude,detail:details,id:activity.id,zoom:11});
+        const location=[activity.lieu,activity.location_name,activity.location_city,activity.ville,activity.city,activity.location_state,activity.state,activity.location_country,activity.pays,activity.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
+        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
       }
     }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
     const unique=new Map<string,FilmItem>();
@@ -186,7 +187,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const icon=document.createElement("div");icon.className="film-memory-icon";icon.textContent="⌖";icon.setAttribute("aria-hidden","true");memory.append(icon);
       }
       if(item.detail){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
+      if(item.kind==="activite"&&item.location){const location=document.createElement("p");location.className="film-activity-location";location.textContent=item.location;memory.append(location);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      filmSection.classList.toggle("film-showing-activity",item.kind==="activite");
       map.stop();
       if(item.kind==="activite") void showActivityRoute(item); else {routeRequest++;clearActivityRoute();}
       const stage=item.kind==="activite"?undefined:(item.kind==="etape"?points.find(p=>p.slug===item.slug):points.find(p=>p.slug===item.slug));
@@ -225,6 +228,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-heading h2{margin:0;color:var(--forest);font-family:Georgia,serif;font-weight:500;font-size:clamp(2rem,4vw,3.2rem)}
   .film-heading>p:last-child{color:var(--muted);font-size:.9rem}
   .film-stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);min-height:390px;background:var(--white);border:1px solid var(--line);overflow:hidden}
+  .voyage-film.film-showing-activity .film-stage{min-height:260px}
+  .voyage-film.film-showing-activity .film-map-wrap{min-height:260px}
+  .voyage-film.film-showing-activity .film-memory{padding:16px 24px;gap:8px}
+  .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
   .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
   #film-map{position:absolute;inset:0}
   .film-map-caption{position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:12px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
