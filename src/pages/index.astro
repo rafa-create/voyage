@@ -21,7 +21,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <section class="container section daily-view" aria-labelledby="daily-heading">
     <div class="section-heading">
       <div>
-        <h2 id="daily-heading">Souvenirs du <span id="daily-heading-date">jour</span></h2>
+        <div class="daily-heading-title">
+          <h2 id="daily-heading">Souvenirs du <span id="daily-heading-date">jour</span></h2>
+          <div class="daily-heading-arrows" aria-label="Changer de journée">
+            <button type="button" id="daily-heading-previous" aria-label="Jour précédent" disabled>←</button>
+            <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
+          </div>
+        </div>
         <p id="daily-date" aria-live="polite">Chargement des souvenirs…</p>
       </div>
       <div class="daily-controls" aria-label="Choisir une journée">
@@ -50,6 +56,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const activitiesGrid = document.querySelector<HTMLElement>("#daily-activities");
     const previous = document.querySelector<HTMLButtonElement>("#day-previous");
     const next = document.querySelector<HTMLButtonElement>("#day-next");
+    const headingPrevious = document.querySelector<HTMLButtonElement>("#daily-heading-previous");
+    const headingNext = document.querySelector<HTMLButtonElement>("#daily-heading-next");
     async function initDailyView() {
       if (!grid || !dateText || !empty || !previous || !next) return;
       const [photoResponse, eventResponse] = await Promise.all([
@@ -143,9 +151,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         }
         previous.disabled = index>=ordered.length-1;
         next.disabled = index<=0;
+        if (headingPrevious) headingPrevious.disabled = previous.disabled;
+        if (headingNext) headingNext.disabled = next.disabled;
         document.documentElement.dataset.voyageDay = day;
         window.dispatchEvent(new CustomEvent("voyage:jour",{detail:{date:day}}));
       };
+      headingPrevious?.addEventListener("click",()=>previous.click());
+      headingNext?.addEventListener("click",()=>next.click());
       previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
       next.addEventListener("click",()=>{if(index>0){index--;render();}});
       window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
