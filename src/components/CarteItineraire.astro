@@ -588,13 +588,42 @@ const points = etapes
                 maxWidth: "280px",
               }).setDOMContent(panel);
               popup.on("open", () => {
-                // MapLibre rend les popups dans un conteneur séparé des marqueurs :
-                // placer explicitement la popup active au-dessus des autres éléments.
+                // Placer la popup active au-dessus des autres éléments.
                 const popupElement = popup.getElement();
                 if (popupElement) popupElement.style.zIndex = "1000";
                 element.querySelectorAll<HTMLElement>(".maplibregl-popup").forEach((other) => {
                   if (other !== popupElement) other.style.zIndex = "1";
                 });
+
+                // Garantir que la popup reste dans les limites visibles de la carte,
+                // même lorsque le marqueur est près d'un bord ou sur petit écran.
+                const keepPopupVisible = (attempts = 2) => {
+                  if (!popup.isOpen() || !popupElement || attempts < 0) return;
+                  const mapRect = element.getBoundingClientRect();
+                  const popupRect = popupElement.getBoundingClientRect();
+                  const inset = 12;
+                  let shiftX = 0;
+                  let shiftY = 0;
+                  if (popupRect.right > mapRect.right - inset) {
+                    shiftX = popupRect.right - (mapRect.right - inset);
+                  } else if (popupRect.left < mapRect.left + inset) {
+                    shiftX = popupRect.left - (mapRect.left + inset);
+                  }
+                  if (popupRect.bottom > mapRect.bottom - inset) {
+                    shiftY = popupRect.bottom - (mapRect.bottom - inset);
+                  } else if (popupRect.top < mapRect.top + inset) {
+                    shiftY = popupRect.top - (mapRect.top + inset);
+                  }
+                  if (shiftX || shiftY) {
+                    map.once("moveend", () => requestAnimationFrame(() => keepPopupVisible(attempts - 1)));
+                    map.panBy([shiftX, shiftY], { duration: 220 });
+                  }
+                };
+                requestAnimationFrame(() => keepPopupVisible());
+                // Recalculer aussi après le chargement de la miniature, dont la
+                // taille peut changer les dimensions de la fenêtre.
+                const popupImage = popupElement?.querySelector("img");
+                popupImage?.addEventListener("load", () => requestAnimationFrame(() => keepPopupVisible()), { once: true });
               });
               new maplibregl.Marker({element:marker,anchor:"center"})
                 .setLngLat([memory.longitude,memory.latitude])
