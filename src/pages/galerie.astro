@@ -222,9 +222,11 @@ import { chemin } from "../lib/paths";
         const caption = document.createElement("figcaption");
         caption.textContent = (video.titre || "Vidéo du voyage") + (stamp ? " · " + stamp.slice(0, 10) : "");
         const mapStep = linkedStep || [...steps].filter((step: any) => step.date <= stamp.slice(0, 10)).sort((a: any, b: any) => b.date.localeCompare(a.date))[0] || steps.find((step: any) => step.date === stamp.slice(0, 10));
-        const videoLat = Number(mapStep?.latitude);
-        const videoLon = Number(mapStep?.longitude);
-        if (mapStep && Number.isFinite(videoLat) && Math.abs(videoLat) <= 85 &&
+        const hasVideoGps = video.latitude !== null && video.latitude !== undefined && video.latitude !== "" &&
+          video.longitude !== null && video.longitude !== undefined && video.longitude !== "";
+        const videoLat = hasVideoGps ? Number(video.latitude) : Number(mapStep?.latitude);
+        const videoLon = hasVideoGps ? Number(video.longitude) : Number(mapStep?.longitude);
+        if ((hasVideoGps || !!mapStep) && Number.isFinite(videoLat) && Math.abs(videoLat) <= 85 &&
             Number.isFinite(videoLon) && Math.abs(videoLon) <= 180) {
           const mapLink = document.createElement("button");
           mapLink.type = "button";
