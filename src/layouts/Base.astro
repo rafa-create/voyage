@@ -6,12 +6,13 @@ interface Props {
   title: string;
   headerTitle?: string;
   description?: string;
-  active?: "accueil" | "journal" | "pays" | "galerie" | "defi";
+  active?: "ir" | "diapo" | "accueil" | "journal" | "pays" | "galerie" | "defi";
 }
 
 const { title, headerTitle = title, description = "Un carnet de voyage en images, en mots et en vidéos.", active } = Astro.props;
 const nav = [
-  { label: "Accueil", href: "/", id: "accueil" },
+  { label: "IR", href: "/", id: "ir" },
+  { label: "Diapo", href: "/diapo/", id: "diapo" },
   { label: "Journal", href: "/journal/", id: "journal" },
   { label: "Galerie", href: "/galerie/", id: "galerie" },
   { label: "Défi", href: "/defi/", id: "defi" },
