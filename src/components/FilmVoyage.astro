@@ -200,7 +200,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }else if(item.kind!=="activite"){
         const icon=document.createElement("div");icon.className="film-memory-icon";icon.textContent="⌖";icon.setAttribute("aria-hidden","true");memory.append(icon);
       }
-      if(item.detail){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
+      if(item.detail && !(item.kind==="photo" && item.detail.trim()===item.title.trim())){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
       if(item.kind==="activite"&&item.location){const location=document.createElement("p");location.className="film-activity-location";location.textContent=item.location;memory.append(location);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       filmSection.classList.toggle("film-showing-activity",item.kind==="activite");
@@ -250,7 +250,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-heading h2{margin:0;color:var(--forest);font-family:Georgia,serif;font-weight:500;font-size:clamp(2rem,4vw,3.2rem)}
   .film-heading>p:last-child{color:var(--muted);font-size:.9rem}
   .film-stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);min-height:390px;background:var(--white);border:1px solid var(--line);overflow:hidden}
-  .voyage-film.film-showing-activity .film-stage{min-height:260px}
+  .voyage-film.film-showing-activity .film-stage{min-height:260px;align-items:start}
   .voyage-film.film-showing-activity .film-map-wrap{min-height:260px}
   .voyage-film.film-showing-activity .film-memory{padding:16px 24px;gap:8px}
   .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
@@ -261,7 +261,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-memory{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:clamp(20px,3vw,38px);min-width:0}
   .film-memory .film-kind{color:var(--muted);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
   .film-memory h3{margin:0;color:var(--forest);font-family:Georgia,serif;font-size:clamp(1.35rem,2.4vw,2rem);font-weight:500;line-height:1.2}
-  .film-memory img{width:100%;height:230px;object-fit:cover;border-radius:2px;animation:filmReveal .6s ease both}
+  .film-memory img{width:100%;height:clamp(130px,20vw,190px);object-fit:cover;border-radius:2px;animation:filmReveal .6s ease both}
   .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
   .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
   .film-memory-placeholder{color:var(--muted);font-size:.9rem}
@@ -289,6 +289,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
   #film-progress{margin-left:auto;color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}
   @keyframes filmReveal{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
-  @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:290px}.film-memory img{height:220px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}#film-progress{font-size:.7rem}}
+  @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:0}.film-memory img{height:160px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}#film-progress{font-size:.7rem}}
   @media(prefers-reduced-motion:reduce){.film-memory img{animation:none}}
 </style>
