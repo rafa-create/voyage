@@ -17,9 +17,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     <div class="section-heading">
       <div>
         <div class="daily-heading-title">
-          <h2 id="daily-heading">Souvenir du jour</h2>
-          <div class="daily-heading-arrows" aria-label="Changer de journée">
+          <div class="daily-heading-arrows" aria-label="Jour précédent">
             <button type="button" id="daily-heading-previous" aria-label="Jour précédent" disabled>←</button>
+          </div>
+          <h2 id="daily-heading">Souvenir du jour</h2>
+          <div class="daily-heading-arrows" aria-label="Jour suivant">
             <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
           </div>
         </div>
