@@ -7,14 +7,14 @@ import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeCo
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
-  movePhoto, legacyPhotos
+  movePhoto, legacyPhotos, mediaKey, videoKey, videoTypes, listedVideos
 } from "./content.js";
 
 const noStore = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
 function json(value,status=200){return new Response(JSON.stringify(value),{status,headers:{...noStore,"Content-Type":"application/json; charset=utf-8"}});}
 function error(message,status=400){return json({error:message},status);}
 function decode(path){try{return decodeURIComponent(path);}catch{return null;}}
-function mime(key,object){return object?.httpMetadata?.contentType||types[key.split(".").pop().toLowerCase()]||"application/octet-stream";}
+function mime(key,object){const ext=key.split(".").pop().toLowerCase();return object?.httpMetadata?.contentType||types[ext]||videoTypes[ext]||"application/octet-stream";}
 function mutationOk(request){return request.headers.get("Origin")===new URL(request.url).origin&&request.headers.get("X-Voyage-Admin")==="1";}
 function bucketFor(env,v){return v==="public"?env.PHOTOS_PUBLIQUES:v==="prive"?env.PHOTOS_PRIVEES:null;}
 function validateStage(input){
@@ -36,7 +36,7 @@ function validateStage(input){
 }
 async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
   if(!bucket)return error("Bucket non configuré.",503);
-  if(!imageKey(key)||(priv&&!allowUnclassified&&!key.startsWith("etapes/")))return new Response("Introuvable",{status:404});
+  if(!mediaKey(key)||(priv&&!allowUnclassified&&!key.startsWith("etapes/")&&!key.startsWith("videos/")))return new Response("Introuvable",{status:404});
   if(!["GET","HEAD"].includes(request.method))return new Response("Méthode non autorisée",{status:405});
   const object=request.method==="HEAD"?await bucket.head(key):await bucket.get(key);
   if(!object)return new Response("Introuvable",{status:404});
@@ -180,6 +180,12 @@ export default {
       if(!await stageExists(env,slug))return error("Étape inconnue.",404);
       return json({videos:await videos(env,slug)});
     }
+    if(path==="/api/public/videos-fichiers"&&request.method==="GET"){
+      const slug=url.searchParams.get("etape");
+      if(slug!==null&&slug!==""&&!await stageExists(env,slug))return error("Étape inconnue.",404);
+      const items=await listedVideos(env,"public");
+      return json({videos:slug?items.filter(v=>v.etape===slug):items});
+    }
 
     // Pages d'étapes publiées via R2 accessibles immédiatement.
     if(request.method==="GET"&&/^\/etapes\/[a-z0-9-]+\/?$/.test(path)){
@@ -311,6 +317,10 @@ export default {
       if(!await stageExists(env,slug))return error("Étape inconnue.");
       return json({videos:await videos(env,slug)});
     }
+    if(path==="/api/prive/admin/videos-fichiers"&&request.method==="GET"){
+      const [pub,priv]=await Promise.all([listedVideos(env,"public"),listedVideos(env,"prive")]);
+      return json({videos:[...pub,...priv].sort((a,b)=>(b.ajouteLe||"").localeCompare(a.ajouteLe||""))});
+    }
     if(request.method!=="POST"||!mutationOk(request))return error("Action non autorisée.",403);
 
     if(path==="/api/prive/admin/defi/publication-activites"){
@@ -413,6 +423,38 @@ export default {
           ...(hasTime?{dateHeure}:{ }),
           ...(latitude!==null?{latitude:String(latitude),longitude:String(longitude),precision:"exact"}:{})}});
       return json({ok:true,etape:slug,visibilite,datePrise:captured,src:photoPath(key,visibilite)},201);
+    }
+    if(path==="/api/prive/admin/upload-video"){
+      const slugParam=url.searchParams.get("etape")||"";
+      const slug=slugParam||null;
+      const visibilite=url.searchParams.get("visibilite");
+      const titre=(url.searchParams.get("titre")||"").trim();
+      if(!["public","prive"].includes(visibilite))return error("Visibilité invalide.");
+      if(slug!==null&&(!slugOk(slug)||!await stageExists(env,slug)))return error("Étape inconnue.");
+      if(!titre||titre.length>180)return error("Le titre doit contenir entre 1 et 180 caractères.");
+      const type=request.headers.get("Content-Type")?.split(";")[0]?.toLowerCase();
+      const extension=Object.entries(videoTypes).find(([ext,mime])=>mime===type)?.[0];
+      if(!extension)return error("Format vidéo non pris en charge. Utilise MP4, MOV, WebM ou OGV.");
+      const advertised=Number(request.headers.get("Content-Length"));
+      if(advertised>95*1024*1024)return error("95 Mo maximum par vidéo.",413);
+      const body=await request.arrayBuffer();
+      if(!body.byteLength||body.byteLength>95*1024*1024)return error("Vidéo vide ou supérieure à 95 Mo.",413);
+      const bucket=bucketFor(env,visibilite);
+      if(!bucket)return error("Bucket non configuré.",503);
+      const key="videos/"+(slug||"sans-etape")+"/"+crypto.randomUUID()+"."+extension;
+      const all=await steps(env);
+      const date=slug?all.find(s=>s.slug===slug)?.date:new Date().toISOString().slice(0,10);
+      await bucket.put(key,body,{httpMetadata:{contentType:type},customMetadata:{titre,...(slug?{etape:slug}:{}),...(date?{datePrise:date}:{})}});
+      return json({ok:true,video:{key,src:photoPath(key,visibilite),visibilite,titre,etape:slug,date}},201);
+    }
+    if(path==="/api/prive/admin/video-file-supprimer"){
+      const input=await readBody(request);
+      const bucket=bucketFor(env,input?.visibilite);
+      if(!bucket||!videoKey(input?.key)||!input.key.startsWith("videos/"))return error("Fichier vidéo invalide.");
+      const file=await bucket.head(input.key);
+      if(!file)return error("Vidéo introuvable.",404);
+      await bucket.delete(input.key);
+      return json({ok:true});
     }
     if(path==="/api/prive/admin/video-ajouter"){
       const input=await readBody(request);
