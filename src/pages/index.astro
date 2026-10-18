@@ -31,8 +31,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       </div>
     </div>
     <div id="daily-photos" class="photo-grid gallery-grid" aria-live="polite"></div>
-    <p id="daily-empty" hidden>Aucune photo n'est encore associée à cette journée.</p>
-    <p class="daily-all"><a class="text-link" href="/galerie/">Parcourir toute la galerie</a></p>
+    <p id="daily-empty" hidden>Aucune photo.</p>
+    <section id="daily-activities-wrap" class="daily-activities" hidden aria-label="Activités du jour">
+      <h3>Activités</h3>
+      <div id="daily-activities"></div>
+    </section>
+    <p class="daily-all"><a class="text-link" href="/galerie/">Toute la galerie ↗</a></p>
   </section>
 
   <script>
@@ -42,6 +46,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const grid = document.querySelector<HTMLElement>("#daily-photos");
     const dateText = document.querySelector<HTMLElement>("#daily-date");
     const empty = document.querySelector<HTMLElement>("#daily-empty");
+    const activitiesWrap = document.querySelector<HTMLElement>("#daily-activities-wrap");
+    const activitiesGrid = document.querySelector<HTMLElement>("#daily-activities");
     const previous = document.querySelector<HTMLButtonElement>("#day-previous");
     const next = document.querySelector<HTMLButtonElement>("#day-next");
     async function initDailyView() {
@@ -54,8 +60,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const courses = eventResponse.ok ? (await eventResponse.json()).courses || [] : [];
       const dates = new Set<string>();
       for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
+      const activityDate = (course:any) => String(course.date || (course.fin ? new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(course.fin))) : "")).slice(0,10);
       for (const course of courses) {
-        const d=String(course.date || (course.fin ? new Date(Number(course.fin)).toISOString().slice(0,10) : "")).slice(0,10);
+        const d=activityDate(course);
         if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
       }
       const todayParts = new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -81,10 +88,40 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
           const caption=document.createElement("figcaption");
+          const place = String(photo.etape || "").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
           const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
-          caption.textContent=(photo.etape||"Souvenir du voyage")+time;figure.append(caption);grid.append(figure);
+          caption.textContent=(place || "Photo")+time;figure.append(caption);grid.append(figure);
         }
         empty.hidden = dayPhotos.length>0;
+        if (activitiesWrap && activitiesGrid) {
+          activitiesGrid.replaceChildren();
+          const dayActivities = courses.filter((course:any) => activityDate(course) === day)
+            .sort((a:any,b:any) => Number(b.fin||0)-Number(a.fin||0));
+          for (const activity of dayActivities) {
+            const item = document.createElement("article");
+            item.className = "daily-activity";
+            const name = document.createElement("strong");
+            name.textContent = activity.titre || "Activité";
+            const details = document.createElement("span");
+            const parts = [String(activity.sport || "").replace(/^./, (c:string) => c.toLocaleUpperCase("fr-FR"))];
+            if (typeof activity.km === "number" && activity.km > 0) parts.push(activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km");
+            if (typeof activity.minutes === "number" && activity.minutes > 0) parts.push(activity.minutes+" min");
+            if (activity.fin) {
+              const clock = new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(new Date(Number(activity.fin)));
+              if (clock) parts.push(clock);
+            }
+            details.textContent = parts.filter(Boolean).join(" · ");
+            item.append(name, details);
+            if (activity.url && /^https:\/\/(www\.)?strava\.com\//.test(activity.url)) {
+              const link = document.createElement("a");
+              link.href = activity.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+              link.textContent = "Voir ↗";
+              item.append(link);
+            }
+            activitiesGrid.append(item);
+          }
+          activitiesWrap.hidden = dayActivities.length === 0;
+        }
         previous.disabled = index>=ordered.length-1;
         next.disabled = index<=0;
         document.documentElement.dataset.voyageDay = day;
@@ -98,3 +135,4 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
   </script>
 </Base>
+
