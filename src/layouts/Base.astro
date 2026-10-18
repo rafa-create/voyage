@@ -120,7 +120,9 @@ const nav = [
     </script>
     <script>
       // Édition en place des textes éditoriaux : réservée aux administrateurs.
+      // Désactivée sur l'accueil pendant le diagnostic du chargement infini de la carte.
       (async () => {
+        if (window.location.pathname === "/" || window.location.pathname === "/index.html") return;
         const main = document.querySelector<HTMLElement>("main");
         if (!main) return;
         try {
