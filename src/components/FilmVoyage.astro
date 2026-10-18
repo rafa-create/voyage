@@ -91,9 +91,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const activities=activityResponse.ok?(await activityResponse.json()).courses||[]:[];
       for(const photo of photos){
         if(!photo)continue;
-        let lat=photo.latitude,lon=photo.longitude;
+        const rawLat=photo.latitude,rawLon=photo.longitude;
+        let lat=rawLat!==null&&rawLat!==undefined&&rawLat!==""?Number(rawLat):NaN;
+        let lon=rawLon!==null&&rawLon!==undefined&&rawLon!==""?Number(rawLon):NaN;
+        const hasPhotoGps=valid(lat,lon);
         const linkedStage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
-        if(!valid(lat,lon)&&linkedStage){lat=linkedStage.latitude;lon=linkedStage.longitude;}
+        if(!hasPhotoGps&&linkedStage){lat=linkedStage.latitude;lon=linkedStage.longitude;}
         if(!valid(lat,lon))continue;
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
