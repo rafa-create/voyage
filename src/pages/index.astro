@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import CarteItineraire from "../components/CarteItineraire.astro";
+import FilmVoyage from "../components/FilmVoyage.astro";
 import { etapes } from "../lib/data";
 
 const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
@@ -188,5 +189,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       .daily-activity-actions { flex-wrap: wrap; }
     }
   </style>
+  <FilmVoyage etapes={etapes} />
 </Base>
 
