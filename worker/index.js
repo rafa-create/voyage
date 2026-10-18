@@ -113,7 +113,7 @@ export default {
     const url=new URL(request.url),path=url.pathname;
     // The public-site mode is stored separately from photo visibility. Default is open
     // so a missing setting never accidentally locks out visitors.
-    const privatePath=/^(?:\\/espace|\\/admin)(?:\\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
+    const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
     if(!privatePath){
       const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       if(siteAccess?.mode==="restricted"){
