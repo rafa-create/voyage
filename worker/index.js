@@ -45,40 +45,6 @@ async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
   return new Response(request.method==="HEAD"?null:object.body,{headers});
 }
 async function readBody(request){try{return await request.json();}catch{return null;}}
-function base64url(bytes){let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
-function fromBase64url(value){const padded=value.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-value.length%4)%4);const binary=atob(padded);return Uint8Array.from(binary,c=>c.charCodeAt(0));}
-async function visitorSessionKey(env){
-  const bucket=env.PHOTOS_PRIVEES;if(!bucket)return null;
-  const key="__meta/site-access-session-key.json";
-  let stored=await getJSON(bucket,key,null);
-  if(!stored?.secret){stored={secret:base64url(crypto.getRandomValues(new Uint8Array(32)))};await putJSON(bucket,key,stored);}
-  return await crypto.subtle.importKey("raw",fromBase64url(stored.secret),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
-}
-async function visitorCookie(env,email){
-  const expires=Math.floor(Date.now()/1000)+60*60*24*30;
-  const payload=email.toLowerCase()+"|"+expires;
-  const key=await visitorSessionKey(env);if(!key)throw new Error("Session indisponible");
-  const signature=base64url(new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(payload))));
-  return "voyage_visitor="+base64url(new TextEncoder().encode(email.toLowerCase()))+"."+expires+"."+signature+"; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax";
-}
-async function visitorEmailFromSession(request,env){
-  const raw=request.headers.get("Cookie")||"";
-  const match=/(?:^|;\s*)voyage_visitor=([A-Za-z0-9_-]+)\.(\d{10})\.([A-Za-z0-9_-]+)(?:;|$)/.exec(raw);
-  if(!match||Number(match[2])<=Math.floor(Date.now()/1000))return null;
-  let email;try{email=new TextDecoder().decode(fromBase64url(match[1])).trim().toLowerCase();}catch{return null;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return null;
-  const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
-  if(!approved.includes(email))return null;
-  try{
-    const key=await visitorSessionKey(env);if(!key)return null;
-    const valid=await crypto.subtle.verify("HMAC",key,fromBase64url(match[3]),new TextEncoder().encode(email+"|"+match[2]));
-    return valid?email:null;
-  }catch{return null;}
-}
-function withCookie(response,cookie){
-  const headers=new Headers(response.headers);headers.set("Set-Cookie",cookie);
-  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-}
 async function stageExists(env,slug){return slugOk(slug)&&(await steps(env)).some(x=>x.slug===slug);}
 function makePublicSteps(all){
   return all.map(e=>({slug:e.slug,date:e.date,dateFin:e.dateFin||null,pays:e.pays,ville:e.ville,titre:e.titre,texte:e.texte||"",latitude:e.latitude,longitude:e.longitude,statut:e.statut,videos:[],photos:[]}));
@@ -147,45 +113,12 @@ export default {
     const url=new URL(request.url),path=url.pathname;
     // The public-site mode is stored separately from photo visibility. Default is open
     // so a missing setting never accidentally locks out visitors.
-    // La page et l'API de demande d'accès restent accessibles même quand le site est restreint.
-    const accessRequestEndpoint=path==="/api/access/request";
-    if(accessRequestEndpoint&&request.method==="POST"){
-      if(!env.PHOTOS_PRIVEES)return error("Service de demande d'accès indisponible.",503);
-      const input=await readBody(request);
-      const email=typeof input?.email==="string"?input.email.trim().toLowerCase():"";
-      if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return error("Adresse e-mail invalide.");
-      const key="__meta/site-access-requests.json";
-      const requests=await getJSON(env.PHOTOS_PRIVEES,key,[]);
-      const previous=requests.find(x=>x.email===email);
-      if(previous?.status==="pending")return json({ok:true,message:"Ta demande est déjà en attente."},200);
-      if(previous?.status==="approved")return withCookie(json({ok:true,loggedIn:true,message:"Accès accordé. Tu peux maintenant consulter le carnet."},200),await visitorCookie(env,email));
-      const next=requests.filter(x=>x.email!==email);
-      next.push({id:crypto.randomUUID(),email,status:"pending",requestedAt:new Date().toISOString()});
-      await putJSON(env.PHOTOS_PRIVEES,key,next.slice(-500));
-      return json({ok:true,message:"Demande envoyée. L'administrateur pourra l'examiner."},201);
-    }
     const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
-    const accessRequestPage=path==="/demander-acces"||path==="/demander-acces/";
-    if(!privatePath&&!accessRequestPage&&!accessRequestEndpoint){
-      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"restricted"});
-      if(siteAccess?.mode!=="open"){
-        const visitorEmail=await visitorEmailFromSession(request,env);
-        if(!visitorEmail){
-          const access=await requireAccess(request,env,false);
-          if(access.error){
-            if(path.startsWith("/api/")||path.startsWith("/media/"))return access.error;
-            if(/\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
-            return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
-          }
-          if(!access.user.isAdmin){
-            const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
-            if(!approved.includes(access.user.email)){
-              if(path.startsWith("/api/"))return error("Accès non autorisé. Demande l'accès au carnet.",403);
-              if(/\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
-              return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
-            }
-          }
-        }
+    if(!privatePath){
+      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
+      if(siteAccess?.mode==="restricted"){
+        const access=await requireAccess(request,env,false);
+        if(access.error)return access.error;
       }
     }
 
@@ -219,10 +152,6 @@ export default {
       const slug=url.searchParams.get("etape");
       if(!await stageExists(env,slug))return error("Étape inconnue.",404);
       return json({videos:await videos(env,slug)});
-    }
-
-    if(path==="/api/public/textes-site"&&request.method==="GET"){
-      return json({textes:await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{})});
     }
 
     // Pages d'étapes publiées via R2 accessibles immédiatement.
@@ -279,28 +208,8 @@ export default {
       return json({photos:await listedPhotos(env,"prive")});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
-    if(path==="/api/prive/admin/site-access-requests"&&request.method==="GET"){
-      const requests=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",[]);
-      return json({requests:requests.slice().sort((a,b)=>b.requestedAt.localeCompare(a.requestedAt))});
-    }
-    if(path==="/api/prive/admin/site-access-requests"&&request.method==="POST"){
-      if(!mutationOk(request))return error("Action non autorisée.",403);
-      const input=await readBody(request);
-      if(typeof input?.email!=="string"||!["approved","rejected","pending"].includes(input?.status))return error("Demande invalide.");
-      const email=input.email.trim().toLowerCase();
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return error("Adresse e-mail invalide.");
-      const requests=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",[]);
-      const found=requests.find(x=>x.email===email);
-      if(!found)return error("Demande introuvable.",404);
-      found.status=input.status;found.reviewedAt=new Date().toISOString();
-      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",requests);
-      const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
-      const next=input.status==="approved"?Array.from(new Set([...approved,email])):approved.filter(x=>x!==email);
-      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",next);
-      return json({ok:true,status:found.status});
-    }
     if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
-      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"restricted"});
+      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       return json({mode:config?.mode==="restricted"?"restricted":"open"});
     }
     if(path==="/api/prive/admin/site-access"&&request.method==="POST"){

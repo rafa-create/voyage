@@ -47,11 +47,3 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 2. Exécuter les tests et la validation localement si l'environnement et les dépendances sont disponibles; indiquer clairement tout contrôle non exécuté.
 3. Tester mobile, navigation clavier, états sans photos et photos sans métadonnées.
 4. Ne pas supposer qu'une PR est déployée : l'URL de production ne change qu'après un déploiement réussi.
-
-## Demandes d'accès au site restreint
-- `src/pages/demander-acces.astro` est la page publique de demande d'accès; `POST /api/access/request` enregistre les demandes dans `PHOTOS_PRIVEES` sous `__meta/site-access-requests.json`.
-- L'administration des demandes est accessible via `/admin/acces/`; les API admin sont `GET/POST /api/prive/admin/site-access-requests`.
-- Les adresses approuvées sont conservées dans `__meta/site-access-approved.json`. En mode restreint, le Worker exige une identité Cloudflare Access puis vérifie que l'e-mail est approuvé; l'administrateur est exempté de cette liste.
-- L'approbation dans le carnet ne modifie pas automatiquement la politique Cloudflare Access. Pour que la personne puisse se connecter, la politique Cloudflare Access doit également autoriser son adresse e-mail. Il n'y a pas d'envoi automatique d'e-mail de confirmation dans la version actuelle.
-- Garder la page et l'API de demande accessibles sans session même en mode restreint. Ne jamais rendre les API de données ou les médias publics accessibles à un visiteur non autorisé pour afficher le formulaire.
-- Préserver la séparation des buckets `PHOTOS_PUBLIQUES` et `PHOTOS_PRIVEES`; une approbation au site ne donne jamais accès aux photos privées.

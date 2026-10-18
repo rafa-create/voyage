@@ -125,8 +125,8 @@ const nav = [
         if (!main) return;
         try {
           const me = await fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" });
-          const isAdmin = me.ok && (await me.json()).isAdmin === true;
-          const response = await fetch("/api/public/textes-site", { credentials: "same-origin", cache: "no-store" });
+          if (!me.ok || !(await me.json()).isAdmin) return;
+          const response = await fetch("/api/prive/admin/textes-site", { credentials: "same-origin", cache: "no-store" });
           if (!response.ok) return;
           const textes: Record<string, string> = (await response.json()).textes || {};
           const selector = "main h1, main h2, main h3, main h4, main p, main .eyebrow, main .card-more";
@@ -236,7 +236,7 @@ const nav = [
               }
               const key = element.dataset.adminTextKey;
               if (key && Object.prototype.hasOwnProperty.call(textes, key) && cleanText(element) === original) setText(element, textes[key]);
-              if (isAdmin && !element.dataset.adminPencil) {
+              if (!element.dataset.adminPencil) {
                 element.dataset.adminPencil = "true";
                 const pencil = document.createElement("button");
                 pencil.type = "button"; pencil.className = "admin-inline-pencil";
