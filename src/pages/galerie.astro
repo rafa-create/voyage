@@ -127,8 +127,16 @@ import { chemin } from "../lib/paths";
           return (data.videos || []).map((video: any) => ({ ...video, etape: step.slug, ville: step.ville, pays: step.pays, date: videoDate(video, step) }));
         } catch { return []; }
       }));
+      let looseVideos: any[] = [];
+      try {
+        const looseResponse = await fetch("/api/public/videos");
+        if (looseResponse.ok) {
+          const looseData = await looseResponse.json();
+          looseVideos = (looseData.videos || []).map((video: any) => ({ ...video, etape: null, date: videoDate(video, {}) }));
+        }
+      } catch {}
       const seenVideos = new Set<string>();
-      for (const video of videosByStep.flat()) {
+      for (const video of [...videosByStep.flat(), ...looseVideos]) {
         const match = String(video.url || "").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
         const id = match?.[1];
         if (!id || seenVideos.has(id)) continue;
