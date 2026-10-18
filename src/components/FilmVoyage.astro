@@ -9,14 +9,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 <section class="voyage-film container" aria-labelledby="voyage-film-title">
   <div class="film-heading">
     <p class="film-eyebrow">Les souvenirs en mouvement</p>
-    <h2 id="voyage-film-title">Le film du voyage</h2>
+    <h2 id="voyage-film-title">Le diapo du voyage</h2>
     <p>Des étapes, des photos et des activités, au fil des jours.</p>
   </div>
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
       <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span></div>
-      <div class="film-map-day"><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select></div>
+      <div class="film-map-day"><select id="film-day-select" aria-label="Jour du diapo" disabled><option>Chargement des jours…</option></select></div>
     </div>
     <div class="film-memory" id="film-memory">
       <div class="film-memory-content" id="film-memory-content"><div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div></div>
