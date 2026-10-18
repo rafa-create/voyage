@@ -69,6 +69,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }
     });
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
+    map.doubleClickZoom.disable();
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
     const stageMarkerElement=document.createElement("div");
     stageMarkerElement.className="film-stage-marker";
