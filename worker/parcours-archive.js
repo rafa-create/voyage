@@ -47,8 +47,8 @@ export function parseGpx(source){
     if(points.length>MAX_POINTS)return null;
   }
   if(points.length<2)return null;
-  return {route:sample(points),distanceKm:Math.round(length*100)/100,
-    start,end,pointCount:points.length};
+  return {route:sample(points,500),routeDetail:sample(points,5000),routeFull:points,
+    distanceKm:Math.round(length*100)/100,start,end,pointCount:points.length};
 }
 function publicItem(item){
   const parcours=item.source!=="import_automatique"||["disponible","resume"].includes(item.routeState);
@@ -125,24 +125,27 @@ export async function importGpx(env,form){
     minutes:parsed.start!==null&&parsed.end!==null&&parsed.end>parsed.start
       ?Math.round((parsed.end-parsed.start)/60000):null,
     titre: title,sport, public:visibility==="public",pointCount:parsed.pointCount,
-    latitude:parsed.route[Math.floor(parsed.route.length/2)][0],
-    longitude:parsed.route[Math.floor(parsed.route.length/2)][1],
+    latitude:parsed.routeFull[Math.floor(parsed.routeFull.length/2)][0],
+    longitude:parsed.routeFull[Math.floor(parsed.routeFull.length/2)][1],
     source:"archive",sourceHash,ajouteLe:new Date().toISOString()};
   // La copie GPX originale appartient au propriétaire et ne dépend pas de l'API.
   await env.PHOTOS_PRIVEES.put(SOURCE+id+".gpx",xml,{
     httpMetadata:{contentType:"application/gpx+xml"}});
-  await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",{...item,route:parsed.route});
+  await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",{...item,
+    route:parsed.route,routeDetail:parsed.routeDetail,routeFull:parsed.routeFull});
   await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...duplicates,item]});
   return publicItem(item);
 }
-export async function publicArchivedRoute(env,id){
+export async function publicArchivedRoute(env,id,precision="overview"){
   if(!/^[a-f0-9-]{36}$/.test(id))return null;
   const [items,enabled]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
   if(!items.some(item=>item.id===id&&isPublishedActivity(item,enabled)))return null;
   const record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
-  if(!Array.isArray(record?.route)||record.route.length<2)return null;
+  const requested=precision==="full"?"routeFull":precision==="detail"?"routeDetail":"route";
+  // Les anciennes archives n'ont que leur tracé simplifié : elles restent lisibles.
+  const points=Array.isArray(record?.[requested])?record[requested]:record?.route;
+  if(!Array.isArray(points)||points.length<2)return null;
   // Les premières et dernières portions ne sont jamais livrées au navigateur public.
-  const points=record.route;
   const cut=points.length>=20?Math.ceil(points.length*.07):0;
   return points.slice(cut,points.length-cut);
 }
