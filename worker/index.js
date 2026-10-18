@@ -235,6 +235,21 @@ export default {
       return json({photos:await listedPhotos(env,"prive")});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
+    if(path==="/api/prive/admin/stockage-r2"&&request.method==="GET"){
+      const totals=[];
+      for(const item of [{name:"Public",bucket:env.PHOTOS_PUBLIQUES},{name:"Privé",bucket:env.PHOTOS_PRIVEES}]){
+        if(!item.bucket){totals.push({name:item.name,available:false,objects:0,bytes:0});continue;}
+        let cursor,objects=0,bytes=0;
+        do{
+          const page=await item.bucket.list({limit:1000,...(cursor?{cursor}:{})});
+          objects+=page.objects.length;
+          bytes+=page.objects.reduce((sum,obj)=>sum+(Number(obj.size)||0),0);
+          cursor=page.truncated?page.cursor:undefined;
+        }while(cursor);
+        totals.push({name:item.name,available:true,objects,bytes});
+      }
+      return json({buckets:totals,updatedAt:new Date().toISOString()});
+    }
     if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
       const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       return json({mode:config?.mode==="restricted"?"restricted":"open"});
