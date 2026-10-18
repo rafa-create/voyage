@@ -50,7 +50,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
   async function initFilm(){
-    if(!mapElement||!memory||!place||!progress||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection||!points.length)return;
+    if(!mapElement||!memory||!place||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection)return;
+    if(!points.length){place.textContent="Aucune étape disponible pour ce voyage.";return;}
     const syncFullscreenButton=()=>{
       const active=filmSection.classList.contains("film-browser-fullscreen");
       fullscreenButton.textContent="⛶";
@@ -246,7 +247,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const showInitialFrame=()=>{if(points.length>1){const bounds=new maplibregl.LngLatBounds();points.forEach(p=>bounds.extend([p.longitude,p.latitude]));map.fitBounds(bounds,{padding:45,maxZoom:6,duration:0});}render(false);};
     if(map.loaded()) showInitialFrame(); else map.once("load",showInitialFrame);
   }
-  initFilm().catch(()=>{});
+  initFilm().catch(()=>{if(place)place.textContent="Impossible de préparer le voyage.";});
 </script>
 <style>
   .voyage-film{padding-top:76px;padding-bottom:84px}
