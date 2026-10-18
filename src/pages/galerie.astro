@@ -249,7 +249,7 @@ import { chemin } from "../lib/paths";
       <label for="edit-photo-date">Date de prise de vue</label><input id="edit-photo-date" type="date"/>
       <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
       <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
-      <label for="edit-photo-stage">Étape du journal</label><select id="edit-photo-stage"><option value="">Sans étape</option></select>
+      <label for="edit-photo-stage">Étape du journal</label><select id="edit-photo-stage"><option value="">— Sans étape —</option></select>
       <label for="edit-photo-map-search">Rechercher sur Google Maps</label>
       <div class="photo-map-search"><input id="edit-photo-map-search" type="search" maxlength="240" placeholder="Nom du lieu, adresse…"/><button type="button" id="edit-photo-map-open">Rechercher</button></div>
       <label for="edit-photo-map-url">Lien Google Maps du point choisi</label>
@@ -372,8 +372,8 @@ import { chemin } from "../lib/paths";
       const deleteButton=dialog?.querySelector<HTMLButtonElement>("#edit-photo-delete");
       if(deleteButton)deleteButton.hidden=!(isAdmin&&item&&!bouton.dataset.video);
       if(editor){editor.hidden=true;
-        if(item){if(editDate)editDate.value=item.datePrise||"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value=item.etape||"";}
-        else if(bouton.dataset.video){if(editDate)editDate.value=bouton.dataset.date||"";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value="";if(editLon)editLon.value="";if(editStage)editStage.value=bouton.dataset.etape||"";}
+        if(item){if(editDate)editDate.value=item.datePrise||"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value="";}
+        else if(bouton.dataset.video){if(editDate)editDate.value=bouton.dataset.date||"";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value="";if(editLon)editLon.value="";if(editStage)editStage.value="";}
         if(editStatus)editStatus.textContent="";}
     };
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
