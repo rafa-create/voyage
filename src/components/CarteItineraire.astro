@@ -18,6 +18,10 @@ const points = etapes
   }));
 ---
 <div class="voyage-map-shell">
+  <div class="map-visibility-toolbar" aria-label="Commandes de la carte">
+    <button type="button" id="map-visibility-toggle" aria-expanded="true">Masquer la carte</button>
+    <div id="map-links-control-slot"></div>
+  </div>
   <div id="carte-voyage" class="voyage-map" data-etapes={JSON.stringify(points)} role="region" aria-label="Carte interactive des étapes du voyage">
     <div class="map-loading">Chargement de la carte…</div>
   </div>
@@ -417,7 +421,22 @@ const points = etapes
               allTracesButton.setAttribute("aria-label", allTracesButton.textContent);
               allTracesButton.setAttribute("aria-pressed", String(voyageLinksHidden));
             });
-            map.addControl({onAdd:()=>allTracesButton,onRemove:()=>allTracesButton.remove()} as maplibregl.IControl,"top-left");
+            const linksSlot = document.getElementById("map-links-control-slot");
+            if (linksSlot) linksSlot.append(allTracesButton);
+            const mapVisibilityToggle = document.getElementById("map-visibility-toggle");
+            mapVisibilityToggle?.addEventListener("click", () => {
+              const hidden = element.style.display === "none";
+              if (hidden) {
+                element.style.display = "";
+                mapVisibilityToggle.textContent = "Masquer la carte";
+                mapVisibilityToggle.setAttribute("aria-expanded", "true");
+                requestAnimationFrame(() => map.resize());
+              } else {
+                element.style.display = "none";
+                mapVisibilityToggle.textContent = "Afficher la carte";
+                mapVisibilityToggle.setAttribute("aria-expanded", "false");
+              }
+            });
             // Les tracés GPS sont chargés et affichés automatiquement à l'ouverture.
             void loadAllTraces();
             for(const memory of memories.slice(-1500)){
