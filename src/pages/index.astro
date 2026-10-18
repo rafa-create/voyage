@@ -69,21 +69,25 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const headingNext = document.querySelector<HTMLButtonElement>("#daily-heading-next");
     async function initDailyView() {
       if (!grid || !empty || !previous || !next) return;
-      const [photoResponse, eventResponse, looseVideoResponse] = await Promise.all([
-        fetch("/api/public/photos",{cache:"no-store"}),
-        fetch("/api/public/carte-evenements",{cache:"no-store"}),
-        fetch("/api/public/videos",{cache:"no-store"})
-      ]);
-      const photos:DailyPhoto[] = photoResponse.ok ? (await photoResponse.json()).photos || [] : [];
-      const courses = eventResponse.ok ? (await eventResponse.json()).courses || [] : [];
-      type DailyVideo = {id?:string;url?:string;titre?:string;date?:string;datePrise?:string;dateHeure?:string;etape?:string;lieu?:string;ville?:string;pays?:string};
-      const looseVideos:DailyVideo[] = looseVideoResponse.ok ? (await looseVideoResponse.json()).videos || [] : [];
-      const videoGroups = await Promise.all(etapes.map(async step => {
+      const safeJson = async (url:string) => {
         try {
-          const response = await fetch("/api/public/videos?etape="+encodeURIComponent(step.slug),{cache:"no-store"});
-          const data = response.ok ? await response.json() : {videos:[]};
-          return (data.videos || []).map((video:DailyVideo)=>({...video,etape:step.slug}));
-        } catch { return []; }
+          const response = await fetch(url,{cache:"no-store"});
+          if (!response.ok) return {};
+          return await response.json();
+        } catch { return {}; }
+      };
+      const [photoData, eventData, looseVideoData] = await Promise.all([
+        safeJson("/api/public/photos"),
+        safeJson("/api/public/carte-evenements"),
+        safeJson("/api/public/videos")
+      ]);
+      const photos:DailyPhoto[] = photoData.photos || [];
+      const courses = eventData.courses || [];
+      type DailyVideo = {id?:string;url?:string;titre?:string;date?:string;datePrise?:string;dateHeure?:string;etape?:string;lieu?:string;ville?:string;pays?:string};
+      const looseVideos:DailyVideo[] = looseVideoData.videos || [];
+      const videoGroups = await Promise.all(etapes.map(async step => {
+        const data = await safeJson("/api/public/videos?etape="+encodeURIComponent(step.slug));
+        return (data.videos || []).map((video:DailyVideo)=>({...video,etape:step.slug}));
       }));
       const videos:DailyVideo[] = [...looseVideos.map(video=>({...video,etape:"sans-etape"})),...videoGroups.flat()];
       const dates = new Set<string>();
