@@ -37,7 +37,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   type FilmPoint = {slug?:string;date:string;titre:string;ville:string;pays:string;latitude:number;longitude:number;statut:string};
-  type FilmItem = {kind:"etape"|"photo"|"video"|"activite";date:string;title:string;lat:number;lon:number;detail:string;place?:string;time?:string;location?:string;src?:string;youtubeId?:string;slug?:string;id?:string;zoom:number};
+  type FilmItem = {kind:"etape"|"photo"|"video"|"video-fichier"|"activite";date:string;title:string;lat:number;lon:number;detail:string;place?:string;time?:string;location?:string;src?:string;fileVideoSrc?:string;youtubeId?:string;slug?:string;id?:string;zoom:number};
   const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
   const mapElement = document.querySelector<HTMLElement>("#film-map");
   const memory = document.querySelector<HTMLElement>("#film-memory-content");
@@ -112,9 +112,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const photoMarker=new maplibregl.Marker({element:photoMarkerElement,anchor:"center"});
     const items:FilmItem[] = [];
     try{
-      const [photoResponse,activityResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements")]);
+      const [photoResponse,activityResponse,fileVideoResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements"),fetch("/api/public/videos-fichiers")]);
       const photos=photoResponse.ok?(await photoResponse.json()).photos||[]:[];
       const activities=activityResponse.ok?(await activityResponse.json()).courses||[]:[];
+      const fileVideos=fileVideoResponse.ok?(await fileVideoResponse.json()).videos||[]:[];
       const videoGroups=await Promise.all(points.map(async stage=>{
         try{
           const response=await fetch("/api/public/videos?etape="+encodeURIComponent(stage.slug||""));
@@ -134,6 +135,18 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const lat=hasVideoGps?Number(video.latitude):stage.latitude;
         const lon=hasVideoGps?Number(video.longitude):stage.longitude;
         items.push({kind:"video",date:rawDate,title:video.titre||"Vidéo du voyage",place:[stage.ville,stage.pays].filter(Boolean).join(", "),time:formatClock(video.dateHeure||video.datePrise),lat,lon,detail:String(video.description||video.commentaire||"").trim(),youtubeId,slug:stage.slug,zoom:12});
+      }
+      for(const video of fileVideos){
+        const rawDate=String(video.date||video.ajouteLe||"").slice(0,10);
+        const stage=(video.etape?points.find(p=>p.slug===video.etape):undefined)||
+          [...points].filter(p=>p.date<=rawDate).sort((a,b)=>b.date.localeCompare(a.date))[0]||
+          points.find(p=>p.date===rawDate)||points[0];
+        if(!stage||!valid(stage.latitude,stage.longitude))continue;
+        const date=/^\d{4}-\d{2}-\d{2}$/.test(rawDate)?rawDate:stage.date;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+        items.push({kind:"video-fichier",date,title:video.titre||"Vidéo du voyage",
+          place:[stage.ville,stage.pays].filter(Boolean).join(", "),lat:stage.latitude,lon:stage.longitude,
+          detail:"",fileVideoSrc:video.src,slug:stage.slug,zoom:12});
       }
       for(const photo of photos){
         if(!photo)continue;
@@ -259,7 +272,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       memory.replaceChildren();
       if(item.kind!=="photo"){
         if(item.kind!=="activite"){
-          const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="video"?"Vidéo YouTube":"Étape";
+          const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="video"?"Vidéo YouTube":item.kind==="video-fichier"?"Vidéo importée":"Étape";
           memory.append(tag);
         }
         const title=document.createElement("h3");title.textContent=item.title;
@@ -267,6 +280,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }
       if(item.youtubeId){
         const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(item.youtubeId)+"?rel=0";frame.title=item.title;frame.loading="lazy";frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";frame.allowFullscreen=true;frame.className="film-video-frame";memory.append(frame);
+      }else if(item.fileVideoSrc){
+        const player=document.createElement("video");player.src=item.fileVideoSrc;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",item.title);player.className="film-video-frame";memory.append(player);
       }else if(item.src){
         const img=document.createElement("img");img.src=item.src;img.alt=item.title;img.loading=index<2?"eager":"lazy";img.decoding="async";memory.append(img);
       }else if(item.kind!=="activite"){
@@ -286,9 +301,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }else{
         stageMarker.remove();
       }
-      if((item.kind==="photo"||item.kind==="video")&&valid(item.lat,item.lon)){
+      if((item.kind==="photo"||item.kind==="video"||item.kind==="video-fichier")&&valid(item.lat,item.lon)){
         photoMarker.setLngLat([item.lon,item.lat]).addTo(map);
-        photoMarkerElement.title=item.kind==="video"?"Localisation de la vidéo":"Position GPS de la photo";
+        photoMarkerElement.title=(item.kind==="video"||item.kind==="video-fichier")?"Localisation de la vidéo":"Position GPS de la photo";
       }else{
         photoMarker.remove();
       }
