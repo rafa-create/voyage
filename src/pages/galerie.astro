@@ -6,9 +6,20 @@ import { chemin } from "../lib/paths";
 ---
 
 <Base title="Galerie photo" active="galerie">
-  <section class="page-intro container">
+  <section class="page-intro container gallery-page-heading">
     <h1>La galerie photo<span class="heading-dot">.</span></h1>
+    <div class="gallery-admin-actions" id="gallery-admin-actions" hidden aria-label="Ajouter du contenu">
+      <button type="button" class="gallery-add-button" id="gallery-add-photo" aria-label="Ajouter des photos" title="Ajouter des photos">+</button>
+      <button type="button" class="gallery-add-button" id="gallery-add-video" aria-label="Ajouter une vidéo" title="Ajouter une vidéo">+</button>
+    </div>
   </section>
+  <div id="gallery-admin-dialog" class="gallery-admin-dialog" hidden role="dialog" aria-modal="true" aria-label="Ajouter du contenu à la galerie">
+    <div class="gallery-admin-dialog-head">
+      <strong id="gallery-admin-dialog-title">Ajouter du contenu</strong>
+      <button type="button" id="gallery-admin-close" aria-label="Fermer">×</button>
+    </div>
+    <iframe id="gallery-admin-frame" title="Outils d’administration de la galerie" loading="lazy"></iframe>
+  </div>
 
   <section class="container section">
     <div id="galerie-unifiee-grid" class="gallery-months">
@@ -32,6 +43,32 @@ import { chemin } from "../lib/paths";
     <p id="galerie-vide" class="empty-state" hidden>Les souvenirs apparaîtront ici dès qu'ils seront ajoutés au carnet.</p>
   </section>
   <script>
+    const galleryAdminActions = document.querySelector<HTMLElement>("#gallery-admin-actions");
+    const galleryAdminDialog = document.querySelector<HTMLElement>("#gallery-admin-dialog");
+    const galleryAdminFrame = document.querySelector<HTMLIFrameElement>("#gallery-admin-frame");
+    const galleryAdminTitle = document.querySelector<HTMLElement>("#gallery-admin-dialog-title");
+    const closeGalleryAdmin = () => {
+      if (galleryAdminDialog) galleryAdminDialog.hidden = true;
+      document.body.classList.remove("gallery-admin-dialog-open");
+    };
+    fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
+      .then(async response => response.ok ? response.json() : null)
+      .then(user => { if (user?.isAdmin && galleryAdminActions) galleryAdminActions.hidden = false; })
+      .catch(() => {});
+    const openGalleryAdmin = (context: "photos" | "videos", title: string) => {
+      if (!galleryAdminDialog || !galleryAdminFrame) return;
+      if (galleryAdminTitle) galleryAdminTitle.textContent = title;
+      const src = "/admin/?context=" + context;
+      if (galleryAdminFrame.getAttribute("src") !== src) galleryAdminFrame.src = src;
+      galleryAdminDialog.hidden = false;
+      document.body.classList.add("gallery-admin-dialog-open");
+    };
+    document.querySelector("#gallery-add-photo")?.addEventListener("click", () => openGalleryAdmin("photos", "02 / UN NOUVEAU SOUVENIR · Ajouter des photos"));
+    document.querySelector("#gallery-add-video")?.addEventListener("click", () => openGalleryAdmin("videos", "03 / YOUTUBE · Ajouter une vidéo"));
+    document.querySelector("#gallery-admin-close")?.addEventListener("click", closeGalleryAdmin);
+    galleryAdminDialog?.addEventListener("click", event => { if (event.target === galleryAdminDialog) closeGalleryAdmin(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && galleryAdminDialog && !galleryAdminDialog.hidden) closeGalleryAdmin(); });
+
     const unifiedGrid = document.querySelector<HTMLElement>("#galerie-unifiee-grid");
     const sortUnified = () => {
       if (!unifiedGrid) return;
@@ -180,6 +217,23 @@ import { chemin } from "../lib/paths";
       <button type="submit" class="admin-primary">Enregistrer les modifications</button><p id="edit-photo-status" role="status"></p>
     </form>
   </dialog>
+  <style>
+    .gallery-page-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+    .gallery-page-heading h1 { margin-right:auto; }
+    .gallery-admin-actions { display:flex; align-items:center; gap:9px; }
+    .gallery-admin-actions[hidden] { display:none !important; }
+    .gallery-add-button { display:inline-grid; place-items:center; width:36px; height:36px; border:1px solid var(--line); border-radius:50%; background:var(--white); color:var(--forest); font:400 1.5rem/1 'DM Sans',sans-serif; cursor:pointer; transition:background .18s ease,color .18s ease,border-color .18s ease; }
+    .gallery-add-button:hover { background:var(--forest); border-color:var(--forest); color:#fff; }
+    .gallery-add-button:focus-visible { outline:2px solid var(--forest); outline-offset:3px; }
+    .gallery-admin-dialog[hidden] { display:none !important; }
+    .gallery-admin-dialog { position:fixed; z-index:1000; inset:0; display:flex; flex-direction:column; background:var(--paper,#f6f3eb); padding:min(4vh,28px) max(12px,3vw); }
+    .gallery-admin-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:16px; max-width:980px; width:100%; margin:0 auto; padding:12px 16px; background:var(--white); border:1px solid var(--line); }
+    .gallery-admin-dialog-head strong { font-size:.88rem; }
+    .gallery-admin-dialog-head button { border:0; background:transparent; color:var(--forest); font-size:1.5rem; cursor:pointer; }
+    .gallery-admin-dialog iframe { display:block; width:100%; max-width:980px; flex:1; min-height:0; margin:0 auto; border:1px solid var(--line); border-top:0; background:var(--white); }
+    body.gallery-admin-dialog-open { overflow:hidden; }
+    @media(max-width:560px) { .gallery-page-heading { align-items:flex-start; } .gallery-admin-actions { gap:6px; } .gallery-add-button { width:32px; height:32px; } }
+  </style>
   <script>
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
     const agrandissement = dialog?.querySelector("img");
