@@ -184,6 +184,10 @@ export default {
       return json({videos:await videos(env,slug)});
     }
 
+    if(path==="/api/public/textes-site"&&request.method==="GET"){
+      return json({textes:await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{})});
+    }
+
     // Pages d'étapes publiées via R2 accessibles immédiatement.
     if(request.method==="GET"&&/^\/etapes\/[a-z0-9-]+\/?$/.test(path)){
       const existing=await env.ASSETS.fetch(request);
