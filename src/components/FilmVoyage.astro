@@ -36,7 +36,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   type FilmPoint = {slug?:string;date:string;titre:string;ville:string;pays:string;latitude:number;longitude:number;statut:string};
-  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;place?:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
+  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;place?:string;time?:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
   const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
   const mapElement = document.querySelector<HTMLElement>("#film-map");
   const memory = document.querySelector<HTMLElement>("#film-memory-content");
@@ -50,6 +50,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const filmSection = document.querySelector<HTMLElement>(".voyage-film");
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
+  const formatClock = (value:unknown):string => { if(value===null||value===undefined||value==="")return ""; let d:Date; if(typeof value==="number"||(typeof value==="string"&&/^\\d+(?:\\.\\d+)?$/.test(value.trim()))){const n=Number(value);d=new Date(n<1e12?n*1000:n);}else{d=new Date(String(value));} return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(d); };
   const activityPlaceCache=new Map<string,string>();
   async function reverseGeocode(lat:number,lon:number):Promise<string>{
     const key=lat.toFixed(3)+","+lon.toFixed(3);
@@ -125,7 +126,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const datedStage=linkedStage||[...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(p=>p.date===date);
-        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",place:[datedStage?.ville,datedStage?.pays].filter(Boolean).join(", "),lat,lon,detail:String(photo.commentaire||photo.description||photo.descriptionCourte||photo.legende||"").trim(),src:photo.src,slug:datedStage?.slug,zoom:12});
+        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",place:[datedStage?.ville,datedStage?.pays].filter(Boolean).join(", "),time:formatClock(photo.dateHeure||photo.datePrise),lat,lon,detail:String(photo.commentaire||photo.description||photo.descriptionCourte||photo.legende||"").trim(),src:photo.src,slug:datedStage?.slug,zoom:12});
       }
       for(const activity of activities){
         if(!activity||!valid(activity.latitude,activity.longitude))continue;
@@ -134,7 +135,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const details=[activity.sport,typeof activity.km==="number"?activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"",typeof activity.minutes==="number"?activity.minutes+" min":""].filter(Boolean).join(" · ");
         const location=[activity.lieu,activity.location_name,activity.location_city,activity.ville,activity.city,activity.location_state,activity.state,activity.location_country,activity.pays,activity.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
-        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
+        const startTime=formatClock(activity.debut||activity.start_time||activity.start||activity.dateDebut);\n        const endTime=formatClock(activity.fin||activity.end_time||activity.end||activity.dateFin);\n        const time=startTime&&endTime?`${startTime}–${endTime}`:startTime||endTime;\n        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,time,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
       }
     }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
     const unique=new Map<string,FilmItem>();
@@ -214,12 +215,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const render=(animate=true)=>{
       const item=sequence[index];
       activeFilmItem=item;
-      place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":"");
+      place.textContent=[item.place||(item.kind==="photo"?"Localisation de la photo":""),item.time].filter(Boolean).join(" · ");
       if(placeCaption)placeCaption.hidden=!place.textContent.trim();
       if(item.kind==="activite"&&!item.place&&valid(item.lat,item.lon)){
         const currentItem=item;
         void reverseGeocode(item.lat,item.lon).then(location=>{
-          if(location&&activeFilmItem===currentItem&&!currentItem.place){place.textContent=location;if(placeCaption)placeCaption.hidden=false;}
+          if(location&&activeFilmItem===currentItem&&!currentItem.place){place.textContent=[location,currentItem.time].filter(Boolean).join(" · ");if(placeCaption)placeCaption.hidden=false;}
         });
       }
       if(daySelect)daySelect.value=item.date;
