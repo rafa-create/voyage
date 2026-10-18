@@ -135,7 +135,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const details=[activity.sport,typeof activity.km==="number"?activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"",typeof activity.minutes==="number"?activity.minutes+" min":""].filter(Boolean).join(" · ");
         const location=[activity.lieu,activity.location_name,activity.location_city,activity.ville,activity.city,activity.location_state,activity.state,activity.location_country,activity.pays,activity.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
-        const startTime=formatClock(activity.debut||activity.start_time||activity.start||activity.dateDebut);\n        const endTime=formatClock(activity.fin||activity.end_time||activity.end||activity.dateFin);\n        const time=startTime&&endTime?`${startTime}–${endTime}`:startTime||endTime;\n        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,time,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
+        const startTime=formatClock(activity.debut||activity.start_time||activity.start||activity.dateDebut);
+        const endTime=formatClock(activity.fin||activity.end_time||activity.end||activity.dateFin);
+        const time=startTime&&endTime?`${startTime}–${endTime}`:startTime||endTime;
+        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,time,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
       }
     }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
     const unique=new Map<string,FilmItem>();
