@@ -253,35 +253,27 @@ const points = etapes
           const detail = (event as CustomEvent<{date?:string}>).detail;
           updateSelectedDay(detail?.date || "");
         });
-        // Réutiliser les commandes du journal quotidien dans un contrôle discret
-        // au bas de la carte : les boutons gardent ainsi leur comportement existant.
-        const dateElement = document.querySelector<HTMLElement>("#daily-date");
-        const dailyControls = document.querySelector<HTMLElement>(".daily-controls");
-        const previousDay = document.querySelector<HTMLButtonElement>("#day-previous");
-        const nextDay = document.querySelector<HTMLButtonElement>("#day-next");
-        if (dateElement && dailyControls && previousDay && nextDay) {
-          const dayControl = document.createElement("div");
-          // Une seule ligne compacte au pied de la carte.
-          dayControl.className = "map-day-control maplibregl-ctrl";
-          previousDay.textContent = "←";
-          previousDay.setAttribute("aria-label", "Jour précédent");
-          nextDay.textContent = "→";
-          nextDay.setAttribute("aria-label", "Jour suivant");
-          previousDay.classList.add("daily-day-arrow");
-          nextDay.classList.add("daily-day-arrow");
-          for (const eventName of ["pointerdown", "mousedown", "touchstart", "dblclick", "click", "wheel"]) {
-            dayControl.addEventListener(eventName, (event) => {
-              event.stopPropagation();
-              if (eventName === "dblclick") event.preventDefault();
-            });
-          }
-          dayControl.append(previousDay, dateElement, nextDay);
-          map.addControl({
-            onAdd: () => dayControl,
-            onRemove: () => dayControl.remove()
-          } as maplibregl.IControl, "bottom-left");
+        // En bas à gauche, afficher uniquement le lieu correspondant au jour sélectionné.
+        const placeControl = document.createElement("div");
+        placeControl.className = "map-day-control maplibregl-ctrl";
+        placeControl.setAttribute("aria-live", "polite");
+        placeControl.style.cssText = "padding:8px 11px;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;font:600 12px 'DM Sans',sans-serif;box-shadow:0 1px 5px #0002;max-width:220px;";
+        const updatePlaceLabel = (date:string) => {
+          const place = points.find((point) => point.date === date);
+          placeControl.textContent = place ? [place.ville, place.pays].filter(Boolean).join(", ") : "";
+          placeControl.style.display = placeControl.textContent ? "" : "none";
+        };
+        updatePlaceLabel(selectedDay);
+        window.addEventListener("voyage:jour", (event) => {
+          const detail = (event as CustomEvent<{date?:string}>).detail;
+          updatePlaceLabel(detail?.date || "");
+        });
+        map.addControl({
+          onAdd: () => placeControl,
+          onRemove: () => placeControl.remove()
+        } as maplibregl.IControl, "bottom-left");
 
-          // Bouton indépendant à droite pour afficher directement la journée d’hier.
+        // Bouton indépendant à droite pour afficher directement la journée d’hier.
           const yesterdayButton = document.createElement("button");
           yesterdayButton.type = "button";
           yesterdayButton.className = "map-today-control maplibregl-ctrl";
