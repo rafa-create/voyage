@@ -93,15 +93,12 @@ import { chemin } from "../lib/paths";
     .journal-day-card { min-width: 0; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
-    .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-    .journal-day-photos .photo-open { display: block; overflow: hidden; }
+    .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+    .journal-day-photos .photo-open { display: block; }
     .journal-day-photos .photo-tile { min-width: 0; width: 100%; }
     .journal-day-photos .photo-open img { display: block; width: 100%; height: auto; max-height: none; aspect-ratio: auto; object-fit: contain; }
-    @media (min-width: 900px) {
-      .journal-day-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
-    }
-    @media (min-width: 1250px) {
-      .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+    @media (max-width: 650px) {
+      .journal-day-photos { grid-template-columns: minmax(0, 1fr); gap: 24px; }
     }
     .journal-day-photos figcaption { margin-top: 7px; color: var(--muted); font-size: .78rem; }
   </style>
