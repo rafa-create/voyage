@@ -21,8 +21,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <section class="container section daily-view" aria-labelledby="daily-heading">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">LE VOYAGE AU FIL DES JOURS</p>
-        <h2 id="daily-heading">Les souvenirs du jour<span class="heading-dot">.</span></h2>
+        <h2 id="daily-heading">Souvenirs du <span id="daily-heading-date">jour</span></h2>
         <p id="daily-date" aria-live="polite">Chargement des souvenirs…</p>
       </div>
       <div class="daily-controls" aria-label="Choisir une journée">
@@ -45,6 +44,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
     const grid = document.querySelector<HTMLElement>("#daily-photos");
     const dateText = document.querySelector<HTMLElement>("#daily-date");
+    const headingDate = document.querySelector<HTMLElement>("#daily-heading-date");
     const empty = document.querySelector<HTMLElement>("#daily-empty");
     const activitiesWrap = document.querySelector<HTMLElement>("#daily-activities-wrap");
     const activitiesGrid = document.querySelector<HTMLElement>("#daily-activities");
@@ -80,6 +80,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const render = () => {
         const day = ordered[index];
         dateText.textContent = dateLabel(day);
+        if (headingDate) headingDate.textContent = new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(day+"T12:00:00"));
         grid.replaceChildren();
         const dayPhotos = photos.filter(p=>dateKey(p)===day)
           .sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||"")));
