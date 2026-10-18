@@ -37,11 +37,11 @@ import { chemin } from "../../lib/paths";
           <div><p class="eyebrow">02 / UN NOUVEAU SOUVENIR</p><h2>Ajouter des photos</h2></div>
         </div>
         <form id="photo-form" class="admin-stack">
-          <label for="upload-etape">Étape de destination si la photo n'a pas de date reconnue</label>
-          <select id="upload-etape" required></select>
+          <label for="upload-etape">Étape associée (facultatif)</label>
+          <select id="upload-etape"></select>
           <label class="admin-inline-check">
-            <input id="auto-date" type="checkbox" checked/>
-            Classer automatiquement selon la date de prise de vue (EXIF)
+            <input id="auto-date" type="checkbox"/>
+            Associer automatiquement à une étape selon la date EXIF
           </label>
           <label for="upload-files" class="admin-dropzone">
             <strong>+ Choisir des photos</strong>
@@ -147,6 +147,7 @@ import { chemin } from "../../lib/paths";
         const select=$<HTMLSelectElement>(id);
         if(!select)continue;
         select.replaceChildren();
+        if(id==="upload-etape")select.append(new Option("Sans étape",""));
         for(const e of etapes){
           const option=document.createElement("option");
           option.value=e.slug;option.textContent=e.ville+" · "+e.pays;
@@ -154,7 +155,7 @@ import { chemin } from "../../lib/paths";
         }
         const choice=before[id];
         const current=etapes.find(e=>e.statut==="actuelle");
-        select.value=choice&&etapes.some(e=>e.slug===choice)?choice:current?.slug||etapes[0]?.slug||"";
+        select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice==="")?choice:id==="upload-etape"?"":current?.slug||etapes[0]?.slug||"";
       }
       const filter=$<HTMLSelectElement>("library-filter");
       if(filter){
@@ -295,10 +296,11 @@ import { chemin } from "../../lib/paths";
           const body=await optimizedPublic(item.file);
           if(body.size>30*1024*1024)throw Error(item.file.name+" dépasse 30 Mo.");
           const params=new URLSearchParams({
-            etape:$<HTMLSelectElement>("upload-etape")?.value||"",
             visibilite:publicPhoto?"public":"prive",
             auto:$<HTMLInputElement>("auto-date")?.checked?"1":"0",
           });
+          const selectedStep=$<HTMLSelectElement>("upload-etape")?.value||"";
+          if(selectedStep)params.set("etape",selectedStep);
           if(item.date)params.set("datePrise",item.date);
           if(item.dateHeure)params.set("dateHeure",item.dateHeure);
           if(item.latitude!==null&&item.longitude!==null){
@@ -331,7 +333,7 @@ import { chemin } from "../../lib/paths";
         const card=document.createElement("div");card.className="admin-photo-item";
         const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo de voyage";img.loading="lazy";
         const body=document.createElement("div");body.className="admin-photo-body";
-        const title=document.createElement("strong");title.textContent=photo.etape?etapes.find(x=>x.slug===photo.etape)?.ville||photo.etape:"À classer";
+        const title=document.createElement("strong");title.textContent=photo.etape?etapes.find(x=>x.slug===photo.etape)?.ville||photo.etape:"Sans étape";
         const date=document.createElement("small");date.textContent=photo.datePrise?"Prise le "+photo.datePrise:"Date EXIF inconnue";
         const actions=document.createElement("div");actions.className="admin-photo-actions";
         const privateLabel=document.createElement("label");privateLabel.className="chosen-private";
@@ -342,14 +344,14 @@ import { chemin } from "../../lib/paths";
           checkbox.disabled=true;
           try{
             if(photo.visibilite==="prive"&&target==="public"){
-              if(!photo.etape)throw Error("Classe d'abord la photo dans une étape.");
               // Réencoder l'original privé sans EXIF/GPS avant la publication.
               const imageResponse=await fetch(photo.src,{credentials:"same-origin"});
               if(!imageResponse.ok)throw Error("Impossible de lire la photo privée.");
               const original=await imageResponse.blob();
               const filename=new File([original],"photo-privee",{type:original.type||"image/jpeg"});
               const clean=await optimizedPublic(filename);
-              const args=new URLSearchParams({etape:photo.etape,visibilite:"public",auto:"0"});
+              const args=new URLSearchParams({visibilite:"public",auto:"0"});
+              if(photo.etape)args.set("etape",photo.etape);
               if(photo.datePrise)args.set("datePrise",photo.datePrise);
               const uploaded=await api("/api/prive/admin/upload?"+args.toString(),{
                 method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body:clean
@@ -375,12 +377,13 @@ import { chemin } from "../../lib/paths";
         actions.append(privateLabel,del);
         {
           const select=document.createElement("select");select.setAttribute("aria-label","Étape de destination");
+          select.add(new Option("Sans étape",""));
           for(const e of etapes)select.add(new Option(e.ville+" · "+e.pays,e.slug));
-          if(photo.etape)select.value=photo.etape;
+          select.value=photo.etape||"";
           const assign=document.createElement("button");assign.type="button";assign.className="admin-secondary";
-          assign.textContent=photo.etape?"Déplacer":"Classer";
+          assign.textContent="Enregistrer";
           assign.addEventListener("click",async()=>{
-            try{await post("/api/prive/admin/assigner",{key:photo.key,visibilite:photo.visibilite,etape:select.value});await refresh();}
+            try{await post("/api/prive/admin/assigner",{key:photo.key,visibilite:photo.visibilite,etape:select.value||null});await refresh();}
             catch(e){message("sync-result",String(e));}
           });
           actions.append(select,assign);
