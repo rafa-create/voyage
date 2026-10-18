@@ -47,7 +47,7 @@ export function parseGpx(source){
     if(points.length>MAX_POINTS)return null;
   }
   if(points.length<2)return null;
-  return {route:sample(points,500),routeDetail:sample(points,5000),routeFull:points,
+  return {route:sample(points,500),routeDetail:sample(points,4000),routeFull:sample(points,12000),
     distanceKm:Math.round(length*100)/100,start,end,pointCount:points.length};
 }
 function publicItem(item){
