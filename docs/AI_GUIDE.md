@@ -42,6 +42,12 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - Une photo sur la carte doit ouvrir la photo précise dans la galerie; préserver l'ordre chronologique global.
 - Toute édition du journal en ligne doit être protégée par la session admin et utiliser les endpoints de mutation existants avec leurs contrôles d'origine/jeton.
 
+## Galerie — géolocalisation manuelle des photos
+- La fenêtre d’édition d’une photo permet de lancer une recherche Google Maps à partir d’un nom ou d’une adresse.
+- Après avoir choisi le point dans Google Maps, l’administrateur peut coller le lien complet; l’interface tente d’extraire les coordonnées depuis les formats d’URL Google Maps courants (`/@lat,lon`, `!3dlat!4dlon` ou une paire dans `q`/`query`). Les champs latitude/longitude restent éditables et les coordonnées sont sauvegardées via l’endpoint protégé existant `/api/prive/admin/photo-modifier`.
+- Cette première version n’intègre pas les résultats Google Places dans la fenêtre et ne nécessite pas de clé API Google. Les liens courts ou les URL sans coordonnées peuvent ne pas être interprétables; dans ce cas, saisir les coordonnées manuellement.
+- Aucun déploiement automatique; vérifier en navigateur la recherche, la récupération des coordonnées et leur persistance avant tout déploiement autorisé.
+
 ## Vérification avant livraison
 1. Inspecter `package.json` avant de choisir les commandes.
 2. Exécuter les tests et la validation localement si l'environnement et les dépendances sont disponibles; indiquer clairement tout contrôle non exécuté.
