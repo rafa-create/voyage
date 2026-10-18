@@ -48,6 +48,8 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - Cette première version n’intègre pas les résultats Google Places dans la fenêtre et ne nécessite pas de clé API Google. Les liens courts ou les URL sans coordonnées peuvent ne pas être interprétables; dans ce cas, saisir les coordonnées manuellement.
 - Aucun déploiement automatique; vérifier en navigateur la recherche, la récupération des coordonnées et leur persistance avant tout déploiement autorisé.
 
+- Dans la fenêtre d’édition de la Galerie, le bouton rouge « Supprimer définitivement cette photo » est visible uniquement pour les administrateurs et les photos répertoriées dans la bibliothèque R2. Il demande confirmation puis appelle l’endpoint existant `POST /api/prive/admin/supprimer-photo` avec `key` et `visibilite`; l’API Worker impose déjà l’authentification admin et la protection `Origin`/`X-Voyage-Admin`. Après succès, la vignette est retirée de l’interface. Ne pas utiliser ce bouton pour des photos statiques provenant uniquement des fichiers du site.
+
 ## Vérification avant livraison
 1. Inspecter `package.json` avant de choisir les commandes.
 2. Exécuter les tests et la validation localement si l'environnement et les dépendances sont disponibles; indiquer clairement tout contrôle non exécuté.
