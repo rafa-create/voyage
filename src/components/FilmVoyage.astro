@@ -7,11 +7,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .map((e) => ({ slug:e.slug, date:e.date, titre:e.titre, ville:e.ville, pays:e.pays, latitude:e.latitude, longitude:e.longitude, statut:e.statut || "passee" }));
 ---
 <section class="voyage-film container" aria-labelledby="voyage-film-title">
-  <div class="film-heading">
-    <p class="film-eyebrow">Les souvenirs en mouvement</p>
-    <h2 id="voyage-film-title">Le diapo du voyage</h2>
-    <p>Des étapes, des photos et des activités, au fil des jours.</p>
-  </div>
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
@@ -270,6 +265,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
+      // Pour une photo, afficher sa description une seule fois, discrètement au-dessus de l'image.
+      if(item.kind==="photo"){
+        const caption=document.createElement("p");
+        caption.className="film-photo-description";
+        caption.textContent=item.detail.trim()||item.title;
+        memory.append(caption);
+      }
       // Afficher d'abord le média, puis ses informations pour une carte plus naturelle.
       if(item.youtubeId){
         const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(item.youtubeId)+"?rel=0";frame.title=item.title;frame.loading="lazy";frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";frame.allowFullscreen=true;frame.className="film-video-frame";memory.append(frame);
@@ -307,9 +309,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="video"?"Vidéo YouTube":item.kind==="video-fichier"?"Vidéo importée":"Étape";
         memory.append(tag);
       }
-      const title=document.createElement("h3");title.textContent=item.title;
-      memory.append(title);
-      if(item.detail.trim()){const detail=document.createElement("p");detail.className=item.kind==="photo"?"film-photo-description":"";detail.textContent=item.detail;memory.append(detail);}
+      if(item.kind!=="photo"){
+        const title=document.createElement("h3");title.textContent=item.title;
+        memory.append(title);
+        if(item.detail.trim()){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
+      }
       if(item.kind==="activite"&&item.location){const location=document.createElement("p");location.className="film-activity-location";location.textContent=item.location;memory.append(location);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       filmSection.classList.toggle("film-showing-activity",item.kind==="activite");
@@ -395,6 +399,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   /* Le lecteur est créé côté client : ces règles doivent être globales, pas scopées par Astro. */
   :global(.voyage-film.film-browser-fullscreen .film-memory .film-video-frame){max-height:38vh;min-height:0;align-self:stretch}
   .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
+  .film-memory .film-photo-description{width:100%;font-size:.76rem;line-height:1.35;color:var(--muted);margin:0 0 2px;overflow-wrap:anywhere}
   .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
   .film-memory-placeholder{color:var(--muted);font-size:.9rem}
   :global(.film-photo-marker){width:18px;height:18px;border-radius:50%;background:#2878d0;border:4px solid #fffdf8;box-shadow:0 0 0 3px #2878d080,0 2px 9px #00000055}
