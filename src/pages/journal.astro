@@ -5,11 +5,6 @@ import { chemin } from "../lib/paths";
 ---
 
 <Base title="Journal" active="journal">
-  <section class="page-intro container">
-    <p class="eyebrow">AU FIL DES JOURS</p>
-    <h1>Le journal de route<span class="heading-dot">.</span></h1>
-    <p>Chaque étape à sa place, dans l'ordre du voyage. Du premier départ aux dernières découvertes.</p>
-  </section>
   <section class="container section journal-list" aria-label="Étapes du voyage">
     {etapes.length === 0 ? (
       <div class="empty-state">
