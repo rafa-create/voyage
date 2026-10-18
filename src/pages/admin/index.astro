@@ -566,7 +566,7 @@ import { chemin } from "../../lib/paths";
       try{
         ffmpeg.FS("writeFile",inputName,new Uint8Array(await file.arrayBuffer()));
         message("video-file-feedback","Vérification du codec "+(index+1)+"/"+total+" · "+file.name);
-        try{await ffmpeg.run("-i",inputName,"-f","null","-");}catch{/* ffmpeg returns a nonzero exit code for the null probe on some builds */}
+        try{await ffmpeg.run("-i",inputName);}catch{/* Input-only invocation intentionally stops after printing stream metadata. */}
         const report=logs.join("\n");
         const videoLine=report.split("\n").find(line=>/Video:/.test(line))||"";
         const audioLine=report.split("\n").find(line=>/Audio:/.test(line))||"";
