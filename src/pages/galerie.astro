@@ -224,7 +224,10 @@ import { chemin } from "../lib/paths";
     <p class="lightbox-counter" aria-live="polite"></p>
     <p class="lightbox-details" id="lightbox-details"></p>
     <form id="photo-editor" class="photo-editor" hidden>
-      <p class="eyebrow">MODIFICATION ADMIN</p>
+      <div class="photo-editor-head">
+        <p class="eyebrow">MODIFICATION ADMIN</p>
+        <button type="button" id="edit-photo-close" class="photo-editor-close" aria-label="Fermer la modification" title="Fermer">✕</button>
+      </div>
       <label for="edit-photo-date">Date de prise de vue</label><input id="edit-photo-date" type="date"/>
       <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
       <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
@@ -384,6 +387,7 @@ import { chemin } from "../lib/paths";
     }, { passive: true });
     dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
     dialog?.querySelector(".lightbox-edit")?.addEventListener("click", () => { if(editor) editor.hidden=!editor.hidden; });
+    document.querySelector<HTMLButtonElement>("#edit-photo-close")?.addEventListener("click", () => { if (editor) editor.hidden = true; });
     dialog?.addEventListener("close", () => {
       if (document.fullscreenElement === dialog) void document.exitFullscreen().catch(() => {});
       dialog.classList.remove("lightbox-fullscreen-mode");
@@ -485,7 +489,10 @@ import { chemin } from "../lib/paths";
     .lightbox-close,.lightbox-edit{position:sticky;top:0;z-index:5;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#222;box-shadow:0 2px 12px #0002;font-size:1.35rem;cursor:pointer}
     .lightbox-close{position:absolute;top:.65rem;right:.65rem}.lightbox-edit{position:absolute;top:.65rem;right:3.8rem}
     .photo-editor{width:100%;max-width:640px;max-height:none;box-sizing:border-box;overflow:visible;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
-    .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{box-sizing:border-box;width:100%;min-width:0;padding:.65rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{padding:.75rem;border:0;border-radius:8px;cursor:pointer}
+    .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{box-sizing:border-box;width:100%;min-width:0;padding:.7rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{padding:.75rem;border:0;border-radius:8px;cursor:pointer}
+    .photo-editor-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.25rem}.photo-editor-head .eyebrow{margin:0}.photo-editor .photo-editor-close{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid var(--line,#ddd);border-radius:50%;background:var(--white,#fffdf8);color:var(--forest,#274c41);font-size:1.25rem;line-height:1}
+    .photo-editor #edit-photo-comment{min-height:5.5rem;resize:vertical}.photo-editor #edit-photo-status{margin:.25rem 0;overflow-wrap:anywhere}
+    .photo-editor #edit-photo-delete{line-height:1.35}
     .photo-editor .admin-danger{background:#9b2929;color:#fff;font-weight:600}.photo-editor .admin-danger:disabled{opacity:.6;cursor:wait}.photo-editor .admin-danger[hidden]{display:none}
     .photo-map-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem}
     .photo-map-search button,.photo-editor #edit-photo-map-use{background:#e9eee8;color:#244b3d;font-size:.9rem}
@@ -504,6 +511,12 @@ import { chemin } from "../lib/paths";
       .photo-editor{flex:1 1 auto;min-height:0;max-width:none;max-height:none;overflow-y:auto;margin:0;padding:.75rem}
       .photo-editor .eyebrow{margin:.1rem 0}
       .photo-editor textarea{resize:vertical}
+      .photo-editor:not([hidden]){position:absolute;inset:3.25rem .5rem .5rem;z-index:6;width:auto;max-width:none;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:0;padding:.85rem .85rem calc(1rem + env(safe-area-inset-bottom));border:1px solid var(--line,#deded6);border-radius:14px;background:var(--paper,#f6f3eb);box-shadow:0 8px 32px #0002;align-content:start;gap:.5rem}
+      .photo-editor:not([hidden]) .photo-editor-head{position:sticky;top:-.85rem;z-index:2;margin:-.85rem -.85rem .25rem;padding:.65rem .85rem;background:var(--paper,#f6f3eb);border-bottom:1px solid var(--line,#deded6)}
+      .photo-editor:not([hidden]) #edit-photo-date,.photo-editor:not([hidden]) #edit-photo-place,.photo-editor:not([hidden]) #edit-photo-comment,.photo-editor:not([hidden]) #edit-photo-stage,.photo-editor:not([hidden]) #edit-photo-map-search,.photo-editor:not([hidden]) #edit-photo-map-url,.photo-editor:not([hidden]) #edit-photo-lat,.photo-editor:not([hidden]) #edit-photo-lon{font-size:16px}
+      .photo-editor:not([hidden]) #edit-photo-map-use,.photo-editor:not([hidden]) #edit-photo-delete{width:100%;min-height:44px}
+      .photo-editor:not([hidden]) button[type="submit"]{position:sticky;bottom:0;z-index:2;width:100%;min-height:48px;background:var(--forest,#274c41);color:#fff;font-weight:700;box-shadow:0 -8px 14px var(--paper,#f6f3eb);padding: .8rem}
+      .photo-editor:not([hidden]) .photo-editor-close{min-height:42px}
     }
   </style>
 </Base>
