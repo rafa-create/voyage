@@ -15,7 +15,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
-      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><label class="film-day-picker"><span class="sr-only">Choisir un jour du film</span><select id="film-day-select" aria-label="Choisir un jour du film" disabled><option>Chargement des jours…</option></select></label><span id="film-date"></span></div>
+      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select><span id="film-date"></span></div>
     </div>
     <div class="film-memory" id="film-memory">
       <div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div>
@@ -254,7 +254,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
   .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
   #film-map{position:absolute;inset:0}
-  .film-map-caption{position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:12px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
+  .film-map-caption{position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:12px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}.film-map-caption #film-day-select{pointer-events:auto;cursor:pointer;max-width:100%;border:1px solid var(--line);border-radius:3px;padding:4px 7px;background:var(--white);color:var(--forest);font:inherit}
   #film-place{font-weight:700}
   .film-memory{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:clamp(20px,3vw,38px);min-width:0}
   .film-memory .film-kind{color:var(--muted);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
