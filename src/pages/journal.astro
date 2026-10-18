@@ -65,9 +65,14 @@ import { chemin } from "../lib/paths";
           const link=document.createElement("a");link.className="photo-open";link.href="/galerie/?photo="+encodeURIComponent(photo.src);link.setAttribute("aria-label","Afficher la photo dans la galerie");
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Souvenir du voyage";img.loading="lazy";img.decoding="async";
           link.append(img);figure.append(link);
-          if(photo.legende||photo.alt||photo.lieu){
-            const caption=document.createElement("figcaption");caption.textContent=[photo.legende||photo.alt,photo.lieu].filter(Boolean).join(" · ");figure.append(caption);
-          }
+          const caption=document.createElement("figcaption");
+          const timeSource=String(photo.dateHeure||photo.datePrise||"");
+          const timeMatch=timeSource.match(/T(\d{2}:\d{2})/);
+          const time=timeMatch ? timeMatch[1] : "";
+          const place=String(photo.lieu||"").trim();
+          const description=String(photo.legende||photo.alt||"").trim();
+          caption.textContent=[description,time,place].filter(Boolean).filter((value,index,all)=>all.indexOf(value)===index).join(" · ");
+          if(caption.textContent)figure.append(caption);
           grid.append(figure);
         }
         const count=document.createElement("p");count.className="journal-day-count";count.textContent=items.length+" "+(items.length>1?"souvenirs":"souvenir");
@@ -90,7 +95,8 @@ import { chemin } from "../lib/paths";
     .journal-day-photos { margin-top: 12px; }
     .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
     .journal-day-photos .photo-open { display: block; overflow: hidden; }
-    .journal-day-photos .photo-open img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; }
+    .journal-day-photos .photo-tile { min-width: 0; width: 100%; }
+    .journal-day-photos .photo-open img { display: block; width: 100%; height: clamp(220px, 24vw, 360px); max-height: none; aspect-ratio: 4/3; object-fit: cover; }
     @media (min-width: 900px) {
       .journal-day-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
     }
