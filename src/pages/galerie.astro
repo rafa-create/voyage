@@ -36,7 +36,7 @@ import { chemin } from "../lib/paths";
           <button type="button" class="photo-open" data-photo={chemin(photo.src)} data-alt={photo.alt} aria-label={"Afficher en grand : " + photo.alt}>
             <img src={chemin(photo.src)} alt={photo.alt} loading="lazy" decoding="async" width="960" height="720" />
           </button>
-          <figcaption><a href={chemin("/etapes/" + photo.etape.slug + "/")}>{photo.etape.pays} · {photo.etape.ville}</a>{photo.legende ? " — " + photo.legende : ""}</figcaption>
+          <figcaption>{photo.legende || photo.alt}</figcaption>
         </figure>
       ))}
     </div>
@@ -259,7 +259,7 @@ import { chemin } from "../lib/paths";
       <label for="edit-photo-date">Date de prise de vue</label><input id="edit-photo-date" type="date"/>
       <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
       <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
-      <label for="edit-photo-stage">Étape du journal</label><select id="edit-photo-stage"><option value="">— Sans étape —</option></select>
+      <div hidden><label for="edit-photo-stage">Étape</label><select id="edit-photo-stage"><option value="">Sans étape</option></select></div>
       <label for="edit-photo-map-search">Rechercher sur Google Maps</label>
       <div class="photo-map-search"><input id="edit-photo-map-search" type="search" maxlength="240" placeholder="Nom du lieu, adresse…"/><button type="button" id="edit-photo-map-open">Rechercher</button></div>
       <label for="edit-photo-map-url">Lien Google Maps du point choisi</label>
