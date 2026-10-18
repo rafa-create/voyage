@@ -219,10 +219,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const target=detail?.date ? ordered.indexOf(detail.date) : -1;
         if(target>=0 && target!==index){index=target;render();}
       });
-      headingPrevious?.addEventListener("click",()=>previous.click());
-      headingNext?.addEventListener("click",()=>next.click());
-      previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
-      next.addEventListener("click",()=>{if(index>0){index--;render();}});
+      const goPrevious = () => { if(index < ordered.length - 1){ index++; render(); } };
+      const goNext = () => { if(index > 0){ index--; render(); } };
+      headingPrevious?.addEventListener("click",goPrevious);
+      headingNext?.addEventListener("click",goNext);
+      previous.addEventListener("click",goPrevious);
+      next.addEventListener("click",goNext);
       window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
       window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;render();}});
       render();
