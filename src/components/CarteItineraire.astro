@@ -275,6 +275,11 @@ const points = etapes
         } as maplibregl.IControl, "bottom-left");
 
         // Bouton indépendant à droite pour afficher directement la journée d’hier.
+          let yesterdayKeyForControl = "";
+          window.addEventListener("voyage:jour", (event) => {
+            const detail = (event as CustomEvent<{date?:string}>).detail;
+            yesterdayButton.style.display = detail?.date === yesterdayKeyForControl ? "none" : "";
+          });
           const yesterdayButton = document.createElement("button");
           yesterdayButton.type = "button";
           yesterdayButton.className = "map-today-control maplibregl-ctrl";
@@ -329,6 +334,7 @@ const points = etapes
             const yesterdayKey = new Intl.DateTimeFormat("en-CA", {
               timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
             }).format(yesterday);
+            yesterdayKeyForControl = yesterdayKey;
             for(const photo of (Array.isArray(photos)?photos:[])){
               if(!photo)continue;
               // Les coordonnées GPS suffisent à afficher une photo sur la carte :
@@ -410,6 +416,9 @@ const points = etapes
                   essential: true
                 });
                 window.dispatchEvent(new CustomEvent("voyage:jour", { detail: { date: targetDay } }));
+                if (targetDay === yesterdayKey) {
+                  yesterdayButton.click();
+                }
               };
               if (map.loaded()) animateToYesterday();
               else map.once("load", animateToYesterday);
