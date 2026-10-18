@@ -202,6 +202,17 @@ import { chemin } from "../lib/paths";
         player.style.aspectRatio = "16/9";
         player.style.background = "#000";
         figure.append(player);
+        const openVideo = document.createElement("button");
+        openVideo.type = "button";
+        openVideo.className = "photo-open gallery-file-video-open";
+        openVideo.dataset.videoFile = video.src;
+        openVideo.dataset.videoTitle = video.titre || "Vidéo du voyage";
+        openVideo.dataset.alt = openVideo.dataset.videoTitle;
+        openVideo.dataset.date = stamp;
+        openVideo.dataset.lieu = video.lieu || "";
+        openVideo.setAttribute("aria-label", "Lire dans le diaporama : " + openVideo.dataset.videoTitle);
+        openVideo.textContent = "Ouvrir dans le diaporama";
+        figure.append(openVideo);
         const caption = document.createElement("figcaption");
         caption.textContent = (video.titre || "Vidéo du voyage") + (stamp ? " · " + stamp.slice(0, 10) : "");
         const mapStep = linkedStep || [...steps].filter((step: any) => step.date <= stamp.slice(0, 10)).sort((a: any, b: any) => b.date.localeCompare(a.date))[0] || steps.find((step: any) => step.date === stamp.slice(0, 10));
@@ -288,6 +299,7 @@ import { chemin } from "../lib/paths";
     <button type="button" class="lightbox-prev" aria-label="Photo précédente">←</button>
     <img src="" alt="" />
     <iframe class="lightbox-video" title="Vidéo YouTube" hidden allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <video class="lightbox-file-video" title="Vidéo importée" hidden controls playsinline preload="metadata"></video>
     <button type="button" class="lightbox-next" aria-label="Photo suivante">→</button>
     <p class="lightbox-counter" aria-live="polite"></p>
     <p class="lightbox-details" id="lightbox-details"></p>
@@ -336,6 +348,7 @@ import { chemin } from "../lib/paths";
     const dialog = document.querySelector<HTMLDialogElement>("#visionneuse");
     const agrandissement = dialog?.querySelector("img");
     const videoPlayer = dialog?.querySelector<HTMLIFrameElement>(".lightbox-video");
+    const fileVideoPlayer = dialog?.querySelector<HTMLVideoElement>(".lightbox-file-video");
     const compteur = dialog?.querySelector<HTMLElement>(".lightbox-counter");
     const details = dialog?.querySelector<HTMLElement>("#lightbox-details");
     let photos: HTMLButtonElement[] = [];
@@ -408,13 +421,25 @@ import { chemin } from "../lib/paths";
       index = (next + photos.length) % photos.length;
       const bouton = photos[index];
       const videoId = bouton.dataset.video;
+      const fileVideoSrc = bouton.dataset.videoFile || "";
+      const showingVideo = !!videoId || !!fileVideoSrc;
       if (videoPlayer) {
         videoPlayer.hidden = !videoId;
         videoPlayer.title = bouton.dataset.videoTitle || "Vidéo YouTube";
         videoPlayer.src = videoId ? "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId) + "?autoplay=1&rel=0" : "";
       }
-      agrandissement.hidden = !!videoId;
-      agrandissement.src = videoId ? "" : (bouton.dataset.photo || "");
+      if (fileVideoPlayer) {
+        fileVideoPlayer.pause();
+        fileVideoPlayer.hidden = !fileVideoSrc;
+        fileVideoPlayer.removeAttribute("src");
+        if (fileVideoSrc) {
+          fileVideoPlayer.src = fileVideoSrc;
+          fileVideoPlayer.load();
+          void fileVideoPlayer.play().catch(() => {});
+        }
+      }
+      agrandissement.hidden = showingVideo;
+      agrandissement.src = showingVideo ? "" : (bouton.dataset.photo || "");
       agrandissement.alt = bouton.dataset.alt || "";
       if (compteur) compteur.textContent = (index + 1) + " / " + photos.length;
       const item=selectedPhoto();
@@ -431,7 +456,7 @@ import { chemin } from "../lib/paths";
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
       if (!dialog) return;
       photos = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
-        .filter(item => !!item.dataset.photo || !!item.dataset.video);
+        .filter(item => !!item.dataset.photo || !!item.dataset.video || !!item.dataset.videoFile);
       index = photos.indexOf(bouton);
       if (index < 0) photos = [bouton], index = 0;
       afficher(index);
@@ -463,6 +488,7 @@ import { chemin } from "../lib/paths";
       dialog.classList.remove("lightbox-fullscreen-mode");
       if (agrandissement) { agrandissement.removeAttribute("src"); agrandissement.hidden=false; }
       if(videoPlayer){videoPlayer.src="";videoPlayer.hidden=true;}
+      if(fileVideoPlayer){fileVideoPlayer.pause();fileVideoPlayer.removeAttribute("src");fileVideoPlayer.load();fileVideoPlayer.hidden=true;}
       if(details){details.textContent="";details.hidden=true;}
       if(editor)editor.hidden=true;
       index = -1;
@@ -555,7 +581,9 @@ import { chemin } from "../lib/paths";
   <style>
     .lightbox:not([open]){display:none}
     .lightbox{box-sizing:border-box;width:min(96vw,1100px);max-width:96vw;max-height:96dvh;overflow:auto;padding:3.5rem 1rem 1rem;position:relative}
-    .lightbox img{display:block;max-height:60vh;max-width:90vw;width:auto;height:auto;object-fit:contain;margin:0 auto}\n    .lightbox-video{display:block;width:min(90vw,1000px);aspect-ratio:16/9;height:auto;border:0;margin:0 auto}.lightbox-video[hidden]{display:none}
+    .lightbox img{display:block;max-height:60vh;max-width:90vw;width:auto;height:auto;object-fit:contain;margin:0 auto}\n    .lightbox-video,.lightbox-file-video{display:block;width:min(90vw,1000px);aspect-ratio:16/9;height:auto;border:0;margin:0 auto}.lightbox-video[hidden],.lightbox-file-video[hidden]{display:none}
+    :global(.gallery-file-video-open){display:block;width:100%;margin:.35rem 0;padding:.55rem .75rem;border:1px solid var(--line,#d8d8d0);border-radius:3px;background:var(--white,#fffdf8);color:var(--forest,#274c41);font:600 .8rem 'DM Sans',sans-serif;cursor:pointer}
+    :global(.gallery-file-video-open:hover){background:var(--forest,#274c41);color:#fff}
     .lightbox-close,.lightbox-edit{position:sticky;top:0;z-index:5;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#222;box-shadow:0 2px 12px #0002;font-size:1.35rem;cursor:pointer}
     .lightbox-close{position:absolute;top:.65rem;right:.65rem}.lightbox-edit{position:absolute;top:.65rem;right:3.8rem}
     .photo-editor{width:100%;max-width:640px;max-height:none;box-sizing:border-box;overflow:visible;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
@@ -571,7 +599,7 @@ import { chemin } from "../lib/paths";
     .photo-map-help{margin:0;color:var(--muted,#666);font-size:.82rem;line-height:1.45}
     @media(max-width:600px) and (orientation:portrait){
       .lightbox{position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;border-radius:0;padding:3.7rem 1rem max(1rem,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.65rem}
-      .lightbox img,.lightbox-video{flex:0 1 auto;width:100%;max-width:100%;max-height:40dvh;object-fit:contain;margin:auto}.lightbox-video{height:auto;aspect-ratio:16/9}
+      .lightbox img,.lightbox-video,.lightbox-file-video{flex:0 1 auto;width:100%;max-width:100%;max-height:40dvh;object-fit:contain;margin:auto}.lightbox-video,.lightbox-file-video{height:auto;aspect-ratio:16/9}
       .lightbox-counter{margin:.1rem 0 .15rem;text-align:center;flex-shrink:0;line-height:1.2}
       .lightbox-details{margin:-.65rem 0 .25rem;text-align:center;font-size:.9rem;line-height:1.4;overflow-wrap:anywhere;word-break:normal;display:flex;flex-direction:column;gap:.2rem;flex-shrink:0;max-width:100%;padding:0 .25rem;box-sizing:border-box}
       .lightbox-details span{display:block;max-width:100%;white-space:normal}
