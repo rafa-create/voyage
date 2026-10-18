@@ -361,7 +361,6 @@ import { chemin } from "../lib/paths";
     const details = dialog?.querySelector<HTMLElement>("#lightbox-details");
     let photos: HTMLButtonElement[] = [];
     let index = -1;
-    let touchX = 0;
     let isAdmin = false;
     let adminPhotos: any[] = [];
     const editor = document.querySelector<HTMLFormElement>("#photo-editor");
@@ -485,13 +484,8 @@ import { chemin } from "../lib/paths";
       if (evenement.key === "ArrowLeft") afficher(index - 1);
       if (evenement.key === "ArrowRight") afficher(index + 1);
     });
-    dialog?.addEventListener("touchstart", (event) => {
-      touchX = event.changedTouches[0]?.clientX || 0;
-    }, { passive: true });
-    dialog?.addEventListener("touchend", (event) => {
-      const delta = (event.changedTouches[0]?.clientX || 0) - touchX;
-      if (Math.abs(delta) > 45) afficher(index + (delta < 0 ? 1 : -1));
-    }, { passive: true });
+    // Pas de navigation au geste tactile : le zoom/pincement ne doit jamais changer de photo.
+    // La navigation reste explicite via les flèches et les touches du clavier.
     dialog?.querySelector(".lightbox-close")?.addEventListener("click", () => dialog.close());
     dialog?.querySelector(".lightbox-edit")?.addEventListener("click", () => { if(editor) editor.hidden=!editor.hidden; });
     document.querySelector<HTMLButtonElement>("#edit-photo-close")?.addEventListener("click", () => { if (editor) editor.hidden = true; });
