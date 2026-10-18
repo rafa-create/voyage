@@ -75,14 +75,18 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           return await response.json();
         } catch { return {}; }
       };
-      const [photoData, eventData] = await Promise.all([
+      const [photoData, eventData, fileVideoData] = await Promise.all([
         safeJson("/api/public/photos"),
-        safeJson("/api/public/carte-evenements")
+        safeJson("/api/public/carte-evenements"),
+        safeJson("/api/public/videos-fichiers")
       ]);
       const photos:DailyPhoto[] = photoData.photos || [];
+      const fileVideos:any[] = fileVideoData.videos || [];
+      const videoDateKey = (video:any) => String(video.date || video.ajouteLe || "").slice(0,10);
       const courses = eventData.courses || [];
       const dates = new Set<string>();
       for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
+      for (const video of fileVideos) { const d=videoDateKey(video); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
       const activityDate = (course:any) => String(course.date || (course.fin ? new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(course.fin))) : "")).slice(0,10);
       for (const course of courses) {
         const d=activityDate(course);
@@ -124,7 +128,19 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           caption.textContent=place+time;
           figure.append(caption);grid.append(figure);
         }
-        empty.hidden = dayPhotos.length>0;
+        const dayVideos = fileVideos.filter(video=>videoDateKey(video)===day)
+          .sort((a,b)=>String(b.date||b.ajouteLe||"").localeCompare(String(a.date||a.ajouteLe||"")));
+        for (const video of dayVideos) {
+          const figure=document.createElement("figure");figure.className="photo-tile daily-video-tile";
+          const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;
+          player.setAttribute("aria-label",video.titre||"Vidéo du voyage");
+          player.style.width="100%";player.style.aspectRatio="16/9";player.style.background="#000";
+          figure.append(player);
+          const caption=document.createElement("figcaption");
+          caption.textContent=(video.titre||"Vidéo du voyage")+(video.date?" · "+String(video.date).slice(11,16):"");
+          figure.append(caption);grid.append(figure);
+        }
+        empty.hidden = dayPhotos.length>0 || dayVideos.length>0;
         if (activitiesWrap && activitiesGrid) {
           activitiesGrid.replaceChildren();
           const dayActivities = courses.filter((course:any) => activityDate(course) === day)
