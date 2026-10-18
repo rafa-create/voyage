@@ -425,15 +425,15 @@ export default {
       const longitude=input.longitude===""||input.longitude==null?null:Number(input.longitude);
       if((latitude===null)!==(longitude===null)||(latitude!==null&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>85||Math.abs(longitude)>180)))return error("Coordonnées GPS invalides.");
       const all=await steps(env);
-      const etape=typeof input.etape==="string"?input.etape:"";
-      if(!etape||!slugOk(etape)||!all.some(s=>s.slug===etape))return error("Choisissez une étape valide pour cette vidéo.");
+      const etape=typeof input.etape==="string"&&input.etape?input.etape:"sans-etape";
+      if(etape!=="sans-etape"&&(!slugOk(etape)||!all.some(s=>s.slug===etape)))return error("Étape inconnue.");
       let sourceSlug=null,sourceList=null,video=null;
-      for(const step of all){
-        const key="__meta/videos/"+step.slug+".json";
+      for(const slug of [...all.map(step=>step.slug),"sans-etape"]){
+        const key="__meta/videos/"+slug+".json";
         const list=await getJSON(env.PHOTOS_PRIVEES,key,[]);
         if(!Array.isArray(list))continue;
         const found=list.find(v=>v.id===input.id);
-        if(found){sourceSlug=step.slug;sourceList=list;video=found;break;}
+        if(found){sourceSlug=slug;sourceList=list;video=found;break;}
       }
       if(!video)return error("Vidéo introuvable.",404);
       const updated={...video,url:"https://www.youtube.com/watch?v="+youtubeId,titre:input.titre.trim(),
@@ -446,7 +446,7 @@ export default {
       }else{
         const targetKey="__meta/videos/"+etape+".json";
         const target=await getJSON(env.PHOTOS_PRIVEES,targetKey,[]);
-        if(!Array.isArray(target)||target.length>=200)return error("Trop de vidéos sur cette étape.");
+        if(!Array.isArray(target)||target.length>=200)return error("Trop de vidéos dans cette catégorie.");
         await putJSON(env.PHOTOS_PRIVEES,"__meta/videos/"+sourceSlug+".json",sourceList.filter(v=>v.id!==input.id));
         await putJSON(env.PHOTOS_PRIVEES,targetKey,[...target,updated]);
       }
