@@ -516,9 +516,11 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   background: #173d3b;
   color: #fffdf8;
 }
+.map-visibility-toolbar #map-visibility-toggle { flex: 0 0 auto; width: auto; white-space: nowrap; }
 @media(max-width:600px) {
   .map-visibility-toolbar { gap: 6px; padding: 8px; }
   .map-visibility-toolbar button { flex: 1 1 auto; padding: 8px 9px; font-size: 12px; }
+  .map-visibility-toolbar #map-visibility-toggle { flex: 0 0 auto; width: auto; }
   #map-links-control-slot { flex: 1 1 auto; }
   #map-links-control-slot button { width: 100%; }
 }
