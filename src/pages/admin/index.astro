@@ -683,7 +683,18 @@ import { chemin } from "../../lib/paths";
         }
         stage="transcodage en H.264/AAC MP4";
         message("Conversion en MP4/H.264 "+(index+1)+"/"+total+" · "+file.name+" — garde cette page ouverte.");
-        await ffmpeg.run("-i",inputName,"-c:v","libx264","-preset","ultrafast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart",outputName);
+        try {
+          await ffmpeg.run("-i",inputName,"-c:v","libx264","-preset","ultrafast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart",outputName);
+        } catch (runError:any) {
+          // Certaines versions de ffmpeg.wasm sur Safari remontent ExitStatus
+          // même pour exit(0). Le fichier de sortie permet de confirmer le succès.
+          const status=runError?.status;
+          const exitZero=status===0 || /(?:Program terminated with )?exit\\(0\\)/i.test(String(runError?.message||runError));
+          let outputExists=false;
+          try { const candidate=ffmpeg.FS("readFile",outputName); outputExists=Boolean(candidate?.length); } catch {}
+          if (!(exitZero && outputExists)) throw runError;
+          ffmpegLog("FFmpeg a terminé avec exit(0) malgré une exception du wrapper ; sortie présente, poursuite de la validation.");
+        }
         stage="lecture et validation du fichier converti";
         const output=ffmpeg.FS("readFile",outputName);
         if(!output?.length)throw new Error("FFmpeg n’a produit aucun octet en sortie.");
