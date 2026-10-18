@@ -44,7 +44,7 @@ async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
     const head=await bucket.head(key);
     if(!head)return new Response("Introuvable",{status:404});
     const total=head.size;
-    const match=rangeHeader.trim().startsWith("bytes=")?rangeHeader.trim().slice(6).split("-"):null;
+    const match=/^bytes=(\\d*)-(\\d*)$/.exec(rangeHeader.trim());
     if(!match||(!match[1]&&!match[2]))return new Response(null,{status:416,headers:{"Content-Range":"bytes */"+total,"Accept-Ranges":"bytes"}});
     let start,end;
     if(!match[1]){const suffix=Number(match[2]);if(!Number.isSafeInteger(suffix)||suffix<=0)return new Response(null,{status:416,headers:{"Content-Range":"bytes */"+total,"Accept-Ranges":"bytes"}});start=Math.max(0,total-suffix);end=total-1;}
