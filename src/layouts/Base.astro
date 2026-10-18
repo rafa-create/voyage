@@ -4,11 +4,12 @@ import { chemin } from "../lib/paths";
 
 interface Props {
   title: string;
+  headerTitle?: string;
   description?: string;
   active?: "accueil" | "journal" | "pays" | "galerie" | "defi";
 }
 
-const { title, description = "Un carnet de voyage en images, en mots et en vidéos.", active } = Astro.props;
+const { title, headerTitle = title, description = "Un carnet de voyage en images, en mots et en vidéos.", active } = Astro.props;
 const nav = [
   { label: "Accueil", href: "/", id: "accueil" },
   { label: "Journal", href: "/journal/", id: "journal" },
@@ -34,8 +35,9 @@ const nav = [
       <div class="container header-inner">
         <a class="brand" href={chemin("/")} aria-label="Carnet de voyage, accueil">
           
-          <span>Carnet<span class="brand-accent">.</span>voyage</span>
+          <span>Carnet de voyage</span>
         </a>
+        <span class="header-page-title" aria-current="page">{headerTitle}</span>
         <nav class="main-nav" aria-label="Navigation principale">
           {nav.map((lien) => (
             <a
