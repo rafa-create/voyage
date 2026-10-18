@@ -31,7 +31,7 @@ import { chemin } from "../lib/paths";
         const card=document.createElement("div");card.className="card-body";
         const label=document.createElement("span");label.className="card-meta";label.textContent=e.date+" · "+e.ville;
         const heading=document.createElement("h2");heading.textContent=e.titre;
-        const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape ↗";
+        const more=document.createElement("span");more.className="card-more";more.textContent="Voir l'étape";
         card.append(label,heading,more);link.append(card);list.append(link);
       }
     }
