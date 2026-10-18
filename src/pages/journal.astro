@@ -15,7 +15,6 @@ import { chemin } from "../lib/paths";
     <section class="container section journal-list journal-stages" aria-label="Étapes facultatives du voyage">
       <div class="journal-stages-heading">
         <h2>Étapes du voyage <span class="heading-dot">.</span></h2>
-        <button type="button" id="add-stage-open" class="journal-add-stage" aria-label="Créer une nouvelle étape" title="Créer une nouvelle étape" hidden>+</button>
       </div>
       <p class="journal-stages-intro">Quelques repères pour raconter le parcours — les souvenirs n'ont pas besoin d'être associés à une étape.</p>
       <ol class="timeline">
@@ -34,36 +33,7 @@ import { chemin } from "../lib/paths";
     </section>
   )}
 
-  <div id="add-stage-dialog" class="journal-stage-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="add-stage-dialog-title">
-    <div class="journal-stage-dialog-head">
-      <strong id="add-stage-dialog-title">06 / ITINÉRAIRE · Créer une nouvelle étape</strong>
-      <button type="button" id="add-stage-close" aria-label="Fermer">×</button>
-    </div>
-    <iframe id="add-stage-frame" title="Créer une nouvelle étape" loading="lazy"></iframe>
-  </div>
-
   <script>
-    const addStageButton = document.querySelector<HTMLButtonElement>("#add-stage-open");
-    const addStageDialog = document.querySelector<HTMLElement>("#add-stage-dialog");
-    const addStageFrame = document.querySelector<HTMLIFrameElement>("#add-stage-frame");
-    const closeStageDialog = () => { if (addStageDialog) addStageDialog.hidden = true; document.body.classList.remove("stage-dialog-open"); };
-    // Le bouton de création est réservé aux administrateurs ; il reste masqué par défaut.
-    fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
-      .then(async response => response.ok ? response.json() : null)
-      .then(user => {
-        if (addStageButton) addStageButton.hidden = user?.isAdmin !== true;
-      })
-      .catch(() => { if (addStageButton) addStageButton.hidden = true; });
-    addStageButton?.addEventListener("click", () => {
-      if (!addStageDialog || !addStageFrame) return;
-      if (!addStageFrame.src) addStageFrame.src = "/admin/?context=etapes";
-      addStageDialog.hidden = false;
-      document.body.classList.add("stage-dialog-open");
-    });
-    document.querySelector("#add-stage-close")?.addEventListener("click", closeStageDialog);
-    addStageDialog?.addEventListener("click", event => { if (event.target === addStageDialog) closeStageDialog(); });
-    document.addEventListener("keydown", event => { if (event.key === "Escape" && addStageDialog && !addStageDialog.hidden) closeStageDialog(); });
-
     type Souvenir = {src:string;alt?:string;legende?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;lieu?:string;etape?:string};
     const root=document.querySelector<HTMLElement>("#journal-souvenirs");
     const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.ajouteLe||"").slice(0,10);
@@ -114,22 +84,13 @@ import { chemin } from "../lib/paths";
     .journal-stages { border-top: 1px solid var(--line); }
     .journal-stages-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
     .journal-stages-heading > h2 { margin: 0; }
-    .journal-add-stage { display: inline-grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; background: var(--white); color: var(--forest); font: 400 1.4rem/1 'DM Sans',sans-serif; cursor: pointer; transition: background .18s ease, color .18s ease, border-color .18s ease; }
-    .journal-add-stage:hover { background: var(--forest); border-color: var(--forest); color: white; }
-    .journal-add-stage:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
-    .journal-stage-dialog[hidden] { display: none !important; }
-    .journal-stage-dialog { position: fixed; z-index: 1000; inset: 0; display: flex; flex-direction: column; background: var(--paper, #f6f3eb); padding: min(4vh, 28px) max(12px, 3vw); }
-    .journal-stage-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 980px; width: 100%; margin: 0 auto; padding: 12px 16px; background: var(--white); border: 1px solid var(--line); }
-    .journal-stage-dialog-head strong { font-size: .88rem; }
-    .journal-stage-dialog-head button { border: 0; background: transparent; color: var(--forest); font-size: 1.5rem; cursor: pointer; }
-    .journal-stage-dialog iframe { display: block; width: 100%; max-width: 980px; flex: 1; min-height: 0; margin: 0 auto; border: 1px solid var(--line); border-top: 0; background: var(--white); }
-    body.stage-dialog-open { overflow: hidden; }
     .journal-stages > h2 { margin: 0 0 8px; }
     .journal-stages-intro { color: var(--muted); margin: 0 0 28px; max-width: 620px; }
     .journal-day-card { min-width: 0; }
     .journal-day-card > h2 { margin: 0; font-size: 1.2rem; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
+    .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .journal-day-photos .photo-open { display: block; overflow: hidden; }
     .journal-day-photos .photo-open img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; }
     .journal-day-photos figcaption { margin-top: 7px; color: var(--muted); font-size: .78rem; }
