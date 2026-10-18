@@ -15,7 +15,7 @@ import { chemin } from "../../lib/paths";
         <a class="country-card" href={chemin("/pays/"+item.slug+"/")}>
           <span class="country-index">{String(i+1).padStart(2,"0")} / DESTINATION</span>
           <h2>{item.nom}</h2>
-          <span>{item.etapes.length} étapes ↗</span>
+          <span>{item.etapes.length} étapes</span>
         </a>
       ))}
     </div>
@@ -34,7 +34,7 @@ import { chemin } from "../../lib/paths";
         link.href="/pays/"+slugify(name)+"/";
         const label=document.createElement("span");label.className="country-index";label.textContent=String(index+1).padStart(2,"0")+" / DESTINATION";
         const h=document.createElement("h2");h.textContent=name;
-        const footer=document.createElement("span");footer.textContent=count+" étape(s) ↗";
+        const footer=document.createElement("span");footer.textContent=count+" étape(s)";
         link.append(label,h,footer);grid.append(link);
       }
     }).catch(()=>{});
