@@ -113,12 +113,37 @@ export default {
     const url=new URL(request.url),path=url.pathname;
     // The public-site mode is stored separately from photo visibility. Default is open
     // so a missing setting never accidentally locks out visitors.
+    // La page et l'API de demande d'accès restent accessibles même quand le site est restreint.
+    const accessRequestEndpoint=path==="/api/access/request";
+    if(accessRequestEndpoint&&request.method==="POST"){
+      if(!env.PHOTOS_PRIVEES)return error("Service de demande d'accès indisponible.",503);
+      const input=await readBody(request);
+      const email=typeof input?.email==="string"?input.email.trim().toLowerCase():"";
+      if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return error("Adresse e-mail invalide.");
+      const key="__meta/site-access-requests.json";
+      const requests=await getJSON(env.PHOTOS_PRIVEES,key,[]);
+      const previous=requests.find(x=>x.email===email);
+      if(previous?.status==="pending")return json({ok:true,message:"Ta demande est déjà en attente."},200);
+      if(previous?.status==="approved")return json({ok:true,message:"Cette adresse a déjà été approuvée. Utilise le bouton Connexion pour accéder au site."},200);
+      const next=requests.filter(x=>x.email!==email);
+      next.push({id:crypto.randomUUID(),email,status:"pending",requestedAt:new Date().toISOString()});
+      await putJSON(env.PHOTOS_PRIVEES,key,next.slice(-500));
+      return json({ok:true,message:"Demande envoyée. L'administrateur pourra l'examiner."},201);
+    }
     const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
-    if(!privatePath){
+    const accessRequestPage=path==="/demander-acces"||path==="/demander-acces/";
+    if(!privatePath&&!accessRequestPage&&!accessRequestEndpoint){
       const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       if(siteAccess?.mode==="restricted"){
         const access=await requireAccess(request,env,false);
         if(access.error)return access.error;
+        if(!access.user.isAdmin){
+          const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
+          if(!approved.includes(access.user.email)){
+            if(path.startsWith("/api/"))return error("Accès non autorisé. Demande l'accès au carnet.",403);
+            return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
+          }
+        }
       }
     }
 
@@ -208,6 +233,26 @@ export default {
       return json({photos:await listedPhotos(env,"prive")});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
+    if(path==="/api/prive/admin/site-access-requests"&&request.method==="GET"){
+      const requests=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",[]);
+      return json({requests:requests.slice().sort((a,b)=>b.requestedAt.localeCompare(a.requestedAt))});
+    }
+    if(path==="/api/prive/admin/site-access-requests"&&request.method==="POST"){
+      if(!mutationOk(request))return error("Action non autorisée.",403);
+      const input=await readBody(request);
+      if(typeof input?.email!=="string"||!["approved","rejected","pending"].includes(input?.status))return error("Demande invalide.");
+      const email=input.email.trim().toLowerCase();
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return error("Adresse e-mail invalide.");
+      const requests=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",[]);
+      const found=requests.find(x=>x.email===email);
+      if(!found)return error("Demande introuvable.",404);
+      found.status=input.status;found.reviewedAt=new Date().toISOString();
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",requests);
+      const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
+      const next=input.status==="approved"?Array.from(new Set([...approved,email])):approved.filter(x=>x!==email);
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",next);
+      return json({ok:true,status:found.status});
+    }
     if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
       const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       return json({mode:config?.mode==="restricted"?"restricted":"open"});
