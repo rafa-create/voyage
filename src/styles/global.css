@@ -480,6 +480,10 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   color: #fff;
 }
 .memory-map-popup .maplibregl-popup-content {
+  box-sizing: border-box;
+  max-height: min(55vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px 14px 14px;
 }
 
