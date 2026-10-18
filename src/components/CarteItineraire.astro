@@ -333,13 +333,30 @@ const points = etapes
                 paint:{"text-color":"#b78369","text-halo-color":"#fffdf8","text-halo-width":1.1,"text-opacity":.82}});
               syncVoyageLinkVisibility();
             }
-            const showTrace=async(id:string,date:string)=>{
+            type RoutePrecision = "overview" | "detail" | "full";
+            const routePrecisionForZoom=(zoom:number):RoutePrecision=>zoom<8?"overview":zoom<12?"detail":"full";
+            const routeCache=new Map<string,[number,number][]>();
+            const fetchRoute=async(id:string,precision:RoutePrecision):Promise<[number,number][]|null>=>{
+              const key=id+":"+precision;
+              const cached=routeCache.get(key);
+              if(cached)return cached;
+              const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(id)+"?precision="+precision,{cache:"no-store"});
+              if(!response.ok)return null;
+              const result=await response.json();
+              const route=(Array.isArray(result.route)?result.route:[]).filter(
+                (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
+              if(route.length<2)return null;
+              routeCache.set(key,route);
+              return route;
+            };
+            let selectedTraceId:string|null=null;
+            let selectedTraceDate="";
+            const showTrace=async(id:string,date:string,fitMap=true)=>{
+              selectedTraceId=id;
+              selectedTraceDate=date;
               try{
-                const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(id),{cache:"no-store"});
-                if(!response.ok)return;
-                const result=await response.json();
-                const route=(Array.isArray(result.route)?result.route:[]).filter(
-                  (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
+                const route=await fetchRoute(id,routePrecisionForZoom(map.getZoom()));
+                if(!route)return;
                 if(route.length<2)return;
                 const line={type:"Feature" as const,properties:{date},
                   geometry:{type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
@@ -379,16 +396,13 @@ const points = etapes
             allTracesButton.setAttribute("aria-label","Afficher tous les liens entre les étapes");
             allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
-            const loadAllTraces=async()=>{
+            const loadAllTraces=async(fitMap=true)=>{
               const activities=memories.filter(e=>e.type==="sport"&&e.id);
+              const precision=routePrecisionForZoom(map.getZoom());
               const routes=await Promise.all(activities.map(async activity=>{
                 try{
-                  const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(activity.id!),{cache:"no-store"});
-                  if(!response.ok)return null;
-                  const result=await response.json();
-                  const route=(Array.isArray(result.route)?result.route:[]).filter(
-                    (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
-                  return route.length>=2?route.map(p=>[p[1],p[0]] as [number,number]):null;
+                  const route=await fetchRoute(activity.id!,precision);
+                  return route?route.map(p=>[p[1],p[0]] as [number,number]):null;
                 }catch{return null;}
               }));
               const features=routes.map((route,index)=>({route,activity:activities[index]}))
@@ -422,7 +436,7 @@ const points = etapes
               for(const feature of features){
                 for(const coordinate of feature.geometry.coordinates)bounds.extend(coordinate);
               }
-              if(!bounds.isEmpty())map.fitBounds(bounds,{padding:60,maxZoom:12,duration:650});
+              if(fitMap&&!bounds.isEmpty())map.fitBounds(bounds,{padding:60,maxZoom:12,duration:650});
             };
             allTracesButton.addEventListener("click",()=>{
               voyageLinksHidden = !voyageLinksHidden;
@@ -448,6 +462,16 @@ const points = etapes
                 mapVisibilityToggle.textContent = "Afficher la carte";
                 mapVisibilityToggle.setAttribute("aria-expanded", "false");
               }
+            });
+            // Les tracés changent de résolution aux seuils de zoom, sans recharger
+            // une résolution déjà reçue pour une activité.
+            let appliedPrecision=routePrecisionForZoom(map.getZoom());
+            map.on("zoomend",()=>{
+              const precision=routePrecisionForZoom(map.getZoom());
+              if(precision===appliedPrecision)return;
+              appliedPrecision=precision;
+              if(map.getSource("tous-les-traces"))void loadAllTraces(false);
+              if(selectedTraceId)void showTrace(selectedTraceId,selectedTraceDate,false);
             });
             // Les tracés GPS sont chargés et affichés automatiquement à l'ouverture.
             void loadAllTraces();
