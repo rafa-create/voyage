@@ -156,7 +156,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }));
       daySelect.disabled=false;
     }
-    let index=0,playing=false,timer:number|undefined,routeRequest=0;
+    const arrivalIndex=sequence.findIndex(item=>item.date.slice(5)==="09-25");
+    let index=arrivalIndex>=0?arrivalIndex:0,playing=false,timer:number|undefined,routeRequest=0;
     const clearActivityRoute=()=>{
       const source=map.getSource("film-activity-route") as maplibregl.GeoJSONSource|undefined;
       source?.setData({type:"FeatureCollection",features:[]});
