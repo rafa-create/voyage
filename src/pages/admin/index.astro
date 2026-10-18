@@ -79,6 +79,24 @@ import { chemin } from "../../lib/paths";
           <p id="video-feedback" role="status" class="admin-feedback"></p>
         </form>
         <div id="video-list" class="admin-video-list"></div>
+        <hr class="admin-video-divider"/>
+        <h3>Importer un fichier vidéo</h3>
+        <form id="video-file-form" class="admin-stack">
+          <label for="video-file-etape">Étape associée (facultatif)</label>
+          <select id="video-file-etape"></select>
+          <label for="video-file-visibility">Visibilité</label>
+          <select id="video-file-visibility"><option value="public">Publique</option><option value="prive">Privée</option></select>
+          <label for="video-files" class="admin-dropzone">
+            <strong>+ Choisir des vidéos</strong>
+            <span>MP4, MOV, WebM ou OGV · Plusieurs fichiers · 95 Mo maximum par vidéo</span>
+          </label>
+          <input id="video-files" class="visually-hidden" type="file" accept="video/mp4,video/quicktime,video/webm,video/ogg,.mp4,.m4v,.mov,.webm,.ogv" multiple />
+          <div id="chosen-video-files" class="chosen-files"></div>
+          <button class="admin-primary" type="submit">Envoyer les vidéos</button>
+          <p class="admin-note">Les fichiers sont envoyés tels quels. Avant une publication publique, vérifie qu’ils ne contiennent pas de métadonnées de localisation. Utilise « Privée » pour conserver une vidéo dans le bucket protégé.</p>
+          <p id="video-file-feedback" role="status" class="admin-feedback"></p>
+        </form>
+        <div id="video-file-list" class="admin-video-file-list"></div>
       </section>
 
       <section class="admin-panel">
@@ -148,10 +166,11 @@ import { chemin } from "../../lib/paths";
     type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null; prive:boolean };
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
     const status = $("admin-status");
-    const selectors = ["active-select","upload-etape","video-etape","edit-story-step"];
+    const selectors = ["active-select","upload-etape","video-etape","video-file-etape","edit-story-step"];
     let etapes:Etape[]=[];
     let photos:Photo[]=[];
     let selected:Chosen[]=[];
+    let selectedVideoFiles:File[]=[];
 
     async function api(path:string, options?:RequestInit){
       const res=await fetch(path,{credentials:"same-origin",cache:"no-store",...options});
@@ -170,7 +189,7 @@ import { chemin } from "../../lib/paths";
         if(!select)continue;
         select.replaceChildren();
         if(id==="upload-etape")select.append(new Option("Sans étape",""));
-        if(id==="video-etape")select.append(new Option("Sans étape","sans-etape"));
+        if(id==="video-etape"||id==="video-file-etape")select.append(new Option("Sans étape","sans-etape"));
         for(const e of etapes){
           const option=document.createElement("option");
           option.value=e.slug;option.textContent=e.ville+" · "+e.pays;
@@ -178,7 +197,7 @@ import { chemin } from "../../lib/paths";
         }
         const choice=before[id];
         const current=etapes.find(e=>e.statut==="actuelle");
-        select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice===""||id==="video-etape"&&choice==="sans-etape")?choice:(id==="upload-etape"||id==="video-etape")?(id==="video-etape"?"sans-etape":""):current?.slug||etapes[0]?.slug||"";
+        select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice===""||(id==="video-etape"||id==="video-file-etape")&&choice==="sans-etape")?choice:(id==="upload-etape"||id==="video-etape"||id==="video-file-etape")?((id==="video-etape"||id==="video-file-etape")?"sans-etape":""):current?.slug||etapes[0]?.slug||"";
       }
       const filter=$<HTMLSelectElement>("library-filter");
       if(filter){
@@ -197,6 +216,7 @@ import { chemin } from "../../lib/paths";
       const storySelect=$<HTMLSelectElement>("edit-story-step");
       if(storySelect){storySelect.replaceChildren(...etapes.map(e=>new Option(e.ville+" · "+e.pays,e.slug)));const active=etapes.find(e=>e.slug===storySelect.value)||etapes.find(e=>e.statut==="actuelle")||etapes[0];if(active)storySelect.value=active.slug;const text=$<HTMLTextAreaElement>("edit-story-text");if(text)text.value=(await api("/api/prive/etapes")).etapes.find((e:Etape)=>e.slug===active?.slug)?.texte||"";}
       await renderVideos();
+      await renderVideoFiles();
       const accessConfig=await api("/api/prive/admin/site-access");
       const accessMode=$<HTMLSelectElement>("site-access-mode");
       if(accessMode)accessMode.value=accessConfig.mode==="restricted"?"restricted":"open";
@@ -501,6 +521,72 @@ import { chemin } from "../../lib/paths";
       }
     }
     $("video-etape")?.addEventListener("change",()=>{renderVideos().catch(()=>{});});
+    function renderChosenVideoFiles(){
+      const list=$("chosen-video-files");if(!list)return;
+      list.replaceChildren();
+      for(const file of selectedVideoFiles){
+        const row=document.createElement("div");row.className="chosen-file";
+        const details=document.createElement("div");details.className="chosen-details";
+        const name=document.createElement("strong");name.textContent=file.name;
+        const size=document.createElement("span");size.textContent=(file.size/1024/1024).toLocaleString("fr-FR",{maximumFractionDigits:1})+" Mo";
+        details.append(name,size);row.append(details);list.append(row);
+      }
+    }
+    $("video-files")?.addEventListener("change",e=>{
+      selectedVideoFiles=Array.from((e.target as HTMLInputElement).files||[]);
+      renderChosenVideoFiles();
+      message("video-file-feedback",selectedVideoFiles.length+" fichier(s) vidéo sélectionné(s).");
+    });
+    async function renderVideoFiles(){
+      const list=$("video-file-list");if(!list)return;
+      const data=await api("/api/prive/admin/videos-fichiers");
+      list.replaceChildren();
+      if(!data.videos.length){const p=document.createElement("p");p.className="admin-note";p.textContent="Aucun fichier vidéo importé pour le moment.";list.append(p);return;}
+      for(const video of data.videos){
+        const row=document.createElement("div");row.className="admin-video-file-item";
+        const details=document.createElement("div");details.className="chosen-details";
+        const title=document.createElement("strong");title.textContent=video.titre;
+        const meta=document.createElement("span");meta.textContent=[video.visibilite==="prive"?"Privée":"Publique",video.etape?(etapes.find(x=>x.slug===video.etape)?.ville||video.etape):"Sans étape",video.date||"Date inconnue"].join(" · ");
+        const link=document.createElement("a");link.href=video.src;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Ouvrir";
+        const del=document.createElement("button");del.type="button";del.className="admin-small-danger";del.textContent="Supprimer";
+        del.addEventListener("click",async()=>{
+          if(!window.confirm("Supprimer définitivement ce fichier vidéo de R2 ?"))return;
+          del.disabled=true;
+          try{await post("/api/prive/admin/video-file-supprimer",{key:video.key,visibilite:video.visibilite});await renderVideoFiles();message("video-file-feedback","Vidéo supprimée du stockage.");}
+          catch(err){message("video-file-feedback",String(err));del.disabled=false;}
+        });
+        details.append(title,meta);row.append(details,link,del);list.append(row);
+      }
+    }
+    $<HTMLFormElement>("video-file-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const form=e.currentTarget as HTMLFormElement;
+      const btn=form.querySelector<HTMLButtonElement>("button[type=submit]");
+      if(!selectedVideoFiles.length){message("video-file-feedback","Choisis d’abord une ou plusieurs vidéos.");return;}
+      if(btn)btn.disabled=true;
+      let done=0;
+      try{
+        for(const file of selectedVideoFiles){
+          if(file.size>95*1024*1024)throw Error(file.name+" dépasse 95 Mo.");
+          const extension=file.name.split(".").pop()?.toLowerCase()||"";
+          const mimeByExtension:Record<string,string>={mp4:"video/mp4",m4v:"video/x-m4v",mov:"video/quicktime",webm:"video/webm",ogv:"video/ogg"};
+          const type=file.type||mimeByExtension[extension];
+          if(!type||!Object.values(mimeByExtension).includes(type))throw Error("Format vidéo non pris en charge : "+file.name);
+          const params=new URLSearchParams({visibilite:$<HTMLSelectElement>("video-file-visibility")?.value||"public",titre:file.name.replace(/\.[^.]+$/,"").slice(0,180)});
+          const slug=$<HTMLSelectElement>("video-file-etape")?.value||"sans-etape";
+          if(slug!=="sans-etape")params.set("etape",slug);
+          message("video-file-feedback","Envoi "+(done+1)+"/"+selectedVideoFiles.length+" · "+file.name);
+          await api("/api/prive/admin/upload-video?"+params.toString(),{method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":type},body:file});
+          done++;
+        }
+        selectedVideoFiles=[];
+        const input=$<HTMLInputElement>("video-files");if(input)input.value="";
+        renderChosenVideoFiles();
+        await refresh();
+        message("video-file-feedback",done+" vidéo(s) enregistrée(s) dans R2.");
+      }catch(err){message("video-file-feedback",done+" envoi(s) réussi(s). "+(err instanceof Error?err.message:"Erreur."));await renderVideoFiles().catch(()=>{});}
+      finally{if(btn)btn.disabled=false;}
+    });
     $<HTMLFormElement>("video-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
       try{
@@ -643,6 +729,13 @@ import { chemin } from "../../lib/paths";
     .admin-dropzone strong{font-size:1rem}.admin-dropzone span{font-size:.74rem;color:var(--muted)}
     .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
     .chosen-files,.admin-photo-list{display:grid;grid-template-columns:1fr;gap:8px}
+    .admin-video-divider{border:0;border-top:1px solid var(--line);margin:24px 0}
+    .admin-video-file-list{display:grid;gap:8px;margin-top:16px}
+    .admin-video-file-item{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);min-width:0}
+    .admin-video-file-item .chosen-details{flex:1;min-width:0}
+    .admin-video-file-item strong{overflow-wrap:anywhere;font-size:.8rem}
+    .admin-video-file-item span{font-size:.7rem;color:var(--muted)}
+    .admin-video-file-item a{font-size:.78rem;font-weight:700;color:var(--forest);white-space:nowrap}
     .chosen-file,.admin-photo-item{border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:8px;min-width:0}
     .chosen-file img,.admin-photo-item>img{width:57px;height:58px;object-fit:cover;flex-shrink:0;background:#e5e8e3}
     .chosen-details,.admin-photo-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
