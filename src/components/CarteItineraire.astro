@@ -144,7 +144,7 @@ const points = etapes
           });
           syncVoyageLinkVisibility();
         }
-        const currentDayColor = "#397A70";
+        const currentDayColor = getComputedStyle(document.documentElement).getPropertyValue("--current-day-sage").trim() || "#397A70";
         let selectedDay = document.documentElement.dataset.voyageDay || "";
         const updateSelectedDay = (date:string, fitMap = true) => {
           selectedDay = date;
@@ -165,6 +165,14 @@ const points = etapes
             map.setLayoutProperty("tous-les-traces-fleches", "symbol-sort-key", selectedDay
               ? ["case", ["==", ["get", "date"], selectedDay], 1, 0]
               : 0);
+            map.setPaintProperty("tous-les-traces-fleches", "text-color", selectedDay
+              ? ["case", ["==", ["get", "date"], selectedDay], currentDayColor, "#df784a"]
+              : "#df784a");
+          }
+          if (map.getLayer("trace-sportive-fleches")) {
+            map.setPaintProperty("trace-sportive-fleches", "text-color", selectedDay
+              ? ["case", ["==", ["get", "date"], selectedDay], currentDayColor, "#df784a"]
+              : "#df784a");
           }
           if (map.getLayer("tous-les-traces")) {
             map.setPaintProperty("tous-les-traces", "line-color", selectedDay
@@ -391,7 +399,7 @@ const points = etapes
                   map.addLayer({id:"trace-sportive-fleches",type:"symbol",source:"trace-sportive",
                     layout:{"symbol-placement":"line","symbol-spacing":170,"text-field":"›","text-size":20,
                       "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":true},
-                    paint:{"text-color":"#df784a","text-halo-color":"#fffdf8","text-halo-width":1.2,"text-opacity":0.82}});
+                    paint:{"text-color":selectedDay ? ["case",["==",["get","date"],selectedDay],currentDayColor,"#df784a"] : "#df784a","text-halo-color":"#fffdf8","text-halo-width":1.2,"text-opacity":0.82}});
                   syncVoyageLinkVisibility();
                 }
                 const bounds=new maplibregl.LngLatBounds();
@@ -445,7 +453,7 @@ const points = etapes
                 map.addLayer({id:"tous-les-traces-fleches",type:"symbol",source:"tous-les-traces",
                   layout:{"symbol-placement":"line","symbol-spacing":170,"symbol-sort-key":["case",["==",["get","date"],selectedDay],1,0],"text-field":"›","text-size":19,
                     "text-rotation-alignment":"map","text-keep-upright":false,"text-allow-overlap":true},
-                  paint:{"text-color":"#df784a","text-halo-color":"#fffdf8","text-halo-width":1.7,"text-opacity":1}});
+                  paint:{"text-color":selectedDay ? ["case",["==",["get","date"],selectedDay],currentDayColor,"#df784a"] : "#df784a","text-halo-color":"#fffdf8","text-halo-width":1.7,"text-opacity":1}});
                 syncVoyageLinkVisibility();
               }
               const bounds=new maplibregl.LngLatBounds();
