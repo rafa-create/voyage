@@ -41,6 +41,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const mapElement = document.querySelector<HTMLElement>("#film-map");
   const memory = document.querySelector<HTMLElement>("#film-memory-content");
   const place = document.querySelector<HTMLElement>("#film-place");
+  const placeCaption = document.querySelector<HTMLElement>(".film-map-caption");
   const dateLabel = document.querySelector<HTMLElement>("#film-date");
   const playButton = document.querySelector<HTMLButtonElement>("#film-play");
   const prevButton = document.querySelector<HTMLButtonElement>("#film-prev");
@@ -214,10 +215,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const item=sequence[index];
       activeFilmItem=item;
       place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":"");
+      if(placeCaption)placeCaption.hidden=!place.textContent.trim();
       if(item.kind==="activite"&&!item.place&&valid(item.lat,item.lon)){
         const currentItem=item;
         void reverseGeocode(item.lat,item.lon).then(location=>{
-          if(location&&activeFilmItem===currentItem&&!currentItem.place)place.textContent=location;
+          if(location&&activeFilmItem===currentItem&&!currentItem.place){place.textContent=location;if(placeCaption)placeCaption.hidden=false;}
         });
       }
       if(daySelect)daySelect.value=item.date;
@@ -300,9 +302,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
   .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
   #film-map{position:absolute;inset:0}
-  .film-map-caption{position:absolute;left:16px;bottom:16px;max-width:calc(100% - 210px);padding:10px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
+  .film-map-caption[hidden]{display:none}.film-map-caption{position:absolute;left:16px;bottom:16px;max-width:calc(100% - 210px);padding:10px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
   .film-map-day{position:absolute;right:16px;bottom:16px;max-width:calc(100% - 32px);padding:5px 8px;background:rgba(255,255,255,.94);border:1px solid #ffffff;border-radius:3px;box-shadow:0 3px 18px #00000012}
-  .film-map-day select{display:block;max-width:240px;min-width:0;height:30px;padding:0 22px 0 6px;border:0;background:transparent;color:var(--forest);font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+  .film-map-day select{display:block;max-width:240px;min-width:0;height:30px;padding:0 8px 0 6px;border:0;background:transparent;color:var(--forest);font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
   #film-place{font-weight:700}
   .film-memory{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:clamp(20px,3vw,38px);min-width:0}
   .film-memory-content{display:flex;flex-direction:column;align-items:flex-start;gap:12px;width:100%;min-width:0}
