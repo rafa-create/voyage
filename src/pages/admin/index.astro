@@ -21,6 +21,15 @@ import { chemin } from "../../lib/paths";
       <button type="button" id="refresh-btn" disabled>↻ Actualiser</button>
     </div>
     <div id="admin-app" hidden>
+      <section class="admin-panel admin-storage-panel">
+        <div class="admin-section-title">
+          <div><p class="eyebrow">STOCKAGE</p><h2>Utilisation de R2</h2></div>
+          <button type="button" class="admin-secondary" id="storage-refresh">↻ Actualiser</button>
+        </div>
+        <p class="admin-note">Volume et nombre de fichiers réellement stockés dans les deux buckets R2, y compris les fichiers techniques. R2 n’a pas de jauge universelle de « place restante » : la facturation dépend notamment du stockage mensuel et des opérations.</p>
+        <div id="storage-summary" class="storage-summary" aria-live="polite"><p>Calcul du stockage…</p></div>
+        <p id="storage-updated" class="admin-note"></p>
+      </section>
       <section class="admin-panel admin-now">
         <div class="admin-section-title">
           <div><p class="eyebrow">01 / EN CE MOMENT</p><h2>Où suis-je ?</h2></div>
@@ -193,11 +202,49 @@ import { chemin } from "../../lib/paths";
       if(accessMode)accessMode.value=accessConfig.mode==="restricted"?"restricted":"open";
       message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
+    function formatBytes(bytes:number):string{
+      if(bytes===0)return "0 octet";
+      const units=["octets","Ko","Mo","Go","To"];
+      const i=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),units.length-1);
+      const value=bytes/Math.pow(1024,i);
+      return (value>=100||i===0?Math.round(value):value.toLocaleString("fr-FR",{maximumFractionDigits:1}))+" "+units[i];
+    }
+    async function loadStorage(){
+      const box=$("storage-summary");
+      const button=$<HTMLButtonElement>("storage-refresh");
+      if(button)button.disabled=true;
+      if(box)box.textContent="Calcul du stockage…";
+      try{
+        const data=await api("/api/prive/admin/stockage-r2");
+        if(box){
+          box.replaceChildren();
+          let totalBytes=0,totalObjects=0;
+          for(const bucket of data.buckets||[]){
+            if(!bucket.available)continue;
+            totalBytes+=bucket.bytes;totalObjects+=bucket.objects;
+            const card=document.createElement("div");card.className="storage-bucket";
+            const name=document.createElement("strong");name.textContent="Bucket "+bucket.name;
+            const size=document.createElement("span");size.className="storage-value";size.textContent=formatBytes(bucket.bytes);
+            const count=document.createElement("span");count.className="storage-count";count.textContent=bucket.objects.toLocaleString("fr-FR")+" objet(s)";
+            card.append(name,size,count);box.append(card);
+          }
+          const total=document.createElement("div");total.className="storage-total";
+          const label=document.createElement("strong");label.textContent="Total utilisé";
+          const size=document.createElement("span");size.className="storage-value";size.textContent=formatBytes(totalBytes);
+          const count=document.createElement("span");count.className="storage-count";count.textContent=totalObjects.toLocaleString("fr-FR")+" objet(s)";
+          total.append(label,size,count);box.prepend(total);
+        }
+        const updated=$("storage-updated");
+        if(updated)updated.textContent="Calculé le "+new Date(data.updatedAt).toLocaleString("fr-FR");
+      }catch(e){if(box)box.textContent=e instanceof Error?e.message:"Impossible de lire le stockage R2.";}
+      finally{if(button)button.disabled=false;}
+    }
     async function start(){
       try{
         const me=await api("/api/prive/moi");
         if(!me.isAdmin)throw Error("Cet espace est réservé à l'administrateur.");
         await refresh();
+        await loadStorage();
         const app=$("admin-app");
         if(app)app.hidden=false;
         const btn=$<HTMLButtonElement>("refresh-btn");
@@ -214,6 +261,7 @@ import { chemin } from "../../lib/paths";
         message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Vérifie que Cloudflare Access protège bien toutes les pages publiques avant de partager le site.":"Le site est maintenant ouvert à tous.");
       }catch(err){if(feedback)feedback.textContent=err instanceof Error?err.message:"Enregistrement impossible.";}
     });
+    $("storage-refresh")?.addEventListener("click",()=>{void loadStorage();});
     $("refresh-btn")?.addEventListener("click",async()=>{
       try{message("admin-status","Actualisation…");await refresh();}catch(e){message("admin-status",String(e));}
     });
@@ -629,6 +677,7 @@ import { chemin } from "../../lib/paths";
     #upload-etape,#auto-date,#video-etape{display:none!important}
     label[for="upload-etape"],label:has(#auto-date),label[for="video-etape"]{display:none!important}
 
+    .storage-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}.storage-bucket,.storage-total{display:flex;flex-direction:column;gap:5px;padding:14px;border:1px solid var(--border,#ddd);border-radius:10px;min-width:0}.storage-total{background:var(--surface-soft,#f5f5f5)}.storage-value{font-size:1.45rem;font-weight:700;overflow-wrap:anywhere}.storage-count{font-size:.9rem;opacity:.75}
     @media(max-width:600px){.admin-journey{padding-top:16px;padding-bottom:48px}.admin-panel{padding:15px;overflow-wrap:anywhere}.admin-section-title{gap:8px;margin-bottom:12px}.admin-section-title h2{font-size:1.45rem}.admin-stack input:not([type=checkbox]),.admin-stack select,.admin-stack textarea,.compact-form select,.admin-panel>select{box-sizing:border-box;width:100%;min-width:0;font-size:16px;scroll-margin-block:16px}.admin-double{grid-template-columns:minmax(0,1fr);gap:10px}.admin-topline{align-items:flex-start;flex-wrap:wrap}.admin-quick-links a{max-width:100%;white-space:normal}.admin-video-item{min-width:0;overflow-wrap:anywhere}.admin-video-item a{min-width:0;overflow-wrap:anywhere}}
   </style>
 </Base>
