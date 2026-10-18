@@ -83,10 +83,10 @@ import Base from "../layouts/Base.astro";
     });
   </script>
   <style is:global>
-    .journal-date-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
-    .journal-date-controls label { color: var(--muted); font-size: .9rem; }
-    .journal-date-controls input { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #222); font: inherit; cursor: pointer; }
-    .journal-date-controls button { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .journal-date-controls { display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; margin-bottom: 28px; overflow-x: auto; max-width: 100%; padding: 2px 2px 6px; }
+    .journal-date-controls label { color: var(--muted); font-size: .9rem; white-space: nowrap; flex: 0 0 auto; }
+    .journal-date-controls input { flex: 0 0 auto; min-width: 145px; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #222); font: inherit; cursor: pointer; }
+    .journal-date-controls button { flex: 0 0 auto; white-space: nowrap; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
     .journal-date-button { display: inline-block; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
     .journal-date-button:focus-visible, .journal-date-controls button:focus-visible, .journal-date-controls input:focus-visible { outline: 2px solid var(--accent, #426b5b); outline-offset: 3px; }
     .journal-day-card { min-width: 0; }
