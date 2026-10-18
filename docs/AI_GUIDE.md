@@ -78,3 +78,9 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - Pour les liens courts Google Maps, il utilise `GET /api/public/resolve-maps-link?url=...` côté Worker afin d’éviter les limites CORS du navigateur.
 - L’endpoint n’accepte que des URL HTTPS de domaines Google Maps autorisés et contrôle chaque hôte de redirection, avec un nombre de redirections limité. Il renvoie l’URL finale pour l’extraction côté navigateur ; il ne garantit pas que Google fournisse toujours des coordonnées.
 - Si Google bloque la résolution ou si le lien final ne contient pas de coordonnées lisibles, l’interface indique une solution de repli manuelle. Aucun déploiement en production sans autorisation explicite.
+
+## Lecture des vidéos importées dans le diaporama
+- **Problème confirmé et résolu par l'utilisateur :** les vidéos importées pouvaient rester figées sur une image, sans message d'erreur, car la gestion des requêtes HTTP `Range` dans `worker/index.js` analysait mal les en-têtes standards comme `bytes=0-` et `bytes=0-1023`.
+- **Correctif validé en production par l'utilisateur :** le commit [`c19d7b2e`](https://github.com/rafa-create/voyage/commit/c19d7b2eea9e73748f05d644c9c293a0d3e073bd) corrige l'expression régulière et l'interprétation des bornes de plage. Le Worker renvoie alors une réponse partielle `206` correcte avec `Content-Range`, `Content-Length` et le type MIME, permettant au lecteur de lire la vidéo.
+- **À retenir pour tout futur diagnostic vidéo :** vérifier d'abord les requêtes `Range` et les réponses `206 Partial Content` avant d'accuser l'encodage du fichier. Le correctif a été confirmé comme ayant résolu le problème.
+- **Affichage dans le diaporama :** les vidéos utilisent la classe CSS `.film-video-frame` dans `src/components/FilmVoyage.astro`; régler leur hauteur maximale et leur adaptation responsive ici plutôt que de modifier le lecteur ou le Worker.
