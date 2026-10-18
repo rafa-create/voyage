@@ -1,41 +1,25 @@
 ---
 import Base from "../layouts/Base.astro";
-import { etapes, dateFr } from "../lib/data";
-import { chemin } from "../lib/paths";
 ---
 
 <Base title="Journal" active="journal">
   <section class="container section journal-list" aria-label="Souvenirs par date">
+    <div class="journal-date-controls">
+      <label for="journal-date-picker">Choisir une journée</label>
+      <input id="journal-date-picker" type="date" aria-label="Choisir une date du journal" />
+      <button type="button" id="journal-show-all">Toutes les journées</button>
+    </div>
     <div id="journal-souvenirs">
       <p class="empty-state">Chargement des souvenirs…</p>
     </div>
   </section>
 
-  {etapes.length > 0 && (
-    <section class="container section journal-list journal-stages" aria-label="Étapes facultatives du voyage">
-      <div class="journal-stages-heading">
-        <h2>Étapes du voyage <span class="heading-dot">.</span></h2>
-      </div>
-      <p class="journal-stages-intro">Quelques repères pour raconter le parcours — les souvenirs n'ont pas besoin d'être associés à une étape.</p>
-      <ol class="timeline">
-        {etapes.map((etape) => (
-          <li>
-            <span class="timeline-date">{dateFr(etape.date)}</span>
-            <a href={chemin("/etapes/" + etape.slug + "/")} class="timeline-card">
-              <span class="eyebrow">{etape.pays} · {etape.ville}</span>
-              <h3>{etape.titre}</h3>
-              <p>{etape.texte.slice(0, 180)}{etape.texte.length > 180 ? "…" : ""}</p>
-              <span class="card-more">Lire cette étape</span>
-            </a>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )}
-
   <script>
     type Souvenir = {src:string;alt?:string;legende?:string;titre?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;date?:string;lieu?:string;etape?:string;kind?:"photo"|"video";key?:string};
     const root=document.querySelector<HTMLElement>("#journal-souvenirs");
+    const datePicker=document.querySelector<HTMLInputElement>("#journal-date-picker");
+    const showAllButton=document.querySelector<HTMLButtonElement>("#journal-show-all");
+    let selectedDay="";
     const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.date||p.ajouteLe||"").slice(0,10);
     const formatDate=(value:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
     async function renderJournal(){
@@ -56,10 +40,14 @@ import { chemin } from "../lib/paths";
         const copy=document.createElement("p");copy.textContent="Les photos et vidéos apparaîtront ici, classées par date, même sans étape associée.";
         empty.append(title,copy);root.append(empty);return;
       }
+      const availableDays=[...groups.keys()].sort((a,b)=>b.localeCompare(a));
+      if(datePicker){datePicker.max=availableDays[0]||new Date().toISOString().slice(0,10);datePicker.value=selectedDay;}
+      const visibleGroups=selectedDay?groups.has(selectedDay)?[[selectedDay,groups.get(selectedDay)!] as [string,Souvenir[]]]:[]:[...groups.entries()];
       const list=document.createElement("ol");list.className="timeline journal-days";
-      for(const [day,items] of groups){
+      for(const [day,items] of visibleGroups){
         const entry=document.createElement("li");
-        const date=document.createElement("span");date.className="timeline-date";date.textContent=formatDate(day);
+        const date=document.createElement("button");date.type="button";date.className="timeline-date journal-date-button";date.textContent=formatDate(day);date.setAttribute("aria-label","Changer la date du journal, date sélectionnée : "+formatDate(day));
+        date.addEventListener("click",()=>{if(!datePicker)return;datePicker.value=day;try{if(typeof datePicker.showPicker==="function")datePicker.showPicker();else datePicker.focus();}catch{datePicker.focus();datePicker.click();}});
         const card=document.createElement("div");card.className="timeline-card journal-day-card";
         const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
         for(const souvenir of items){
@@ -81,18 +69,26 @@ import { chemin } from "../lib/paths";
         const count=document.createElement("p");count.className="journal-day-count";count.textContent=items.length+" "+(items.length>1?"souvenirs":"souvenir");
         card.append(count,grid);entry.append(date,card);list.append(entry);
       }
-      root.append(list);
+      if(selectedDay&&!groups.has(selectedDay)){
+        const empty=document.createElement("div");empty.className="empty-state";
+        const title=document.createElement("h2");title.textContent="Aucun souvenir pour cette journée";
+        const copy=document.createElement("p");copy.textContent="Choisissez une autre date dans le calendrier ou affichez toutes les journées.";
+        empty.append(title,copy);root.append(empty);
+      }else root.append(list);
     }
+    datePicker?.addEventListener("change",()=>{selectedDay=datePicker.value;renderJournal().catch(()=>{});});
+    showAllButton?.addEventListener("click",()=>{selectedDay="";if(datePicker)datePicker.value="";renderJournal().catch(()=>{});});
     renderJournal().catch(()=>{
       if(root){root.replaceChildren();const p=document.createElement("p");p.className="empty-state";p.textContent="Impossible de charger les souvenirs pour le moment.";root.append(p);}
     });
   </script>
   <style is:global>
-    .journal-stages { border-top: 1px solid var(--line); }
-    .journal-stages-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
-    .journal-stages-heading > h2 { margin: 0; }
-    .journal-stages > h2 { margin: 0 0 8px; }
-    .journal-stages-intro { color: var(--muted); margin: 0 0 28px; max-width: 620px; }
+    .journal-date-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+    .journal-date-controls label { color: var(--muted); font-size: .9rem; }
+    .journal-date-controls input { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #222); font: inherit; cursor: pointer; }
+    .journal-date-controls button { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .journal-date-button { display: inline-block; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+    .journal-date-button:focus-visible, .journal-date-controls button:focus-visible, .journal-date-controls input:focus-visible { outline: 2px solid var(--accent, #426b5b); outline-offset: 3px; }
     .journal-day-card { min-width: 0; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
