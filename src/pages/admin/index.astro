@@ -77,7 +77,7 @@ import { chemin } from "../../lib/paths";
           <div><p class="eyebrow">04 / BIBLIOTHÈQUE R2</p><h2>Gérer les photos</h2></div>
           <button type="button" class="admin-secondary" id="sync-btn">↻ Synchroniser R2</button>
         </div>
-        <p class="admin-note">Actualiser recharge les photos réellement présentes dans R2. Synchroniser cherche également les fichiers déposés directement dans le bucket et tente de les classer d'après leur date EXIF.</p>
+        <p class="admin-note">Actualiser recharge les photos réellement présentes dans R2. Synchroniser repère aussi les fichiers déposés directement dans le bucket. Les photos sans étape restent sans étape jusqu'à ce que tu choisisses de les associer.</p>
         <label for="library-filter">Filtrer les photos</label>
         <select id="library-filter"><option value="all">Toutes les photos</option><option value="unclassified">À classer</option></select>
         <p id="sync-result" role="status" class="admin-feedback"></p>
@@ -316,7 +316,7 @@ import { chemin } from "../../lib/paths";
         renderChosen();
         const input=$<HTMLInputElement>("upload-files");if(input)input.value="";
         await refresh();
-        message("photo-progress",done+" photo(s) enregistrée(s) et classée(s).");
+        message("photo-progress",done+" photo(s) enregistrée(s).");
       }catch(err){
         message("photo-progress",done+" envoi(s) réussis. "+(err instanceof Error?err.message:"Erreur."));
         await refresh().catch(()=>{});
@@ -399,7 +399,7 @@ import { chemin } from "../../lib/paths";
       try{
         const result=await post("/api/prive/admin/synchroniser",{});
         await refresh();
-        message("sync-result",result.matched+" photo(s) classée(s), "+result.unclassified+" à classer dans le lot vérifié.");
+        message("sync-result","Synchronisation terminée · "+result.unclassified+" photo(s) sans étape dans le lot vérifié. Tu peux les associer manuellement si tu le souhaites.");
       }catch(err){message("sync-result",err instanceof Error?err.message:"Erreur de synchronisation.");}
       finally{btn.disabled=false;}
     });
