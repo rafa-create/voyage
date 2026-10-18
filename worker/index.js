@@ -38,9 +38,29 @@ async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
   if(!bucket)return error("Bucket non configuré.",503);
   if(!mediaKey(key)||(priv&&!allowUnclassified&&!key.startsWith("etapes/")&&!key.startsWith("videos/")))return new Response("Introuvable",{status:404});
   if(!["GET","HEAD"].includes(request.method))return new Response("Méthode non autorisée",{status:405});
+  const isVideo=videoKey(key);
+  const rangeHeader=request.headers.get("Range");
+  if(isVideo&&request.method==="GET"&&rangeHeader){
+    const head=await bucket.head(key);
+    if(!head)return new Response("Introuvable",{status:404});
+    const total=head.size;
+    const match=/^bytes=(\\d*)-(\\d*)$/.exec(rangeHeader.trim());
+    if(!match||(!match[1]&&!match[2]))return new Response(null,{status:416,headers:{"Content-Range":"bytes */"+total,"Accept-Ranges":"bytes"}});
+    let start,end;
+    if(!match[1]){const suffix=Number(match[2]);if(!Number.isSafeInteger(suffix)||suffix<=0)return new Response(null,{status:416,headers:{"Content-Range":"bytes */"+total,"Accept-Ranges":"bytes"}});start=Math.max(0,total-suffix);end=total-1;}
+    else{start=Number(match[1]);end=match[2]?Number(match[2]):total-1;}
+    if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||start>=total||end<start)return new Response(null,{status:416,headers:{"Content-Range":"bytes */"+total,"Accept-Ranges":"bytes"}});
+    end=Math.min(end,total-1);
+    const object=await bucket.get(key,{range:{offset:start,length:end-start+1}});
+    if(!object)return new Response("Introuvable",{status:404});
+    const headers=new Headers({"Content-Type":mime(key,object),"Cache-Control":priv?"private, no-store":"public, max-age=60","X-Content-Type-Options":"nosniff","Accept-Ranges":"bytes","Content-Range":"bytes "+start+"-"+end+"/"+total,"Content-Length":String(end-start+1)});
+    if(object.httpEtag)headers.set("ETag",object.httpEtag);
+    return new Response(object.body,{status:206,headers});
+  }
   const object=request.method==="HEAD"?await bucket.head(key):await bucket.get(key);
   if(!object)return new Response("Introuvable",{status:404});
   const headers=new Headers({"Content-Type":mime(key,object),"Cache-Control":priv?"private, no-store":"public, max-age=60","X-Content-Type-Options":"nosniff"});
+  if(isVideo){headers.set("Accept-Ranges","bytes");headers.set("Content-Length",String(object.size));}
   if(object.httpEtag)headers.set("ETag",object.httpEtag);
   return new Response(request.method==="HEAD"?null:object.body,{headers});
 }
