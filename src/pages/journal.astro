@@ -13,14 +13,16 @@ import { etapes } from "../lib/data";
   <script>
     type Souvenir = {src:string;alt?:string;legende?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;lieu?:string;etape?:string};
     type VideoSouvenir = {id?:string;url:string;titre:string;date?:string|null;lieu?:string;etape?:string;stepDate?:string};
+    type FichierVideo = {src:string;titre:string;date?:string|null;etape?:string|null};
     const root=document.querySelector<HTMLElement>("#journal-souvenirs");
     const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.ajouteLe||"").slice(0,10);
     const formatDate=(value:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
     async function renderJournal(){
       if(!root)return;
-      const [photoResponse, looseVideoResponse] = await Promise.all([
+      const [photoResponse, looseVideoResponse, fileVideoResponse] = await Promise.all([
         fetch("/api/public/photos",{cache:"no-store"}),
-        fetch("/api/public/videos",{cache:"no-store"})
+        fetch("/api/public/videos",{cache:"no-store"}),
+        fetch("/api/public/videos-fichiers",{cache:"no-store"})
       ]);
       if(!photoResponse.ok)throw new Error("Chargement des photos impossible");
       const photoData=await photoResponse.json();
@@ -34,10 +36,13 @@ import { etapes } from "../lib/data";
       }));
       const looseVideos:VideoSouvenir[]=looseVideoResponse.ok?(await looseVideoResponse.json()).videos||[]:[];
       const videos:VideoSouvenir[]=[...looseVideos,...videoGroups.flat()];
+      const fileVideos:FichierVideo[]=fileVideoResponse.ok?(await fileVideoResponse.json()).videos||[]:[];
       const videoDate=(video:VideoSouvenir)=>String(video.date||video.stepDate||"").slice(0,10);
+      const fileVideoDate=(video:FichierVideo)=>String(video.date||"").slice(0,10);
       const days=new Set<string>();
       for(const photo of photos)days.add(dateOf(photo));
       for(const video of videos){const day=videoDate(video);if(/^\d{4}-\d{2}-\d{2}$/.test(day))days.add(day);}
+      for(const video of fileVideos){const day=fileVideoDate(video);if(/^\d{4}-\d{2}-\d{2}$/.test(day))days.add(day);}
       photos.sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||"")));
       root.replaceChildren();
       if(!days.size){
@@ -50,6 +55,7 @@ import { etapes } from "../lib/data";
       for(const day of [...days].sort((a,b)=>b.localeCompare(a))){
         const dayPhotos=photos.filter(photo=>dateOf(photo)===day);
         const dayVideos=videos.filter(video=>videoDate(video)===day);
+        const dayFileVideos=fileVideos.filter(video=>fileVideoDate(video)===day);
         const entry=document.createElement("li");
         const date=document.createElement("span");date.className="timeline-date";date.textContent=formatDate(day);
         const card=document.createElement("div");card.className="timeline-card journal-day-card";
@@ -79,13 +85,19 @@ import { etapes } from "../lib/data";
           link.append(img,play);figure.append(link);
           const caption=document.createElement("figcaption");caption.textContent=String(video.titre||"Vidéo du voyage");figure.append(caption);grid.append(figure);
         }
-        const total=dayPhotos.length+dayVideos.length;
+        for(const video of dayFileVideos){
+          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
+          const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",video.titre||"Vidéo du voyage");
+          const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(player,caption);grid.append(figure);
+        }
+        const total=dayPhotos.length+dayVideos.length+dayFileVideos.length;
         const count=document.createElement("p");count.className="journal-day-count";count.textContent=total+" "+(total>1?"souvenirs":"souvenir");
         card.append(count,grid);entry.append(date,card);list.append(entry);
       }
       root.append(list);
       const undatedVideos=videos.filter(video=>!(/^\d{4}-\d{2}-\d{2}$/.test(videoDate(video))));
-      if(undatedVideos.length){
+      const undatedFileVideos=fileVideos.filter(video=>!(/^\d{4}-\d{2}-\d{2}$/.test(fileVideoDate(video))));
+      if(undatedVideos.length||undatedFileVideos.length){
         const section=document.createElement("section");section.className="journal-undated-videos";
         const heading=document.createElement("h2");heading.textContent="Vidéos sans date";
         const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
@@ -98,6 +110,11 @@ import { etapes } from "../lib/data";
           const play=document.createElement("span");play.className="journal-video-play";play.textContent="▶";play.setAttribute("aria-hidden","true");
           link.append(img,play);figure.append(link);
           const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(caption);grid.append(figure);
+        }
+        for(const video of undatedFileVideos){
+          const figure=document.createElement("figure");figure.className="photo-tile journal-video-tile";
+          const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;player.setAttribute("aria-label",video.titre||"Vidéo du voyage");
+          const caption=document.createElement("figcaption");caption.textContent=video.titre||"Vidéo du voyage";figure.append(player,caption);grid.append(figure);
         }
         if(grid.childElementCount){section.append(heading,grid);root.append(section);}
       }
@@ -117,6 +134,7 @@ import { etapes } from "../lib/data";
     .journal-day-photos { margin-top: 12px; }
     .journal-video-link { display:block;position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:6px;background:#222; }
     .journal-video-link img { display:block;width:100%;height:100%;object-fit:cover; }
+    .journal-video-tile video { display:block;width:100%;height:auto;max-height:75vh;aspect-ratio:16/9;background:#111;border-radius:6px; }
     .journal-video-play { position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:48px;height:34px;border-radius:9px;background:#d71920;color:#fff;font-size:1.2rem; }
     .journal-video-tile { min-width:0; }
     .journal-undated-videos{margin-top:2rem}.journal-undated-videos h2{font-size:1.25rem;margin-bottom:1rem}
