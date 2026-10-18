@@ -1,0 +1,136 @@
+---
+import type { Etape } from "../lib/data";
+interface Props { etapes: Etape[]; }
+const { etapes } = Astro.props;
+const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
+  .sort((a,b) => a.date.localeCompare(b.date))
+  .map((e) => ({ date:e.date, titre:e.titre, ville:e.ville, pays:e.pays, latitude:e.latitude, longitude:e.longitude, statut:e.statut || "passee" }));
+---
+<section class="voyage-film container" aria-labelledby="voyage-film-title">
+  <div class="film-heading">
+    <p class="film-eyebrow">Les souvenirs en mouvement</p>
+    <h2 id="voyage-film-title">Le film du voyage</h2>
+    <p>Des étapes, des photos et des activités, au fil des jours.</p>
+  </div>
+  <div class="film-stage">
+    <div class="film-map-wrap">
+      <div id="film-map" aria-label="Carte animée du voyage"></div>
+      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><span id="film-date"></span></div>
+    </div>
+    <div class="film-memory" id="film-memory">
+      <div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div>
+    </div>
+  </div>
+  <div class="film-controls">
+    <button type="button" id="film-prev" aria-label="Souvenir précédent">←</button>
+    <button type="button" id="film-play" class="film-play" disabled>▶ Lancer le film</button>
+    <button type="button" id="film-next" aria-label="Souvenir suivant">→</button>
+    <span id="film-progress" aria-live="polite">Chargement des souvenirs…</span>
+  </div>
+</section>
+<script>
+  import maplibregl from "maplibre-gl";
+  import "maplibre-gl/dist/maplibre-gl.css";
+  type FilmPoint = {date:string;titre:string;ville:string;pays:string;latitude:number;longitude:number;statut:string};
+  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;src?:string;slug?:string;id?:string;zoom:number};
+  const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
+  const mapElement = document.querySelector<HTMLElement>("#film-map");
+  const memory = document.querySelector<HTMLElement>("#film-memory");
+  const place = document.querySelector<HTMLElement>("#film-place");
+  const dateLabel = document.querySelector<HTMLElement>("#film-date");
+  const progress = document.querySelector<HTMLElement>("#film-progress");
+  const playButton = document.querySelector<HTMLButtonElement>("#film-play");
+  const prevButton = document.querySelector<HTMLButtonElement>("#film-prev");
+  const nextButton = document.querySelector<HTMLButtonElement>("#film-next");
+  const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
+  const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
+  async function initFilm(){
+    if(!mapElement||!memory||!place||!dateLabel||!progress||!playButton||!prevButton||!nextButton||!points.length)return;
+    const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
+    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:undefined,zoom:6}));
+    try{
+      const [photoResponse,activityResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements")]);
+      const photos=photoResponse.ok?(await photoResponse.json()).photos||[]:[];
+      const activities=activityResponse.ok?(await activityResponse.json()).courses||[]:[];
+      for(const photo of photos){
+        if(!photo)continue;
+        let lat=photo.latitude,lon=photo.longitude;
+        if(!valid(lat,lon)&&photo.etape){const stage=points.find(p=>p.slug===photo.etape);if(stage){lat=stage.latitude;lon=stage.longitude;}}
+        if(!valid(lat,lon))continue;
+        const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",lat,lon,detail:photo.commentaire||photo.legende||"",src:photo.src,zoom:12});
+      }
+      for(const activity of activities){
+        if(!activity||!valid(activity.latitude,activity.longitude))continue;
+        const timestamp=Number(activity.fin);
+        const date=String(activity.date||(Number.isFinite(timestamp)?new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(timestamp)):"")).slice(0,10);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+        const details=[activity.sport,typeof activity.km==="number"?activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"",typeof activity.minutes==="number"?activity.minutes+" min":""].filter(Boolean).join(" · ");
+        items.push({kind:"activite",date,title:activity.titre||"Activité du voyage",lat:activity.latitude,lon:activity.longitude,detail:details,id:activity.id,zoom:11});
+      }
+    }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
+    const unique=new Map<string,FilmItem>();
+    for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
+    const sequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
+    if(!sequence.length){progress.textContent="Aucun souvenir disponible pour le moment.";return;}
+    let index=0,playing=false,timer:number|undefined;
+    const render=(animate=true)=>{
+      const item=sequence[index];
+      place.textContent=item.title;
+      dateLabel.textContent=prettyDate(item.date);
+      progress.textContent=(index+1)+" / "+sequence.length;
+      memory.replaceChildren();
+      const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="photo"?"Photo":item.kind==="activite"?"Activité":"Étape";
+      const title=document.createElement("h3");title.textContent=item.title;
+      memory.append(tag,title);
+      if(item.src){
+        const img=document.createElement("img");img.src=item.src;img.alt=item.title;img.loading=index<2?"eager":"lazy";img.decoding="async";memory.append(img);
+      }else{
+        const icon=document.createElement("div");icon.className="film-memory-icon";icon.textContent=item.kind==="activite"?"↗":"⌖";icon.setAttribute("aria-hidden","true");memory.append(icon);
+      }
+      if(item.detail){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
+      const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      map.stop();
+      map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
+      prevButton.disabled=index===0;
+      nextButton.disabled=index===sequence.length-1;
+    };
+    const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="▶ Reprendre le film";};
+    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;playing=true;playButton.textContent="Ⅱ Pause";render();timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},4500);};
+    playButton.disabled=false;playButton.textContent="▶ Lancer le film";
+    playButton.addEventListener("click",()=>playing?stop():start());
+    prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
+    nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render();});
+    map.once("load",()=>{if(points.length>1){const bounds=new maplibregl.LngLatBounds();points.forEach(p=>bounds.extend([p.longitude,p.latitude]));map.fitBounds(bounds,{padding:45,maxZoom:6,duration:0});}render(false);});
+  }
+  initFilm().catch(()=>{if(progress)progress.textContent="Impossible de préparer le film pour le moment.";});
+</script>
+<style>
+  .voyage-film{padding-top:76px;padding-bottom:84px}
+  .film-heading{margin-bottom:26px}
+  .film-eyebrow{margin:0 0 8px;color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+  .film-heading h2{margin:0;color:var(--forest);font-family:Georgia,serif;font-weight:500;font-size:clamp(2rem,4vw,3.2rem)}
+  .film-heading>p:last-child{color:var(--muted);font-size:.9rem}
+  .film-stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);min-height:390px;background:var(--white);border:1px solid var(--line);overflow:hidden}
+  .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
+  #film-map{position:absolute;inset:0}
+  .film-map-caption{position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:12px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;box-shadow:0 3px 18px #00000012;pointer-events:none}
+  #film-place{font-weight:700}
+  .film-memory{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:clamp(20px,3vw,38px);min-width:0}
+  .film-memory .film-kind{color:var(--muted);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .film-memory h3{margin:0;color:var(--forest);font-family:Georgia,serif;font-size:clamp(1.35rem,2.4vw,2rem);font-weight:500;line-height:1.2}
+  .film-memory img{width:100%;height:230px;object-fit:cover;border-radius:2px;animation:filmReveal .6s ease both}
+  .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
+  .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
+  .film-memory-placeholder{color:var(--muted);font-size:.9rem}
+  .film-controls{display:flex;align-items:center;gap:12px;padding-top:16px}
+  .film-controls button{min-width:42px;height:42px;padding:0 14px;border:1px solid var(--line);background:transparent;color:var(--forest);cursor:pointer}
+  .film-controls button:disabled{opacity:.35;cursor:default}
+  .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
+  #film-progress{margin-left:auto;color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}
+  @keyframes filmReveal{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:290px}.film-memory img{height:220px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}#film-progress{font-size:.7rem}}
+  @media(prefers-reduced-motion:reduce){.film-memory img{animation:none}}
+</style>
