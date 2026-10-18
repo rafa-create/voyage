@@ -89,7 +89,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const dates = new Set<string>();
       for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
       const videoDate = (video:DailyVideo) => String(video.dateHeure || video.datePrise || video.date || "").slice(0,10);
-      for (const video of videos) { const d=videoDate(video); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
+      for (const video of videos) {
+        const d=videoDate(video);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
+        else if (video.etape && video.etape !== "sans-etape") {
+          const step=etapes.find(item=>item.slug===video.etape);
+          if (step?.date) dates.add(step.date);
+        }
+      }
       const activityDate = (course:any) => String(course.date || (course.fin ? new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(course.fin))) : "")).slice(0,10);
       for (const course of courses) {
         const d=activityDate(course);
