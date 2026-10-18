@@ -136,11 +136,16 @@ export default {
       const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       if(siteAccess?.mode==="restricted"){
         const access=await requireAccess(request,env,false);
-        if(access.error)return access.error;
+        if(access.error){
+          if(path.startsWith("/api/")||path.startsWith("/media/"))return access.error;
+          if(/\\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
+          return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
+        }
         if(!access.user.isAdmin){
           const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
           if(!approved.includes(access.user.email)){
             if(path.startsWith("/api/"))return error("Accès non autorisé. Demande l'accès au carnet.",403);
+            if(/\\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
             return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
           }
         }
