@@ -34,7 +34,6 @@ import Base from "../layouts/Base.astro";
             <p class="eyebrow">LE CARNET</p>
             <h2>Jour après jour<span class="period">.</span></h2>
           </div>
-          <button id="refresh-defi" type="button" class="refresh-button">↻ Actualiser</button>
         </div>
         <div id="days-list" class="day-list"></div>
         <p id="source-note" class="update-note"></p>
@@ -384,7 +383,6 @@ import Base from "../layouts/Base.astro";
       }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
       finally{if(button)button.disabled=false;}
     }
-    get("refresh-defi")?.addEventListener("click",()=>void load(true));
     void load();
   </script>
 
