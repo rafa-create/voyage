@@ -523,9 +523,16 @@ const points = etapes
                 const target=Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
                   .find(marker=>marker.dataset.memoryKey===detail.key);
                 if(target){
-                  target.click();
                   const lat=Number(target.dataset.latitude),lon=Number(target.dataset.longitude);
-                  if(Number.isFinite(lat)&&Number.isFinite(lon))map.easeTo({center:[lon,lat],zoom:Math.max(map.getZoom(),11),duration:650});
+                  if(Number.isFinite(lat)&&Number.isFinite(lon)){
+                    // Centrer d'abord la carte, puis ouvrir la popup une fois le déplacement terminé :
+                    // MapLibre peut ainsi calculer son placement à partir de la position finale.
+                    map.stop();
+                    map.easeTo({center:[lon,lat],zoom:Math.max(map.getZoom(),11),duration:450});
+                    map.once("moveend",()=>target.click());
+                  }else{
+                    target.click();
+                  }
                 }
               }
             });
