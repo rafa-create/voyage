@@ -211,7 +211,7 @@ import { chemin } from "../../lib/paths";
       const feedback=$("site-access-feedback");
       try{
         await post("/api/prive/admin/site-access",{mode});
-        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Vérifie que Cloudflare Access protège bien toutes les pages publiques avant de partager le site.":"Le site est maintenant ouvert à tous.");
+        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Les visiteurs devront utiliser une adresse e-mail approuvée.":"Le site est maintenant ouvert à tous.");
       }catch(err){if(feedback)feedback.textContent=err instanceof Error?err.message:"Enregistrement impossible.";}
     });
     $("refresh-btn")?.addEventListener("click",async()=>{
