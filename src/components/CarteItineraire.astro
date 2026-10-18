@@ -303,9 +303,9 @@ const points = etapes
         // GPX publiées sont positionnées selon l'heure de leur capture/départ.
         // Une position de ville/étape reste explicitement approximative.
         void (async()=>{
-          type Event={type:"photo"|"sport"|"etape";date:string;dateHeure?:string|null;
+          type Event={type:"photo"|"video"|"sport"|"etape";date:string;dateHeure?:string|null;
             order:string|null;latitude:number;longitude:number;titre:string;
-            src?:string;etape?:string;id?:string;distance?:number;km?:number;minutes?:number;sport?:string;precision:string;parcours?:boolean};
+            src?:string;youtubeId?:string;etape?:string;id?:string;distance?:number;km?:number;minutes?:number;sport?:string;precision:string;parcours?:boolean};
           const valid=(lat:unknown,lon:unknown)=>
             typeof lat==="number"&&typeof lon==="number"&&Number.isFinite(lat)&&
             Number.isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180;
@@ -325,7 +325,28 @@ const points = etapes
             const sportData=sportsResponse?.ok?await sportsResponse.json():{};
             const photos=photoData.photos;
             const courses=sportData.courses;
+            const videoGroups=await Promise.all(points.map(async stage=>{
+              try{
+                const response=await fetch("/api/public/videos?etape="+encodeURIComponent(stage.slug));
+                if(!response.ok)return [];
+                const data=await response.json();
+                return (data.videos||[]).map((video:any)=>({...video,stage}));
+              }catch{return [];}
+            }));
             const memories:Event[]=[];
+            for(const video of videoGroups.flat()){
+              const match=String(video.url||"").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
+              const youtubeId=match?.[1], stage=video.stage;
+              if(!youtubeId||!valid(stage?.latitude,stage?.longitude))continue;
+              const date=String(video.dateHeure||video.datePrise||video.date||stage.date||"").slice(0,10);
+              if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+              const hasGps=valid(video.latitude,video.longitude);
+              memories.push({type:"video",date,dateHeure:typeof video.dateHeure==="string"?video.dateHeure:null,
+                order:video.dateHeure||date+"T23:58",latitude:hasGps?Number(video.latitude):stage.latitude,
+                longitude:hasGps?Number(video.longitude):stage.longitude,
+                precision:hasGps?"GPS vidéo":"Emplacement indicatif de l'étape",
+                titre:video.titre||"Vidéo YouTube",youtubeId,etape:stage.slug});
+            }
             const parisToday = new Intl.DateTimeFormat("en-CA", {
               timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
             }).format(new Date());
@@ -592,16 +613,16 @@ const points = etapes
               const marker=document.createElement("button");
               marker.type="button";
               marker.classList.add("memory-map-marker");
-              if(memory.type==="photo" && memory.src) marker.classList.add("memory-map-photo-marker");
+              if((memory.type==="photo" && memory.src)||memory.type==="video") marker.classList.add("memory-map-photo-marker");
               marker.dataset.date=memory.date;
               marker.dataset.latitude=String(memory.latitude);
               marker.dataset.longitude=String(memory.longitude);
-              marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : "";
+              marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : memory.type==="video" ? "video:"+String(memory.youtubeId||"") : "";
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
-              marker.style.cssText=memory.type==="photo"&&memory.src
+              marker.style.cssText=(memory.type==="photo"&&memory.src)||(memory.type==="video"&&memory.youtubeId)
                 ?"width:44px;height:44px;cursor:pointer;border:2px solid #fff;border-radius:8px;"+
-                  "background:#fff url('"+String(memory.src).replace(/'/g,"%27")+"') center/cover no-repeat;"+
+                  "background:#fff url('"+String(memory.type==="photo"?memory.src:"https://i.ytimg.com/vi/"+memory.youtubeId+"/hqdefault.jpg").replace(/'/g,"%27")+"') center/cover no-repeat;"+
                   "box-shadow:0 2px 8px #0005;"
                 :"width:16px;height:16px;cursor:pointer;border:2px solid #fff;border-radius:50%;"+
                   "background:#c86f4d;box-shadow:0 1px 5px #0005;";
@@ -641,8 +662,9 @@ const points = etapes
                 const precision=document.createElement("span");precision.textContent=memory.precision;
                 panel.append(precision);
               }
-              if(memory.type==="photo"&&memory.src){
-                const image=document.createElement("img");image.src=memory.src;
+              if((memory.type==="photo"&&memory.src)||(memory.type==="video"&&memory.youtubeId)){
+                const image=document.createElement("img");
+                image.src=memory.type==="photo"?memory.src!:"https://i.ytimg.com/vi/"+memory.youtubeId+"/hqdefault.jpg";
                 image.alt=memory.titre;image.loading="lazy";
                 image.style.cssText="width:100%;max-width:230px;max-height:160px;object-fit:cover;border-radius:6px;margin:6px 0;";
                 panel.append(image);
@@ -656,6 +678,10 @@ const points = etapes
               }else if(memory.type==="photo"&&memory.src){
                 const link=document.createElement("a");
                 link.href="/galerie/?photo="+encodeURIComponent(memory.src);
+                link.textContent="Voir dans la galerie";panel.append(link);
+              }else if(memory.type==="video"&&memory.youtubeId){
+                const link=document.createElement("a");
+                link.href="/galerie/";
                 link.textContent="Voir dans la galerie";panel.append(link);
               }
               if(selectedDay && selectedDay !== memory.date){
@@ -745,16 +771,17 @@ const points = etapes
             });
             const mapRequest = new URLSearchParams(window.location.search);
             const requestedPhoto = mapRequest.get("photoMap");
+            const requestedVideo = mapRequest.get("videoMap");
             const requestedDate = mapRequest.get("date");
             const requestedLat = Number(mapRequest.get("lat"));
             const requestedLon = Number(mapRequest.get("lon"));
-            if (requestedPhoto && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+            if ((requestedPhoto || requestedVideo) && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
                 Number.isFinite(requestedLat) && Math.abs(requestedLat) <= 85 &&
                 Number.isFinite(requestedLon) && Math.abs(requestedLon) <= 180) {
               window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte", {detail:{
-                date:requestedDate,kind:"photo",key:requestedPhoto,latitude:requestedLat,longitude:requestedLon
+                date:requestedDate,kind:requestedVideo?"video":"photo",key:requestedPhoto||undefined,latitude:requestedLat,longitude:requestedLon
               }}));
-              mapRequest.delete("photoMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
+              mapRequest.delete("photoMap");mapRequest.delete("videoMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
               const remaining = mapRequest.toString();
               window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
             }
