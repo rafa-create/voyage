@@ -493,3 +493,47 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   #map-links-control-slot button { width: 100%; }
 }
 
+
+/* Navigation du journal quotidien : titre daté et flèches toujours visibles. */
+.daily-view .daily-heading-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.daily-view .daily-heading-title h2 { margin: 0; }
+.daily-heading-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.daily-heading-arrows button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--forest);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.daily-heading-arrows button:hover:not(:disabled) { background: #ebe6da; }
+.daily-heading-arrows button:disabled { opacity: .35; cursor: not-allowed; }
+.daily-view .daily-controls { display: flex; flex-wrap: nowrap; gap: 10px; }
+.daily-view .daily-controls button {
+  min-width: 142px;
+  padding-inline: 16px;
+  white-space: nowrap;
+}
+@media(max-width:650px) {
+  .daily-view .daily-heading-title { gap: 8px; }
+  .daily-heading-arrows { gap: 4px; }
+  .daily-heading-arrows button { width: 34px; height: 34px; }
+  .daily-view .daily-controls { width: 100%; }
+  .daily-view .daily-controls button { min-width: 0; flex: 1 1 0; padding-inline: 10px; }
+}
