@@ -68,11 +68,15 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const todayParts = new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
       const part = (type:string) => todayParts.find(p=>p.type===type)?.value || "";
       const todayKey = part("year")+"-"+part("month")+"-"+part("day");
-      // Toujours inclure la date du jour, même si aucune photo ou activité n'y est encore associée.
+      const yesterdayDate = new Date(Date.UTC(Number(part("year")), Number(part("month")) - 1, Number(part("day")) - 1));
+      const yesterdayKey = [yesterdayDate.getUTCFullYear(), String(yesterdayDate.getUTCMonth()+1).padStart(2,"0"), String(yesterdayDate.getUTCDate()).padStart(2,"0")].join("-");
+      // Toujours inclure aujourd'hui et hier, même sans photo ni activité associée.
       dates.add(todayKey);
+      dates.add(yesterdayKey);
       const ordered = Array.from(dates).sort((a,b)=>b.localeCompare(a));
       let index = ordered.indexOf(todayKey);
       const todayIndex = index;
+      const yesterdayIndex = ordered.indexOf(yesterdayKey);
       const render = () => {
         const day = ordered[index];
         dateText.textContent = dateLabel(day);
@@ -130,6 +134,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       previous.addEventListener("click",()=>{if(index<ordered.length-1){index++;render();}});
       next.addEventListener("click",()=>{if(index>0){index--;render();}});
       window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
+      window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;render();}});
       render();
     }
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
