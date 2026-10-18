@@ -21,14 +21,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       <div class="section-heading">
         <div>
           <div class="daily-heading-title daily-heading-visible">
-            <div class="daily-heading-arrows" aria-label="Jour précédent">
-              <button type="button" id="daily-heading-previous" aria-label="Jour précédent" disabled>←</button>
-            </div>
             <h2 id="daily-heading">Souvenir du jour</h2>
             <input type="date" id="daily-date-picker" aria-label="Choisir la journée mise en avant" title="Choisir une journée" />
-            <div class="daily-heading-arrows" aria-label="Jour suivant">
-              <button type="button" id="daily-heading-next" aria-label="Jour suivant" disabled>→</button>
-            </div>
           </div>
         </div>
         <div class="daily-controls" aria-label="Choisir une journée">
@@ -77,18 +71,31 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           return await response.json();
         } catch { return {}; }
       };
-      const [photoData, eventData, fileVideoData] = await Promise.all([
+      const [photoData, eventData, fileVideoData, stageData] = await Promise.all([
         safeJson("/api/public/photos"),
         safeJson("/api/public/carte-evenements"),
-        safeJson("/api/public/videos-fichiers")
+        safeJson("/api/public/videos-fichiers"),
+        safeJson("/api/public/etapes")
       ]);
       const photos:DailyPhoto[] = photoData.photos || [];
       const fileVideos:any[] = fileVideoData.videos || [];
+      const stages:any[] = Array.isArray(stageData.etapes) ? stageData.etapes : [];
       const videoDateKey = (video:any) => String(video.date || video.ajouteLe || "").slice(0,10);
+      const youtubeVideos:any[] = (await Promise.all(stages.map(async (stage:any) => {
+        if (!stage.slug) return [];
+        const data = await safeJson("/api/public/videos?etape="+encodeURIComponent(stage.slug));
+        return (Array.isArray(data.videos) ? data.videos : []).map((video:any) => {
+          const match = String(video.url || "").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
+          const youtubeId = match?.[1];
+          const date = String(video.dateHeure || video.datePrise || video.date || stage.date || "").slice(0,10);
+          return youtubeId && /^\d{4}-\d{2}-\d{2}$/.test(date) ? {...video, youtubeId, dailyDate:date} : null;
+        }).filter(Boolean);
+      }))).flat();
       const courses = eventData.courses || [];
       const dates = new Set<string>();
       for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
       for (const video of fileVideos) { const d=videoDateKey(video); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
+      for (const video of youtubeVideos) dates.add(video.dailyDate);
       const activityDate = (course:any) => String(course.date || (course.fin ? new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(course.fin))) : "")).slice(0,10);
       for (const course of courses) {
         const d=activityDate(course);
@@ -133,6 +140,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         }
         const dayVideos = fileVideos.filter(video=>videoDateKey(video)===day)
           .sort((a,b)=>String(b.date||b.ajouteLe||"").localeCompare(String(a.date||a.ajouteLe||"")));
+        const dayYoutubeVideos = youtubeVideos.filter(video=>video.dailyDate===day)
+          .sort((a,b)=>String(b.dateHeure||b.datePrise||b.date||"").localeCompare(String(a.dateHeure||a.datePrise||a.date||"")));
         for (const video of dayVideos) {
           const figure=document.createElement("figure");figure.className="photo-tile daily-video-tile";
           const player=document.createElement("video");player.src=video.src;player.controls=true;player.preload="metadata";player.playsInline=true;
@@ -143,7 +152,22 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           caption.textContent=(video.titre||"Vidéo du voyage")+(video.date?" · "+String(video.date).slice(11,16):"");
           figure.append(caption);grid.append(figure);
         }
-        empty.hidden = dayPhotos.length>0 || dayVideos.length>0;
+        for (const video of dayYoutubeVideos) {
+          const figure=document.createElement("figure");figure.className="photo-tile daily-video-tile daily-youtube-tile";
+          const frame=document.createElement("iframe");
+          frame.src="https://www.youtube-nocookie.com/embed/"+video.youtubeId;
+          frame.title=video.titre||"Vidéo YouTube du voyage";
+          frame.loading="lazy";
+          frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+          frame.allowFullscreen=true;
+          frame.referrerPolicy="strict-origin-when-cross-origin";
+          frame.style.width="100%";frame.style.aspectRatio="16/9";frame.style.border="0";frame.style.background="#000";
+          figure.append(frame);
+          const caption=document.createElement("figcaption");
+          caption.textContent=(video.titre||"Vidéo YouTube du voyage")+(video.dateHeure?" · "+String(video.dateHeure).slice(11,16):"");
+          figure.append(caption);grid.append(figure);
+        }
+        empty.hidden = dayPhotos.length>0 || dayVideos.length>0 || dayYoutubeVideos.length>0;
         if (activitiesWrap && activitiesGrid) {
           activitiesGrid.replaceChildren();
           const dayActivities = courses.filter((course:any) => activityDate(course) === day)
@@ -184,8 +208,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         }
         previous.disabled = index>=ordered.length-1;
         next.disabled = index<=0;
-        if (headingPrevious) headingPrevious.disabled = previous.disabled;
-        if (headingNext) headingNext.disabled = next.disabled;
         document.documentElement.dataset.voyageDay = day;
         window.dispatchEvent(new CustomEvent("voyage:jour",{detail:{date:day}}));
       };
@@ -197,8 +219,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       });
       const goPrevious = () => { if(index < ordered.length - 1){ index++; render(); } };
       const goNext = () => { if(index > 0){ index--; render(); } };
-      headingPrevious?.addEventListener("click",goPrevious);
-      headingNext?.addEventListener("click",goNext);
       dailyDatePicker?.addEventListener("change",()=>{
         const day=dailyDatePicker.value;
         if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
@@ -224,12 +244,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .daily-map-controls .daily-heading-title { display: flex; align-items: center; gap: 8px; }
     #daily-date-picker { width: 42px; min-width: 42px; height: 32px; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); cursor: pointer; }
     #daily-date-picker:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
-    .daily-heading-arrows { display: flex; align-items: center; }
-    .daily-heading-arrows button { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); font: 500 1rem 'DM Sans',sans-serif; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
-    .daily-heading-arrows button:hover:not(:disabled) { background: #f2f0e9; border-color: #b9b3a5; }
-    .daily-heading-arrows button:active:not(:disabled) { background: #e8e5dc; }
-    .daily-heading-arrows button:disabled { opacity: 1; color: #a9a69d; border-color: #e8e5dd; background: #faf9f6; cursor: default; }
-    .daily-heading-arrows button:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .home-map-control-row #daily-date { margin: 0; }
     .home-map-control-row .daily-controls { display: none; }
     #map-visibility-toggle { flex: 0 0 auto; width: auto; min-height: 32px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--forest); font: 600 .76rem 'DM Sans',sans-serif; cursor: pointer; white-space: nowrap; transition: background-color .16s ease, border-color .16s ease; }
@@ -237,8 +251,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     #map-visibility-toggle:active { background: #f2f0e9; }
     #map-visibility-toggle:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .daily-view:not(.daily-map-controls) { padding-top: 28px; }
-    .daily-heading-title { display: none; }
-    .daily-heading-title.daily-heading-visible { display: flex; }
+    .daily-heading-title { display: flex; }
     .daily-view #daily-date { margin-top: 8px; font-size: .8rem; }
     .daily-activities { margin-top: 22px; }
     .daily-activities[hidden] { display: none !important; }
