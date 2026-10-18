@@ -453,7 +453,11 @@ import { chemin } from "../lib/paths";
       const item=selectedPhoto();
       if(details){details.replaceChildren();const bits=[item?.datePrise||bouton.dataset.date,bouton.dataset.videoTitle||item?.lieu,item?.commentaire||item?.legende].filter(Boolean);for(const bit of bits){const line=document.createElement("span");line.textContent=String(bit);details.append(line);}details.hidden=!bits.length;}
       const editButton=dialog?.querySelector<HTMLButtonElement>(".lightbox-edit");
-      if(editButton)editButton.hidden=!(isAdmin&&(item||bouton.dataset.video||bouton.dataset.videoFile));
+      if(editButton){
+        editButton.hidden=!(isAdmin&&(item||bouton.dataset.video||bouton.dataset.videoFile));
+        editButton.title=bouton.dataset.videoFile||bouton.dataset.video?"Modifier cette vidéo":"Modifier cette photo";
+        editButton.setAttribute("aria-label",editButton.title);
+      }
       const deleteButton=dialog?.querySelector<HTMLButtonElement>("#edit-photo-delete");
       if(deleteButton)deleteButton.hidden=!(isAdmin&&item&&!bouton.dataset.video);
       if(editor){editor.hidden=true;
@@ -560,8 +564,9 @@ import { chemin } from "../lib/paths";
           const response=await fetch("/api/prive/admin/video-file-modifier",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify({key:button.dataset.videoFileKey,visibilite:button.dataset.videoVisibility,titre:editComment.value,date:editDate.value,lieu:editPlace.value,latitude:editLat.value,longitude:editLon.value,etape:editStage.value})});
           const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Modification de la vidéo importée impossible.");
           button.dataset.date=editDate.value;button.dataset.lieu=editPlace.value;button.dataset.latitude=editLat.value;button.dataset.longitude=editLon.value;button.dataset.videoTitle=editComment.value;button.dataset.alt=editComment.value;button.dataset.etape=editStage.value;
-          const caption=button.closest("figure")?.querySelector("figcaption");if(caption)caption.textContent=editComment.value+(editDate.value?" · "+editDate.value:"");
-          const player=button.closest("figure")?.querySelector("video");if(player)player.setAttribute("aria-label",editComment.value);
+          const figure=button.closest("figure");if(figure)figure.dataset.date=editDate.value;
+          const caption=figure?.querySelector("figcaption");if(caption)caption.textContent=editComment.value+(editDate.value?" · "+editDate.value:"");
+          const player=figure?.querySelector("video");if(player)player.setAttribute("aria-label",editComment.value);
           editStatus.textContent="Modifications enregistrées.";return;
         }
         if(!p)return;
