@@ -96,17 +96,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const button=document.createElement("button");button.type="button";button.className="photo-open";
           button.dataset.photo=photo.src;button.dataset.alt=photo.alt||"Photo du voyage";
           button.setAttribute("aria-label","Afficher dans la galerie : "+(photo.alt||"photo du voyage"));
-          button.addEventListener("click",()=>{ location.href="/galerie/?photo="+encodeURIComponent(photo.src); });
+          button.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"photo",key:photo.src}})));
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
           const caption=document.createElement("figcaption");
-          const place = String(photo.etape || "").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
+          const place = String(photo.alt || photo.etape || "Photo").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
           const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
-          caption.textContent=(place || "Photo")+time;
-          const mapLink=document.createElement("button");
-          mapLink.type="button";mapLink.className="daily-map-link";mapLink.textContent="Voir sur la carte";
-          mapLink.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"photo",key:photo.src}})));
-          figure.append(caption,mapLink);grid.append(figure);
+          caption.textContent=place+time;
+          figure.append(caption);grid.append(figure);
         }
         empty.hidden = dayPhotos.length>0;
         if (activitiesWrap && activitiesGrid) {
@@ -118,8 +115,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
             item.className = "daily-activity";
             const copy = document.createElement("div");
             copy.className = "daily-activity-copy";
-            const name = document.createElement("strong");
+            const name = document.createElement("button");
+            name.type = "button";
+            name.className = "daily-activity-title";
             name.textContent = activity.titre || "Activité";
+            name.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:activityDate(activity),kind:"sport",key:activity.id ? String(activity.id) : ""}})));
             const details = document.createElement("span");
             const parts = [String(activity.sport || "").replace(/^./, (c:string) => c.toLocaleUpperCase("fr-FR"))];
             if (typeof activity.km === "number" && activity.km > 0) parts.push(activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km");
@@ -133,10 +133,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
             item.append(copy);
             const actions = document.createElement("div");
             actions.className = "daily-activity-actions";
-            const mapLink=document.createElement("button");
-            mapLink.type="button";mapLink.className="daily-map-link";mapLink.textContent="Voir sur la carte";
-            mapLink.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"sport",key:activity.id ? String(activity.id) : ""}})));
-            actions.append(mapLink);
             if (activity.url && /^https:\/\/(www\.)?strava\.com\//.test(activity.url)) {
               const link = document.createElement("a");
               link.href = activity.url; link.target = "_blank"; link.rel = "noopener noreferrer";
@@ -179,12 +175,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     #daily-activities { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
     .daily-activity { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); background: var(--white); }
     .daily-activity-copy { display: grid; gap: 5px; min-width: 0; }
-    .daily-activity strong { font-size: .9rem; line-height: 1.35; color: var(--forest); }
+    .daily-activity-title { border: 0; padding: 0; background: transparent; color: var(--forest); font: inherit; font-size: .9rem; line-height: 1.35; font-weight: 700; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
     .daily-activity span { color: var(--muted); font-size: .78rem; }
     .daily-activity-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-    .daily-activity a, .daily-map-link { color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-    .daily-map-link { border: 0; padding: 0; background: transparent; cursor: pointer; font-family: inherit; }
-    .photo-tile .daily-map-link { display: inline-block; margin-top: 7px; }
+    .photo-tile figcaption { margin-top: 7px; color: var(--forest); font-size: .82rem; text-decoration: underline; text-underline-offset: 3px; }
+    .daily-activity a { color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
     .daily-all { margin-top: 20px; }
     @media(max-width:650px) {
       .daily-view { padding-top: 38px; }
