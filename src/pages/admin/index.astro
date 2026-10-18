@@ -572,6 +572,11 @@ import { chemin } from "../../lib/paths";
       return ffmpegInstance;
     }
     async function makeBrowserCompatible(file:File,index:number,total:number):Promise<File>{
+      // FFmpeg WASM may fail in browsers without SharedArrayBuffer. Do not block uploads: keep the original and let the browser decode it at playback time.
+      if(typeof SharedArrayBuffer==="undefined"){
+        message("video-file-feedback","Conversion indisponible dans ce navigateur : envoi du fichier original "+(index+1)+"/"+total+". La lecture dépendra des codecs pris en charge par le navigateur.");
+        return file;
+      }
       // HEVC and other codecs can be inside an MP4. Inspect the stream instead of trusting its extension.
       const ffmpeg=await getFFmpeg();
       const inputName="input_"+index+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80);
