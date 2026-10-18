@@ -109,7 +109,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     photoMarkerElement.setAttribute("role","img");
     photoMarkerElement.setAttribute("aria-label","Position GPS de la photo");
     const photoMarker=new maplibregl.Marker({element:photoMarkerElement,anchor:"center"});
-    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,place:[p.ville,p.pays].filter(Boolean).join(", "),lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:p.slug,zoom:6}));
+    const items:FilmItem[] = [];
     try{
       const [photoResponse,activityResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements")]);
       const photos=photoResponse.ok?(await photoResponse.json()).photos||[]:[];
@@ -140,7 +140,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const time=startTime&&endTime?`${startTime}–${endTime}`:startTime||endTime;
         items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,time,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
       }
-    }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
+    }catch{/* Le film utilise les photos et activités disponibles, sans ajouter d'étapes de destination. */}
     const unique=new Map<string,FilmItem>();
     for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
     const sequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
