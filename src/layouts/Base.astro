@@ -255,7 +255,8 @@ const nav = [
               if (figure.dataset.adminPhotoPencil) continue;
               const image = figure.querySelector("img");
               const photoControl = figure.querySelector<HTMLButtonElement>("button.photo-open[data-photo]") || figure.querySelector<HTMLAnchorElement>("a.photo-open[href]");
-              if (!image || !photoControl) continue;
+              const imagePath = image?.getAttribute("src") || "";
+              if (!image || !photoControl || !/^\/media(?:-prive)?\//.test(imagePath)) continue;
               figure.dataset.adminPhotoPencil = "true";
               figure.style.position = figure.style.position || "relative";
               const pencil = document.createElement("button");
