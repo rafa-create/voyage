@@ -36,7 +36,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   type FilmPoint = {slug?:string;date:string;titre:string;ville:string;pays:string;latitude:number;longitude:number;statut:string};
-  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
+  type FilmItem = {kind:"etape"|"photo"|"activite";date:string;title:string;lat:number;lon:number;detail:string;place?:string;location?:string;src?:string;slug?:string;id?:string;zoom:number};
   const points:FilmPoint[] = JSON.parse(document.querySelector("#film-map")?.getAttribute("data-points") || "[]");
   const mapElement = document.querySelector<HTMLElement>("#film-map");
   const memory = document.querySelector<HTMLElement>("#film-memory-content");
@@ -84,7 +84,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     photoMarkerElement.setAttribute("role","img");
     photoMarkerElement.setAttribute("aria-label","Position GPS de la photo");
     const photoMarker=new maplibregl.Marker({element:photoMarkerElement,anchor:"center"});
-    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:p.slug,zoom:6}));
+    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,place:[p.ville,p.pays].filter(Boolean).join(", "),lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:p.slug,zoom:6}));
     try{
       const [photoResponse,activityResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements")]);
       const photos=photoResponse.ok?(await photoResponse.json()).photos||[]:[];
@@ -101,7 +101,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const datedStage=linkedStage||[...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(p=>p.date===date);
-        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",lat,lon,detail:photo.commentaire||photo.legende||"",src:photo.src,slug:datedStage?.slug,zoom:12});
+        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",place:[datedStage?.ville,datedStage?.pays].filter(Boolean).join(", "),lat,lon,detail:photo.commentaire||photo.legende||"",src:photo.src,slug:datedStage?.slug,zoom:12});
       }
       for(const activity of activities){
         if(!activity||!valid(activity.latitude,activity.longitude))continue;
@@ -110,7 +110,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         const details=[activity.sport,typeof activity.km==="number"?activity.km.toLocaleString("fr-FR",{maximumFractionDigits:2})+" km":"",typeof activity.minutes==="number"?activity.minutes+" min":""].filter(Boolean).join(" · ");
         const location=[activity.lieu,activity.location_name,activity.location_city,activity.ville,activity.city,activity.location_state,activity.state,activity.location_country,activity.pays,activity.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
-        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
+        items.push({kind:"activite",date,title:activity.titre||activity.name||"Activité du voyage",place:location,lat:activity.latitude,lon:activity.longitude,detail:details,location,id:activity.id,zoom:11});
       }
     }catch{/* Les étapes suffisent pour lancer le film si les autres données sont indisponibles. */}
     const unique=new Map<string,FilmItem>();
@@ -189,7 +189,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     };
     const render=(animate=true)=>{
       const item=sequence[index];
-      place.textContent=item.title;
+      place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":item.kind==="activite"?"Lieu de l’activité":"Localisation de l’étape");
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
       if(item.kind!=="activite"){
