@@ -564,8 +564,10 @@ import { chemin } from "../../lib/paths";
     });
     let ffmpegInstance:any=null;
     let ffmpegLogs:string[]=[];
-    const VIDEO_CORE_URL="https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js";
-    const VIDEO_FFMPEG_URL="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js";
+    const VIDEO_CORE_URLS=["https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js","https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js"];
+    const VIDEO_FFMPEG_URLS=["https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js","https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"];
+    const VIDEO_CORE_URL=VIDEO_CORE_URLS[0];
+    const VIDEO_FFMPEG_URL=VIDEO_FFMPEG_URLS[0];
     function videoEnvironment(){
       const nav=navigator as any;
       return [
@@ -577,8 +579,8 @@ import { chemin } from "../../lib/paths";
         "SharedArrayBuffer disponible : "+String(typeof SharedArrayBuffer!=="undefined"),
         "Mémoire JS estimée : "+(nav.deviceMemory?nav.deviceMemory+" Go":"non exposée"),
         "Nombre de cœurs : "+(nav.hardwareConcurrency||"non exposé"),
-        "Core FFmpeg : "+VIDEO_CORE_URL,
-        "Wrapper FFmpeg : "+VIDEO_FFMPEG_URL
+        "Cores FFmpeg (ordre de tentative) : "+VIDEO_CORE_URLS.join(" ; "),
+        "Wrappers FFmpeg (ordre de tentative) : "+VIDEO_FFMPEG_URLS.join(" ; ")
       ].join("\n");
     }
     function ffmpegLog(line:unknown){
@@ -593,30 +595,48 @@ import { chemin } from "../../lib/paths";
       if(ffmpegInstance?.isLoaded?.())return ffmpegInstance;
       const w=window as any;
       let stage="initialisation";
+      const attempts:string[]=[];
       ffmpegLogs=[];
       try{
         if(!w.FFmpeg){
-          stage="chargement du script FFmpeg depuis unpkg";
-          await new Promise<void>((resolve,reject)=>{
-            const script=document.createElement("script");
-            script.src=VIDEO_FFMPEG_URL;
-            script.onload=()=>resolve();
-            script.onerror=(event)=>reject(new Error("Événement script.onerror lors du chargement de "+script.src+" ; type="+(event as Event).type));
-            document.head.append(script);
-          });
+          stage="chargement du script FFmpeg depuis les CDN";
+          for(const scriptUrl of VIDEO_FFMPEG_URLS){
+            try{
+              await new Promise<void>((resolve,reject)=>{
+                const script=document.createElement("script");
+                script.src=scriptUrl;
+                script.onload=()=>resolve();
+                script.onerror=(event)=>{script.remove();reject(new Error("script.onerror pour "+scriptUrl+" ; type="+(event as Event).type));};
+                document.head.append(script);
+              });
+              if(w.FFmpeg?.createFFmpeg)break;
+              attempts.push("Wrapper chargé sans FFmpeg.createFFmpeg : "+scriptUrl);
+            }catch(error){attempts.push("Wrapper "+scriptUrl+" : "+errorDetails(error));}
+          }
         }
-        if(!w.FFmpeg?.createFFmpeg)throw new Error("Le script est chargé mais FFmpeg.createFFmpeg est absent. window.FFmpeg="+String(!!w.FFmpeg));
-        stage="création du moteur FFmpeg (core monothread)";
-        ffmpegInstance=w.FFmpeg.createFFmpeg({
-          log:true,
-          mainName:"main",
-          corePath:VIDEO_CORE_URL,
-          logger:({type,message:line}:any)=>ffmpegLog("["+String(type||"log")+"] "+String(line))
-        });
-        stage="chargement du core WebAssembly ; une erreur « Load failed » survient souvent à cette étape";
-        await ffmpegInstance.load();
-        ffmpegLogs.push("Chargement FFmpeg terminé.");
-        return ffmpegInstance;
+        if(!w.FFmpeg?.createFFmpeg)throw new Error("Chargement du wrapper FFmpeg impossible. "+attempts.join(" | "));
+        let lastError:unknown=null;
+        for(const coreUrl of VIDEO_CORE_URLS){
+          stage="chargement du core WebAssembly via "+coreUrl;
+          try{
+            // Utilise une nouvelle instance après chaque échec de chargement.
+            const instance=w.FFmpeg.createFFmpeg({
+              log:true,
+              mainName:"main",
+              corePath:coreUrl,
+              logger:({type,message:line}:any)=>ffmpegLog("["+String(type||"log")+"] "+String(line))
+            });
+            await instance.load();
+            ffmpegInstance=instance;
+            ffmpegLogs.push("Chargement FFmpeg terminé via "+coreUrl);
+            return ffmpegInstance;
+          }catch(error){
+            lastError=error;
+            attempts.push("Core "+coreUrl+" : "+errorDetails(error));
+            ffmpegInstance=null;
+          }
+        }
+        throw new Error("Échec du chargement du core via tous les CDN. "+(lastError?errorDetails(lastError):""));
       }catch(error){
         const diagnostic=[
           "ÉCHEC FFmpeg",
@@ -626,11 +646,14 @@ import { chemin } from "../../lib/paths";
           "ENVIRONNEMENT",
           videoEnvironment(),
           "",
-          "DERNIÈRES LIGNES FFmpeg",
-          ffmpegLogs.length?ffmpegLogs.join("\n"):"Aucun log FFmpeg reçu avant l'échec.",
+          "TENTATIVES CDN",
+          attempts.length?attempts.join("\\n"):"Aucune tentative alternative nécessaire.",
           "",
-          "Pistes : vérifier l'accès réseau à unpkg, les extensions/bloqueurs, la politique CSP et la compatibilité WebAssembly du navigateur."
-        ].join("\n");
+          "DERNIÈRES LIGNES FFmpeg",
+          ffmpegLogs.length?ffmpegLogs.join("\\n"):"Aucun log FFmpeg reçu avant l'échec.",
+          "",
+          "Pistes : vérifier l'accès réseau aux CDN, les extensions/bloqueurs, la politique CSP et la compatibilité WebAssembly du navigateur."
+        ].join("\\n");
         showVideoDiagnostic(diagnostic);
         throw new Error("Échec du moteur vidéo à l’étape « "+stage+" » : "+(error instanceof Error?error.message:String(error))+". Ouvre « Diagnostic technique détaillé » pour le rapport complet.");
       }
