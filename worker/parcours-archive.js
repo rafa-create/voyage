@@ -140,9 +140,22 @@ export async function publicArchivedRoute(env,id,precision="overview"){
   if(!/^[a-f0-9-]{36}$/.test(id))return null;
   const [items,enabled]=await Promise.all([archiveIndex(env),autoPublicationEnabled(env)]);
   if(!items.some(item=>item.id===id&&isPublishedActivity(item,enabled)))return null;
-  const record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
+  let record=await getJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",null);
   const requested=precision==="full"?"routeFull":precision==="detail"?"routeDetail":"route";
-  // Les anciennes archives n'ont que leur tracé simplifié : elles restent lisibles.
+  // À la première demande détaillée, reconstruire les niveaux des anciennes
+  // archives à partir du GPX original conservé dans R2, puis les mettre en cache.
+  if(requested!=="route"&&!Array.isArray(record?.[requested])){
+    const original=await env.PHOTOS_PRIVEES.get(SOURCE+id+".gpx");
+    if(original){
+      const parsed=parseGpx(await original.text());
+      if(parsed&&record){
+        record={...record,route:parsed.route,routeDetail:parsed.routeDetail,
+          routeFull:parsed.routeFull,pointCount:parsed.pointCount};
+        await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",record);
+      }
+    }
+  }
+  // Les archives anciennes sans GPX source restent accessibles à leur résolution disponible.
   const points=Array.isArray(record?.[requested])?record[requested]:record?.route;
   if(!Array.isArray(points)||points.length<2)return null;
   // Les premières et dernières portions ne sont jamais livrées au navigateur public.
