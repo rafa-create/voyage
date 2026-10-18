@@ -22,7 +22,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     </div>
   </div>
   <div class="film-controls">
-    <button type="button" id="film-fullscreen" aria-label="Passer le film en plein écran" title="Plein écran">⛶ Plein écran</button>
+    <button type="button" id="film-fullscreen" aria-label="Passer le film en plein écran" title="Plein écran">⛶</button>
     <button type="button" id="film-prev" aria-label="Souvenir précédent">←</button>
     <button type="button" id="film-play" class="film-play" disabled>▶ Lancer le film</button>
     <button type="button" id="film-next" aria-label="Souvenir suivant">→</button>
@@ -50,19 +50,24 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   async function initFilm(){
     if(!mapElement||!memory||!place||!dateLabel||!progress||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection||!points.length)return;
     const syncFullscreenButton=()=>{
-      const active=document.fullscreenElement===filmSection;
-      fullscreenButton.textContent=active?"⛶ Quitter le plein écran":"⛶ Plein écran";
-      fullscreenButton.setAttribute("aria-label",active?"Quitter le plein écran":"Passer le film en plein écran");
-      if(active)window.setTimeout(()=>map.resize(),100);
-      else map.resize();
+      const active=filmSection.classList.contains("film-browser-fullscreen");
+      fullscreenButton.textContent="⛶";
+      fullscreenButton.setAttribute("aria-label",active?"Réduire le film":"Passer le film en plein écran");
+      fullscreenButton.title=active?"Réduire le film":"Plein écran";
+      window.setTimeout(()=>map.resize(),100);
     };
-    fullscreenButton.addEventListener("click",async()=>{
-      try{
-        if(document.fullscreenElement===filmSection)await document.exitFullscreen();
-        else if(!document.fullscreenElement)await filmSection.requestFullscreen();
-      }catch{/* Le plein écran peut être bloqué par le navigateur ou l'appareil. */}
+    fullscreenButton.addEventListener("click",()=>{
+      filmSection.classList.toggle("film-browser-fullscreen");
+      document.body.classList.toggle("film-browser-fullscreen-open",filmSection.classList.contains("film-browser-fullscreen"));
+      syncFullscreenButton();
     });
-    document.addEventListener("fullscreenchange",syncFullscreenButton);
+    document.addEventListener("keydown",(event)=>{
+      if(event.key==="Escape"&&filmSection.classList.contains("film-browser-fullscreen")){
+        filmSection.classList.remove("film-browser-fullscreen");
+        document.body.classList.remove("film-browser-fullscreen-open");
+        syncFullscreenButton();
+      }
+    });
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
     const stageMarkerElement=document.createElement("div");
@@ -220,17 +225,17 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-stage-marker{width:24px;height:24px;background:#df784a;border:3px solid #fffdf8;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 9px #00000040;position:relative}
   .film-stage-marker::after{content:"";position:absolute;width:6px;height:6px;top:6px;left:6px;border-radius:50%;background:#fffdf8}
   .film-controls{display:flex;align-items:center;gap:12px;padding-top:16px;flex-wrap:wrap}
-  #film-fullscreen{margin-right:auto;font-size:.8rem}
-  .voyage-film:fullscreen{box-sizing:border-box;width:100%;height:100%;padding:clamp(14px,2.5vh,28px) clamp(16px,3vw,48px);background:var(--paper,#f8f6f0);display:flex;flex-direction:column;overflow:auto}
-  .voyage-film:fullscreen .film-heading{margin-bottom:12px;flex:0 0 auto}
-  .voyage-film:fullscreen .film-heading h2{font-size:clamp(1.5rem,3vh,2.5rem)}
-  .voyage-film:fullscreen .film-heading>p:last-child{margin:5px 0}
-  .voyage-film:fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
-  .voyage-film:fullscreen .film-map-wrap{min-height:0}
-  .voyage-film:fullscreen .film-memory{overflow:auto}
-  .voyage-film:fullscreen .film-memory img{height:auto;max-height:48vh;object-fit:contain}
-  .voyage-film:fullscreen .film-controls{flex:0 0 auto}
-  @media(max-width:700px){.voyage-film:fullscreen .film-stage{grid-template-columns:1fr;grid-template-rows:minmax(220px,1fr) minmax(150px,.8fr)}.voyage-film:fullscreen .film-map-wrap{min-height:220px}.voyage-film:fullscreen .film-memory{min-height:0;padding:14px}.voyage-film:fullscreen .film-memory img{max-height:24vh}}
+  #film-fullscreen{margin-right:auto;width:42px;min-width:42px;padding:0;font-size:1.35rem;line-height:1;border-radius:3px;background:var(--white);box-shadow:0 1px 4px #00000018}
+  .voyage-film.film-browser-fullscreen{position:fixed;inset:0;z-index:9999;box-sizing:border-box;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;padding:clamp(12px,2.5vh,28px) clamp(12px,3vw,40px);background:var(--paper,#f8f6f0);display:flex;flex-direction:column;overflow:auto}
+  body.film-browser-fullscreen-open{overflow:hidden}
+  .voyage-film.film-browser-fullscreen .film-heading{margin-bottom:12px;flex:0 0 auto}
+  .voyage-film.film-browser-fullscreen .film-heading h2{font-size:clamp(1.5rem,3vh,2.5rem)}
+  .voyage-film.film-browser-fullscreen .film-heading>p:last-child{margin:5px 0}
+  .voyage-film.film-browser-fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
+  .voyage-film.film-browser-fullscreen .film-map-wrap{min-height:0}
+  .voyage-film.film-browser-fullscreen .film-memory{overflow:auto}
+  .voyage-film.film-browser-fullscreen .film-memory img{height:auto;max-height:48vh;object-fit:contain}
+  .voyage-film.film-browser-fullscreen .film-controls{flex:0 0 auto}
   .film-controls button{min-width:42px;height:42px;padding:0 14px;border:1px solid var(--line);background:transparent;color:var(--forest);cursor:pointer}
   .film-controls button:disabled{opacity:.35;cursor:default}
   .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
