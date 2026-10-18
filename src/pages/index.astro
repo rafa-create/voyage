@@ -8,16 +8,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 ---
 
 <Base title="Mon itinéraire" headerTitle="Mon itinéraire" active="accueil">
-  <section class="route-section home-map-only" aria-labelledby="home-map-heading">
-    <div class="container home-map-intro">
-      <h1 id="home-map-heading">Où j'étais hier</h1>
-    </div>
-    <div class="route-map-card home-full-width-map">
-      <CarteItineraire etapes={etapes}/>
-    </div>
-  </section>
-
-  <section id="daily-view" class="container section daily-view" aria-labelledby="daily-heading">
+  <section class="container section daily-view daily-map-controls" aria-label="Choisir le jour du souvenir">
     <div class="section-heading">
       <div>
         <div class="daily-heading-title">
@@ -36,6 +27,17 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         <button type="button" id="day-next" disabled>Jour suivant</button>
       </div>
     </div>
+  </section>
+  <section class="route-section home-map-only" aria-labelledby="home-map-heading">
+    <div class="container home-map-intro">
+      <h1 id="home-map-heading">Où j'étais hier</h1>
+    </div>
+    <div class="route-map-card home-full-width-map">
+      <CarteItineraire etapes={etapes}/>
+    </div>
+  </section>
+
+  <section id="daily-view" class="container section daily-view" aria-label="Photos du jour">
     <div id="daily-photos" class="photo-grid gallery-grid" aria-live="polite"></div>
     <p id="daily-empty" hidden>Aucune photo.</p>
     <section id="daily-activities-wrap" class="daily-activities" hidden aria-label="Activités du jour">
@@ -173,10 +175,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <style is:global>
     .home-map-intro { padding-top: 0; padding-bottom: 14px; }
     .home-map-intro h1 { margin: 0; color: var(--forest); font-size: clamp(1.55rem, 2.5vw, 2rem); line-height: 1.2; }
-    .daily-view { padding-top: 48px; }
-    .daily-view .section-heading { margin-bottom: 24px; }
-    .daily-view .section-heading .eyebrow { margin-bottom: 7px; }
-    .daily-view .section-heading h2 { margin: 0; }
+    .daily-map-controls { padding-top: 18px; padding-bottom: 8px; }
+    .daily-map-controls .section-heading { margin-bottom: 0; }
+    .daily-map-controls .section-heading h2 { margin: 0; }
+    .daily-view:not(.daily-map-controls) { padding-top: 28px; }
     .daily-heading-title { display: none; }
     .daily-heading-title.daily-heading-visible { display: flex; }
     .daily-view #daily-date { margin-top: 8px; font-size: .8rem; }
@@ -192,7 +194,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .photo-tile figcaption { margin-top: 7px; color: var(--forest); font-size: .82rem; text-decoration: none; }
     .daily-activity a { color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
     @media(max-width:650px) {
-      .daily-view { padding-top: 38px; }
+      .daily-map-controls { padding-top: 14px; }
+      .daily-view:not(.daily-map-controls) { padding-top: 24px; }
       #daily-activities { grid-template-columns: 1fr; }
       .daily-activity { align-items: flex-start; flex-direction: column; padding: 12px; gap: 9px; }
       .daily-activity-actions { flex-wrap: wrap; }
