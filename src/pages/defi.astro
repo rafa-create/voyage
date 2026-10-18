@@ -64,7 +64,7 @@ import Base from "../layouts/Base.astro";
 
     type Chess = {date:string;result:string;url:string;fin:number;rating?:number|null;mode?:string|null;eloDelta?:number|null};
     type Run = {id?:string;date:string;fin?:number;km:number;titre:string;minutes?:number|null;url?:string|null;source?:string;sport?:string;parcours?:boolean};
-    type Day = {date:string;echecs:Chess|null;activite:Run|null;resultat:"reussi"|"en_cours"|"manque"};
+    type Day = {date:string;echecs:Chess|null;partiesEchecs?:Chess[];activite:Run|null;resultat:"reussi"|"en_cours"|"manque"};
     type Elo = {rating:number|null;mode:string;delta:number|null;historique:{date:string;fin:number;rating:number}[]};
     type Data = {configured:boolean;username?:string;debut?:string;stats?:{
       jours:number;joursEchecs:number;joursActivites:number;joursComplets:number;reussite:number|null
@@ -126,21 +126,27 @@ import Base from "../layouts/Base.astro";
     }
     function expandElo(day:Day,body:HTMLElement){
       body.replaceChildren();
-      const game=day.echecs;
-      if(!game){body.append(create("p","empty-text","Aucune partie rapide ce jour-là."));return;}
-      const summary=create("div","chess-detail-top");
-      const rating=game.rating==null?"ELO non disponible":game.rating+" ELO";
-      summary.append(create("strong",undefined,rating));
-      if(game.eloDelta!==null&&game.eloDelta!==undefined){
-        const n=game.eloDelta;
-        summary.append(create("span","variation "+(n>0?"up":n<0?"down":"flat"),
-          (n>0?"+":"")+n+" points"));
-      }
-      body.append(summary);
+      const games=day.partiesEchecs?.length?day.partiesEchecs:(day.echecs?[day.echecs]:[]);
+      if(!games.length){body.append(create("p","empty-text","Aucune partie rapide ce jour-là."));return;}
+      body.append(create("p","tiny-label",games.length+" PARTIE"+(games.length>1?"S":"")+" RAPIDE"+(games.length>1?"S":"")+" JOUÉE"+(games.length>1?"S":"")));
+      const list=create("div","chess-game-list");
+      games.forEach((game,index)=>{
+        const row=create("div","chess-game-row");
+        const details=create("div","chess-game-info");
+        const time=Number.isFinite(game.fin)?new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit"}).format(new Date(game.fin*1000)):"";
+        details.append(create("strong",undefined,"Partie "+(index+1)+" · "+game.result));
+        const metadata=[time,game.rating==null?"ELO non disponible":game.rating+" ELO"];
+        if(game.eloDelta!==null&&game.eloDelta!==undefined)
+          metadata.push((game.eloDelta>0?"+":"")+game.eloDelta+" points");
+        details.append(create("small",undefined,metadata.filter(Boolean).join(" · ")));
+        row.append(details);
+        const origin=externalLink(game.url,"chess","Voir la partie");
+        if(origin)row.append(origin);
+        list.append(row);
+      });
+      body.append(list);
       const chart=chessGraph(day.date);
       if(chart)body.append(chart);
-      const origin=externalLink(game.url,"chess","Voir la partie sur Chess.com");
-      if(origin)body.append(origin);
     }
     function chessGraph(date:string){
       const entries=(state.elo?.historique||[])
@@ -445,6 +451,12 @@ import Base from "../layouts/Base.astro";
     .chess-detail-top strong{font:500 2rem/1.2 'Playfair Display',Georgia,serif;color:var(--forest)}
     .variation{font-size:.82rem;font-weight:800;color:var(--muted)}
     .variation.up{color:#28704c}.variation.down{color:#b65a43}
+    .chess-game-list{display:grid;gap:8px;margin-top:10px}
+    .chess-game-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+    .chess-game-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .chess-game-info strong{font-size:.86rem;color:var(--forest)}
+    .chess-game-info small{font-size:.75rem;color:var(--muted)}
+    .chess-game-row .original-link{flex:0 0 auto;margin-top:0}
     .elo-inline{margin-top:20px;color:var(--forest)}
     .tiny-label{font-size:.67rem;color:var(--muted);letter-spacing:.08em;font-weight:800}
     .elo-inline svg{width:100%;height:115px;display:block;margin-top:12px}
