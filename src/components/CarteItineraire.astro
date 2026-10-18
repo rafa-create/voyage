@@ -73,7 +73,7 @@ const points = etapes
       // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
       // Masquer les liens entre les étapes dès l'ouverture de la carte.
       let voyageLinksHidden = true;
-      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs"];
+      const voyageLinkLayers = ["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "tous-les-traces", "tous-les-traces-fleches", "trace-sportive", "trace-sportive-fleches"];
       const syncVoyageLinkVisibility = () => {
         for (const id of voyageLinkLayers) {
           if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", voyageLinksHidden ? "none" : "visible");
