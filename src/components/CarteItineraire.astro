@@ -463,8 +463,13 @@ const points = etapes
               allTracesButton.setAttribute("aria-label", allTracesButton.textContent);
               allTracesButton.setAttribute("aria-pressed", String(voyageLinksHidden));
             });
-            const linksSlot = document.getElementById("map-links-control-slot");
-            if (linksSlot) linksSlot.append(allTracesButton);
+            const linksControl = document.createElement("div");
+            linksControl.className = "maplibregl-ctrl map-links-control";
+            linksControl.append(allTracesButton);
+            map.addControl({
+              onAdd: () => linksControl,
+              onRemove: () => linksControl.remove()
+            } as maplibregl.IControl, "top-left");
             const mapVisibilityToggle = document.getElementById("map-visibility-toggle");
             mapVisibilityToggle?.addEventListener("click", () => {
               const hidden = element.style.display === "none";
