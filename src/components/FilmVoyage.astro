@@ -22,6 +22,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     </div>
   </div>
   <div class="film-controls">
+    <button type="button" id="film-fullscreen" aria-label="Passer le film en plein écran" title="Plein écran">⛶ Plein écran</button>
     <button type="button" id="film-prev" aria-label="Souvenir précédent">←</button>
     <button type="button" id="film-play" class="film-play" disabled>▶ Lancer le film</button>
     <button type="button" id="film-next" aria-label="Souvenir suivant">→</button>
@@ -42,10 +43,26 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const playButton = document.querySelector<HTMLButtonElement>("#film-play");
   const prevButton = document.querySelector<HTMLButtonElement>("#film-prev");
   const nextButton = document.querySelector<HTMLButtonElement>("#film-next");
+  const fullscreenButton = document.querySelector<HTMLButtonElement>("#film-fullscreen");
+  const filmSection = document.querySelector<HTMLElement>(".voyage-film");
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
   async function initFilm(){
-    if(!mapElement||!memory||!place||!dateLabel||!progress||!playButton||!prevButton||!nextButton||!points.length)return;
+    if(!mapElement||!memory||!place||!dateLabel||!progress||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection||!points.length)return;
+    const syncFullscreenButton=()=>{
+      const active=document.fullscreenElement===filmSection;
+      fullscreenButton.textContent=active?"⛶ Quitter le plein écran":"⛶ Plein écran";
+      fullscreenButton.setAttribute("aria-label",active?"Quitter le plein écran":"Passer le film en plein écran");
+      if(active)window.setTimeout(()=>map.resize(),100);
+      else map.resize();
+    };
+    fullscreenButton.addEventListener("click",async()=>{
+      try{
+        if(document.fullscreenElement===filmSection)await document.exitFullscreen();
+        else if(!document.fullscreenElement)await filmSection.requestFullscreen();
+      }catch{/* Le plein écran peut être bloqué par le navigateur ou l'appareil. */}
+    });
+    document.addEventListener("fullscreenchange",syncFullscreenButton);
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
     const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:undefined,zoom:6}));
@@ -185,7 +202,18 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
   .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
   .film-memory-placeholder{color:var(--muted);font-size:.9rem}
-  .film-controls{display:flex;align-items:center;gap:12px;padding-top:16px}
+  .film-controls{display:flex;align-items:center;gap:12px;padding-top:16px;flex-wrap:wrap}
+  #film-fullscreen{margin-right:auto;font-size:.8rem}
+  .voyage-film:fullscreen{box-sizing:border-box;width:100%;height:100%;padding:clamp(14px,2.5vh,28px) clamp(16px,3vw,48px);background:var(--paper,#f8f6f0);display:flex;flex-direction:column;overflow:auto}
+  .voyage-film:fullscreen .film-heading{margin-bottom:12px;flex:0 0 auto}
+  .voyage-film:fullscreen .film-heading h2{font-size:clamp(1.5rem,3vh,2.5rem)}
+  .voyage-film:fullscreen .film-heading>p:last-child{margin:5px 0}
+  .voyage-film:fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
+  .voyage-film:fullscreen .film-map-wrap{min-height:0}
+  .voyage-film:fullscreen .film-memory{overflow:auto}
+  .voyage-film:fullscreen .film-memory img{height:auto;max-height:48vh;object-fit:contain}
+  .voyage-film:fullscreen .film-controls{flex:0 0 auto}
+  @media(max-width:700px){.voyage-film:fullscreen .film-stage{grid-template-columns:1fr;grid-template-rows:minmax(220px,1fr) minmax(150px,.8fr)}.voyage-film:fullscreen .film-map-wrap{min-height:220px}.voyage-film:fullscreen .film-memory{min-height:0;padding:14px}.voyage-film:fullscreen .film-memory img{max-height:24vh}}
   .film-controls button{min-width:42px;height:42px;padding:0 14px;border:1px solid var(--line);background:transparent;color:var(--forest);cursor:pointer}
   .film-controls button:disabled{opacity:.35;cursor:default}
   .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
