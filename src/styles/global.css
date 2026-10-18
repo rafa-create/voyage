@@ -504,10 +504,11 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 .daily-view .daily-heading-title {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
 }
-.daily-view .daily-heading-title h2 { margin: 0; }
+.daily-view .daily-heading-title h2 { margin: 0; min-width: 0; }
 .daily-heading-arrows {
   display: inline-flex;
   align-items: center;
@@ -538,7 +539,8 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   white-space: nowrap;
 }
 @media(max-width:650px) {
-  .daily-view .daily-heading-title { gap: 8px; }
+  .daily-view .daily-heading-title { gap: 6px; }
+  .daily-view .daily-heading-title h2 { font-size: clamp(1.05rem, 4.5vw, 1.5rem); }
   .daily-heading-arrows { gap: 4px; }
   .daily-heading-arrows button { width: 34px; height: 34px; }
   .daily-view .daily-controls { width: 100%; }
