@@ -62,7 +62,7 @@ const { etape } = Astro.props;
                     ></iframe>
                   </div>
                 ) : <p>Impossible d'intégrer ce lien vidéo.</p>}
-                <p><a href={video.url} target="_blank" rel="noopener noreferrer">{video.titre} ↗</a></p>
+                <p><a href={video.url} target="_blank" rel="noopener noreferrer">{video.titre}</a></p>
               </div>
             );
           })}
@@ -130,7 +130,7 @@ const { etape } = Astro.props;
               iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share";
               frame.append(iframe);
               const link = document.createElement("a");
-              link.href = video.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent=video.titre+" ↗";
+              link.href = video.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent=video.titre+"";
               card.append(frame,link);videosGrid.append(card);
               saved.add(id);
             }
