@@ -42,7 +42,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <section id="daily-view" class="container section daily-view" aria-label="Photos du jour">
     <div id="daily-photos" class="photo-grid gallery-grid" aria-live="polite"></div>
     <p id="daily-empty" hidden>Aucune photo ni vidéo.</p>
-    <section id="daily-videos-wrap" class="daily-videos" hidden aria-label="Vidéos du jour"><h3>Vidéos</h3><div id="daily-videos"></div></section>
     <section id="daily-activities-wrap" class="daily-activities" hidden aria-label="Activités du jour">
       <h3>Activités</h3>
       <div id="daily-activities"></div>
@@ -76,31 +75,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           return await response.json();
         } catch { return {}; }
       };
-      const [photoData, eventData, looseVideoData] = await Promise.all([
+      const [photoData, eventData] = await Promise.all([
         safeJson("/api/public/photos"),
-        safeJson("/api/public/carte-evenements"),
-        safeJson("/api/public/videos")
+        safeJson("/api/public/carte-evenements")
       ]);
       const photos:DailyPhoto[] = photoData.photos || [];
       const courses = eventData.courses || [];
-      type DailyVideo = {id?:string;url?:string;titre?:string;date?:string;datePrise?:string;dateHeure?:string;etape?:string;lieu?:string;ville?:string;pays?:string};
-      const looseVideos:DailyVideo[] = looseVideoData.videos || [];
-      const videoGroups = await Promise.all(etapes.map(async step => {
-        const data = await safeJson("/api/public/videos?etape="+encodeURIComponent(step.slug));
-        return (data.videos || []).map((video:DailyVideo)=>({...video,etape:step.slug}));
-      }));
-      const videos:DailyVideo[] = [...looseVideos.map(video=>({...video,etape:"sans-etape"})),...videoGroups.flat()];
       const dates = new Set<string>();
       for (const photo of photos) { const d=dateKey(photo); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d); }
-      const videoDate = (video:DailyVideo) => String(video.dateHeure || video.datePrise || video.date || "").slice(0,10);
-      for (const video of videos) {
-        const d=videoDate(video);
-        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
-        else if (video.etape && video.etape !== "sans-etape") {
-          const step=etapes.find(item=>item.slug===video.etape);
-          if (step?.date) dates.add(step.date);
-        }
-      }
       const activityDate = (course:any) => String(course.date || (course.fin ? new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(course.fin))) : "")).slice(0,10);
       for (const course of courses) {
         const d=activityDate(course);
@@ -142,32 +124,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           caption.textContent=place+time;
           figure.append(caption);grid.append(figure);
         }
-        const dayVideos = videos.filter(video => {
-          const explicitDate = videoDate(video);
-          if (explicitDate) return explicitDate === day;
-          if (!video.etape || video.etape === "sans-etape") return false;
-          const step = etapes.find(item=>item.slug===video.etape);
-          if (!step) return false;
-          const nextStepDate = [...etapes].filter(item=>item.date>step.date).sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;
-          return day >= step.date && (!nextStepDate || day < nextStepDate);
-        });
-        const dailyVideosWrap = document.querySelector<HTMLElement>("#daily-videos-wrap");
-        const dailyVideosGrid = document.querySelector<HTMLElement>("#daily-videos");
-        if (dailyVideosGrid && dailyVideosWrap) {
-          dailyVideosGrid.replaceChildren();
-          for (const video of dayVideos) {
-            const id = String(video.url || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1];
-            if (!id) continue;
-            const figure = document.createElement("figure"); figure.className="photo-tile daily-video-tile";
-            const link = document.createElement("a"); link.href=video.url || ("https://www.youtube.com/watch?v="+id); link.target="_blank"; link.rel="noopener noreferrer"; link.className="daily-video-link";
-            const poster = document.createElement("img"); poster.src="https://i.ytimg.com/vi/"+id+"/hqdefault.jpg"; poster.alt=video.titre || "Vidéo du voyage"; poster.loading="lazy"; poster.decoding="async";
-            const play = document.createElement("span"); play.className="daily-video-play"; play.setAttribute("aria-hidden","true"); play.textContent="▶";
-            link.append(poster,play); figure.append(link);
-            const caption=document.createElement("figcaption"); caption.textContent=video.titre || "Vidéo du voyage"; figure.append(caption); dailyVideosGrid.append(figure);
-          }
-          dailyVideosWrap.hidden = dailyVideosGrid.childElementCount===0;
-        }
-        empty.hidden = dayPhotos.length>0 || (dailyVideosGrid?.childElementCount || 0)>0;
+        empty.hidden = dayPhotos.length>0;
         if (activitiesWrap && activitiesGrid) {
           activitiesGrid.replaceChildren();
           const dayActivities = courses.filter((course:any) => activityDate(course) === day)
@@ -232,7 +189,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
   </script>
   <style is:global>
-    .daily-videos{margin-top:1.5rem}.daily-videos h3{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;margin:0 0 .75rem;color:var(--muted,#777)}#daily-videos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:1rem}.daily-video-tile{min-width:0}.daily-video-link{display:block;position:relative;overflow:hidden;border-radius:6px;background:#222;aspect-ratio:16/9}.daily-video-link img{display:block;width:100%;height:100%;object-fit:cover}.daily-video-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:48px;height:34px;border-radius:9px;background:#d71920;color:#fff;font-size:1.2rem}.daily-video-tile figcaption{margin-top:.4rem;font-size:.9rem;line-height:1.4;overflow-wrap:anywhere}
     .daily-map-controls { padding-top: 18px; padding-bottom: 8px; }
     .daily-map-controls-bottom { padding-top: 12px; padding-bottom: 4px; }
     .daily-map-controls > h1 { margin: 0 0 12px; color: var(--forest); font-size: clamp(1.55rem, 2.5vw, 2rem); line-height: 1.2; }
