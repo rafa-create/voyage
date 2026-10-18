@@ -378,7 +378,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .voyage-film.film-showing-activity .film-memory-content p{grid-column:1/-1;grid-row:auto;white-space:nowrap}
   .voyage-film.film-showing-activity .film-memory-content h3{white-space:normal}
   .film-activity-location{font-size:.9rem;color:var(--forest)!important;font-weight:600}
-  .film-map-wrap{position:relative;min-height:390px;background:#e9ece5}
+  .film-map-wrap{position:relative;min-height:390px;background:#e9ece5;order:1}
+  .film-memory{order:0}
   #film-map{position:absolute;inset:0}
   .film-map-caption[hidden]{display:none}.film-map-caption{position:absolute;left:16px;bottom:16px;max-width:calc(100% - 230px);padding:10px 14px;background:rgba(255,255,255,.94);color:var(--forest);font-size:.8rem;border-radius:10px;box-shadow:0 3px 18px #00000012;pointer-events:none;overflow-wrap:anywhere}
   .film-map-day{position:absolute;right:8px;bottom:16px;width:max-content;max-width:calc(100% - 16px);padding:8px 12px;background:#fff;border:1px solid rgba(30,55,45,.12);border-radius:10px;box-shadow:0 2px 10px rgba(20,35,28,.10)}
@@ -405,9 +406,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .voyage-film.film-browser-fullscreen .film-heading{display:none}
   .voyage-film.film-browser-fullscreen .film-heading h2{font-size:clamp(1.5rem,3vh,2.5rem)}
   .voyage-film.film-browser-fullscreen .film-heading>p:last-child{margin:5px 0}
-  .voyage-film.film-browser-fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
-  .voyage-film.film-browser-fullscreen .film-map-wrap{grid-row:1;min-height:0}
-  .voyage-film.film-browser-fullscreen .film-memory{grid-row:2;overflow:auto;justify-content:flex-start;padding:12px 16px;gap:8px}
+  .voyage-film.film-browser-fullscreen .film-stage{flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .voyage-film.film-browser-fullscreen .film-memory{grid-row:1;order:0;overflow:auto;justify-content:flex-start;padding:12px 16px;gap:8px}
+  .voyage-film.film-browser-fullscreen .film-map-wrap{grid-row:2;order:1;min-height:0}
   .voyage-film.film-browser-fullscreen .film-memory img{height:auto;max-height:28vh;max-width:100%;object-fit:contain;align-self:center}
   .voyage-film.film-browser-fullscreen .film-map-wrap{min-height:0}
   .voyage-film.film-browser-fullscreen .film-memory{overflow:auto}
