@@ -42,7 +42,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   </section>
 
   <script>
-    type DailyPhoto = {src:string;alt?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
+    type DailyPhoto = {src:string;alt?:string;legende?:string;commentaire?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
     const dateLabel = (value:string) => "Souvenir du " + new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
     const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
     const grid = document.querySelector<HTMLElement>("#daily-photos");
@@ -100,7 +100,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
           const caption=document.createElement("figcaption");
-          const place = String(photo.alt || photo.etape || "Photo").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
+          const place = String(photo.legende || photo.commentaire || photo.alt || photo.etape || "Photo").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
           const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
           caption.textContent=place+time;
           figure.append(caption);grid.append(figure);
