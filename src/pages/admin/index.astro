@@ -60,8 +60,8 @@ import { chemin } from "../../lib/paths";
           <div><p class="eyebrow">03 / YOUTUBE</p><h2>Ajouter une vidéo</h2></div>
         </div>
         <form id="video-form" class="admin-stack">
-          <label for="video-etape">Étape</label>
-          <select id="video-etape" required></select>
+          <label for="video-etape">Étape associée (facultatif)</label>
+          <select id="video-etape"></select>
           <label for="video-title">Titre de la vidéo</label>
           <input id="video-title" placeholder="Ex. Coucher de soleil sur le port" required maxlength="180"/>
           <label for="video-url">Lien YouTube</label>
@@ -161,6 +161,7 @@ import { chemin } from "../../lib/paths";
         if(!select)continue;
         select.replaceChildren();
         if(id==="upload-etape")select.append(new Option("Sans étape",""));
+        if(id==="video-etape")select.append(new Option("Sans étape","sans-etape"));
         for(const e of etapes){
           const option=document.createElement("option");
           option.value=e.slug;option.textContent=e.ville+" · "+e.pays;
@@ -168,7 +169,7 @@ import { chemin } from "../../lib/paths";
         }
         const choice=before[id];
         const current=etapes.find(e=>e.statut==="actuelle");
-        select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice==="")?choice:id==="upload-etape"?"":current?.slug||etapes[0]?.slug||"";
+        select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice===""||id==="video-etape"&&choice==="sans-etape")?choice:(id==="upload-etape"||id==="video-etape")?(id==="video-etape"?"sans-etape":""):current?.slug||etapes[0]?.slug||"";
       }
       const filter=$<HTMLSelectElement>("library-filter");
       if(filter){
@@ -433,8 +434,8 @@ import { chemin } from "../../lib/paths";
       const list=$("video-list");if(!list)return;
       const slug=$<HTMLSelectElement>("video-etape")?.value;
       list.replaceChildren();
-      if(!slug)return;
-      const result=await api("/api/prive/admin/videos?etape="+encodeURIComponent(slug));
+      const selectedSlug=slug||"sans-etape";
+      const result=await api("/api/prive/admin/videos?etape="+encodeURIComponent(selectedSlug));
       for(const video of result.videos){
         const line=document.createElement("div");line.className="admin-video-item";
         const link=document.createElement("a");link.href=video.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=video.titre+"";
@@ -443,7 +444,7 @@ import { chemin } from "../../lib/paths";
           const del=document.createElement("button");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Supprimer cette vidéo");
           del.addEventListener("click",async()=>{
             if(!window.confirm("Retirer ce lien YouTube ?"))return;
-            try{await post("/api/prive/admin/video-supprimer",{slug,id:video.id});await renderVideos();}
+            try{await post("/api/prive/admin/video-supprimer",{slug:selectedSlug,id:video.id});await renderVideos();}
             catch(err){message("video-feedback",String(err));}
           });
           line.append(del);
@@ -456,11 +457,11 @@ import { chemin } from "../../lib/paths";
       e.preventDefault();
       try{
         await post("/api/prive/admin/video-ajouter",{
-          slug:$<HTMLSelectElement>("video-etape")?.value,
+          slug:$<HTMLSelectElement>("video-etape")?.value||"sans-etape",
           titre:$<HTMLInputElement>("video-title")?.value,
           url:$<HTMLInputElement>("video-url")?.value,
         });
-        message("video-feedback","Vidéo ajoutée à l'étape.");
+        message("video-feedback",($<HTMLSelectElement>("video-etape")?.value==="sans-etape"?"Vidéo ajoutée sans étape.":"Vidéo ajoutée à l'étape."));
         for(const id of ["video-title","video-url"]){const el=$<HTMLInputElement>(id);if(el)el.value="";}
         await renderVideos();
       }catch(err){message("video-feedback",err instanceof Error?err.message:"Erreur.");}
