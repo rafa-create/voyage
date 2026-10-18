@@ -145,7 +145,20 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           figure.append(player);
           const caption=document.createElement("figcaption");
           caption.textContent=(video.titre||"Vidéo du voyage")+(video.date?" · "+String(video.date).slice(11,16):"");
-          figure.append(caption);grid.append(figure);
+          figure.append(caption);
+          const linkedStage=video.etape?stages.find(stage=>stage.slug===video.etape):undefined;
+          const videoDay=videoDateKey(video);
+          const mapStage=linkedStage||[...stages].filter(stage=>String(stage.date||"")<=videoDay).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||stages.find(stage=>stage.date===videoDay);
+          if(video.key&&mapStage&&Number.isFinite(Number(mapStage.latitude))&&Number.isFinite(Number(mapStage.longitude))){
+            const mapButton=document.createElement("button");
+            mapButton.type="button";
+            mapButton.className="daily-video-map-link";
+            mapButton.textContent="Voir sur la carte";
+            mapButton.setAttribute("aria-label","Voir sur la carte : "+(video.titre||"Vidéo du voyage"));
+            mapButton.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:videoDay,kind:"video-fichier",key:"video-file:"+String(video.key)}})));
+            figure.append(mapButton);
+          }
+          grid.append(figure);
         }
         for (const video of dayYoutubeVideos) {
           const figure=document.createElement("figure");figure.className="photo-tile daily-video-tile daily-youtube-tile";
@@ -245,6 +258,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     /* Deux colonnes donnent plus de place aux photos ; les vidéos occupent toute la largeur. */
     .daily-view .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .daily-view .gallery-grid .daily-video-tile { grid-column: 1 / -1; }
+    .daily-video-map-link { display:inline-block;margin-top:.5rem;padding:.35rem .65rem;border:1px solid var(--line);border-radius:3px;background:var(--white);color:var(--forest);font:600 .78rem 'DM Sans',sans-serif;cursor:pointer; }
+    .daily-video-map-link:hover { background:var(--forest);color:#fff; }
     .daily-view .daily-video-tile iframe,
     .daily-view .daily-video-tile video { display: block; width: 100%; aspect-ratio: 16 / 9; }
 
