@@ -7,7 +7,6 @@ import Base from "../layouts/Base.astro";
     <div class="journal-date-controls">
       <label for="journal-date-picker">Choisir une journée</label>
       <input id="journal-date-picker" type="date" aria-label="Choisir une date du journal" />
-      <button type="button" id="journal-show-all">Toutes les journées</button>
     </div>
     <div id="journal-souvenirs">
       <p class="empty-state">Chargement des souvenirs…</p>
@@ -18,7 +17,6 @@ import Base from "../layouts/Base.astro";
     type Souvenir = {src:string;alt?:string;legende?:string;titre?:string;dateHeure?:string;datePrise?:string;ajouteLe?:string;date?:string;lieu?:string;etape?:string;kind?:"photo"|"video";key?:string};
     const root=document.querySelector<HTMLElement>("#journal-souvenirs");
     const datePicker=document.querySelector<HTMLInputElement>("#journal-date-picker");
-    const showAllButton=document.querySelector<HTMLButtonElement>("#journal-show-all");
     let selectedDay="";
     const dateOf=(p:Souvenir)=>String(p.dateHeure||p.datePrise||p.date||p.ajouteLe||"").slice(0,10);
     const formatDate=(value:string)=>new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
@@ -72,21 +70,19 @@ import Base from "../layouts/Base.astro";
       if(selectedDay&&!groups.has(selectedDay)){
         const empty=document.createElement("div");empty.className="empty-state";
         const title=document.createElement("h2");title.textContent="Aucun souvenir pour cette journée";
-        const copy=document.createElement("p");copy.textContent="Choisissez une autre date dans le calendrier ou affichez toutes les journées.";
+        const copy=document.createElement("p");copy.textContent="Choisissez une autre date dans le calendrier ou effacez la date sélectionnée pour retrouver le journal complet.";
         empty.append(title,copy);root.append(empty);
       }else root.append(list);
     }
     datePicker?.addEventListener("change",()=>{selectedDay=datePicker.value;renderJournal().catch(()=>{});});
-    showAllButton?.addEventListener("click",()=>{selectedDay="";if(datePicker)datePicker.value="";renderJournal().catch(()=>{});});
     renderJournal().catch(()=>{
       if(root){root.replaceChildren();const p=document.createElement("p");p.className="empty-state";p.textContent="Impossible de charger les souvenirs pour le moment.";root.append(p);}
     });
   </script>
   <style is:global>
-    .journal-date-controls { display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; margin-bottom: 28px; overflow-x: auto; max-width: 100%; padding: 2px 2px 6px; }
-    .journal-date-controls label { color: var(--muted); font-size: .9rem; white-space: nowrap; flex: 0 0 auto; }
-    .journal-date-controls input { flex: 0 0 auto; min-width: 145px; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #222); font: inherit; cursor: pointer; }
-    .journal-date-controls button { flex: 0 0 auto; white-space: nowrap; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .journal-date-controls { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; margin-bottom: 20px; overflow-x: auto; max-width: 100%; padding: 2px 2px 5px; }
+    .journal-date-controls label { color: var(--muted); font-size: .76rem; white-space: nowrap; flex: 0 0 auto; }
+    .journal-date-controls input { flex: 0 0 auto; width: 138px; min-width: 138px; min-height: 34px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface, #fff); color: var(--text, #222); font-size: .78rem; cursor: pointer; }
     .journal-date-button { display: inline-block; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
     .journal-date-button:focus-visible, .journal-date-controls button:focus-visible, .journal-date-controls input:focus-visible { outline: 2px solid var(--accent, #426b5b); outline-offset: 3px; }
     .journal-day-card { min-width: 0; }
