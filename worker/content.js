@@ -97,7 +97,7 @@ export async function videos(env,slug){
   const db=await getJSON(env.PHOTOS_PRIVEES,"__meta/videos/"+slug+".json",[]);
   const stored=Array.isArray(db)?db:[];
   const step=etapesInitiales.find(x=>x.slug===slug);
-  return [...(step?.videos||[]),...stored].filter(v=>urlYoutube(v.url)).map(v=>({id:v.id||null,url:v.url,titre:v.titre||"Vidéo du voyage"}));
+  return [...(step?.videos||[]),...stored].filter(v=>urlYoutube(v.url)).map(v=>({id:v.id||null,url:v.url,titre:v.titre||"Vidéo du voyage",date:v.date||null,lieu:v.lieu||"",latitude:v.latitude??null,longitude:v.longitude??null}));
 }
 export async function getCaptureCoords(bucket,key){
   try{
