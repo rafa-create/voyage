@@ -93,7 +93,7 @@ import { chemin } from "../../lib/paths";
           <input id="video-files" class="visually-hidden" type="file" accept="video/mp4,video/quicktime,video/webm,video/ogg,.mp4,.m4v,.mov,.webm,.ogv" multiple />
           <div id="chosen-video-files" class="chosen-files"></div>
           <button class="admin-primary" type="submit">Envoyer les vidéos</button>
-          <p class="admin-note">Les vidéos sont vérifiées avant l’envoi. Si nécessaire, le navigateur les convertit en MP4/H.264 pour améliorer la compatibilité. La conversion peut être longue sur téléphone et nécessite le chargement d’un moteur de conversion. Les fichiers déjà présents dans R2 ne sont pas modifiés. Avant une publication publique, vérifie les métadonnées de localisation. Utilise « Privée » pour le bucket protégé.</p>
+          <p class="admin-note">Les vidéos sont vérifiées avant l’envoi. Si nécessaire, le navigateur tente une conversion en MP4/H.264 avec le moteur monothread. La conversion peut être longue sur téléphone. Si elle échoue, l’envoi est interrompu plutôt que d’enregistrer silencieusement un fichier potentiellement illisible. Les fichiers déjà présents dans R2 ne sont pas modifiés. Avant une publication publique, vérifie les métadonnées de localisation. Utilise « Privée » pour le bucket protégé.</p>
           <p id="video-file-feedback" role="status" class="admin-feedback"></p>
         </form>
         <div id="video-file-list" class="admin-video-file-list"></div>
@@ -564,19 +564,16 @@ import { chemin } from "../../lib/paths";
         });
       }
       if(!w.FFmpeg?.createFFmpeg)throw new Error("Le moteur de conversion vidéo n’est pas disponible dans ce navigateur.");
-      // Match ffmpeg.wasm 0.11.6 with the standard single-thread core 0.11.0.
-      // Do not use core-st here: its proxy entry point can fail with unknown proxy_main errors.
-      // The standard core does not require SharedArrayBuffer / COOP-COEP headers.
-      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,mainName:"main",corePath:"https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"});
+      // ffmpeg.wasm 0.11.x uses @ffmpeg/core-st for the single-thread build.
+      // The standard @ffmpeg/core 0.11.x build is multithreaded and may require SharedArrayBuffer.
+      // Explicit mainName avoids the proxy_main entry-point mismatch seen with core-st.
+      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,mainName:"main",corePath:"https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js"});
       await ffmpegInstance.load();
       return ffmpegInstance;
     }
     async function makeBrowserCompatible(file:File,index:number,total:number):Promise<File>{
-      // FFmpeg WASM may fail in browsers without SharedArrayBuffer. Do not block uploads: keep the original and let the browser decode it at playback time.
-      if(typeof SharedArrayBuffer==="undefined"){
-        message("video-file-feedback","Conversion indisponible dans ce navigateur : envoi du fichier original "+(index+1)+"/"+total+". La lecture dépendra des codecs pris en charge par le navigateur.");
-        return file;
-      }
+      // Always attempt the single-thread converter, including browsers without SharedArrayBuffer.
+      // If conversion fails, abort the upload instead of silently storing an incompatible original.
       // HEVC and other codecs can be inside an MP4. Inspect the stream instead of trusting its extension.
       const ffmpeg=await getFFmpeg();
       const inputName="input_"+index+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80);
