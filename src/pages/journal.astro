@@ -59,7 +59,6 @@ import { chemin } from "../lib/paths";
         const entry=document.createElement("li");
         const date=document.createElement("span");date.className="timeline-date";date.textContent=formatDate(day);
         const card=document.createElement("div");card.className="timeline-card journal-day-card";
-        const heading=document.createElement("h2");heading.textContent=formatDate(day);
         const grid=document.createElement("div");grid.className="photo-grid gallery-grid journal-day-photos";
         for(const photo of items){
           const figure=document.createElement("figure");figure.className="photo-tile";
@@ -72,7 +71,7 @@ import { chemin } from "../lib/paths";
           grid.append(figure);
         }
         const count=document.createElement("p");count.className="journal-day-count";count.textContent=items.length+" "+(items.length>1?"souvenirs":"souvenir");
-        card.append(heading,count,grid);entry.append(date,card);list.append(entry);
+        card.append(count,grid);entry.append(date,card);list.append(entry);
       }
       root.append(list);
     }
@@ -87,7 +86,6 @@ import { chemin } from "../lib/paths";
     .journal-stages > h2 { margin: 0 0 8px; }
     .journal-stages-intro { color: var(--muted); margin: 0 0 28px; max-width: 620px; }
     .journal-day-card { min-width: 0; }
-    .journal-day-card > h2 { margin: 0; font-size: 1.2rem; }
     .journal-day-count { color: var(--muted); font-size: .8rem; margin: 8px 0 16px; }
     .journal-day-photos { margin-top: 12px; }
     .journal-day-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
