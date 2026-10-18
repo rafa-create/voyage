@@ -457,3 +457,39 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
   padding: 18px 14px 14px;
 }
 
+/* Barre de commandes de la carte : masquer la carte ou ses liens indépendamment. */
+.map-visibility-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+}
+.map-visibility-toolbar button {
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid #d8d2c5;
+  border-radius: 4px;
+  background: #fffdf8;
+  color: #173d3b;
+  font: 600 13px 'DM Sans',sans-serif;
+  cursor: pointer;
+  box-shadow: 0 1px 4px #00000012;
+}
+.map-visibility-toolbar button:hover {
+  background: #ebe6da;
+}
+#map-links-control-slot { display: flex; align-items: center; }
+#map-links-control-slot button[aria-pressed="true"] {
+  background: #173d3b;
+  color: #fffdf8;
+}
+@media(max-width:600px) {
+  .map-visibility-toolbar { gap: 6px; padding: 8px; }
+  .map-visibility-toolbar button { flex: 1 1 auto; padding: 8px 9px; font-size: 12px; }
+  #map-links-control-slot { flex: 1 1 auto; }
+  #map-links-control-slot button { width: 100%; }
+}
+
