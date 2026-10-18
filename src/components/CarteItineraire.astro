@@ -161,6 +161,11 @@ const points = etapes
               marker.style.backgroundColor = selectedDay && marker.dataset.date === selectedDay ? currentDayColor : "#c86f4d";
             }
           });
+          if (map.getLayer("tous-les-traces-fleches")) {
+            map.setLayoutProperty("tous-les-traces-fleches", "symbol-sort-key", selectedDay
+              ? ["case", ["==", ["get", "date"], selectedDay], 1, 0]
+              : 0);
+          }
           if (map.getLayer("tous-les-traces")) {
             map.setPaintProperty("tous-les-traces", "line-color", selectedDay
               ? ["case", ["==", ["get", "date"], selectedDay], currentDayColor, "#df784a"]
@@ -185,8 +190,13 @@ const points = etapes
           if (map.getLayer("tous-les-traces")) map.moveLayer("tous-les-traces");
           if (map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
           if (map.getLayer("fil-des-souvenirs-fleches")) map.moveLayer("fil-des-souvenirs-fleches");
-          if (map.getLayer("tous-les-traces-fleches")) map.moveLayer("tous-les-traces-fleches");
-          if (map.getLayer("trace-sportive-fleches")) map.moveLayer("trace-sportive-fleches");
+          if (map.getLayer("trace-sportive-fleches") && selectedTraceDate === selectedDay && selectedDay) {
+            map.moveLayer("tous-les-traces-fleches");
+            map.moveLayer("trace-sportive-fleches");
+          } else {
+            if (map.getLayer("trace-sportive-fleches")) map.moveLayer("trace-sportive-fleches");
+            if (map.getLayer("tous-les-traces-fleches")) map.moveLayer("tous-les-traces-fleches");
+          }
           const dateLabel = document.querySelector<HTMLElement>("#daily-date");
           if (dateLabel) {
             dateLabel.style.backgroundColor = selectedDay ? currentDayColor : "transparent";
