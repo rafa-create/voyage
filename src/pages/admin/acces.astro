@@ -1,0 +1,37 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="Demandes d'accès">
+<main class="container" style="max-width:900px;padding:40px 0 100px">
+<a href="/admin/">← Retour à l'administration</a>
+<h1>Demandes d'accès</h1>
+<p>Accepte ou refuse les demandes. Après approbation, la personne doit aussi être autorisée par la règle Cloudflare Access.</p>
+<p id="status" role="status">Chargement…</p>
+<div id="list"></div>
+</main>
+<script>
+const status=document.querySelector<HTMLElement>("#status");
+const list=document.querySelector<HTMLElement>("#list");
+async function api(method="GET",body?:unknown){
+ const r=await fetch("/api/prive/admin/site-access-requests",{method,credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},...(body?{body:JSON.stringify(body)}:{})});
+ const d=await r.json();if(!r.ok)throw Error(d.error||"Erreur");return d;
+}
+async function load(){
+ try{
+  const d=await api();list!.replaceChildren();status!.textContent=d.requests.length+" demande(s)";
+  for(const item of d.requests){
+   const row=document.createElement("section");row.style.cssText="padding:16px 0;border-top:1px solid var(--line)";
+   const label=document.createElement("p");label.textContent=item.email+" · "+item.status+" · "+new Date(item.requestedAt).toLocaleString("fr-FR");row.append(label);
+   for(const [labelText,next] of [["Accepter","approved"],["Refuser","rejected"],["Remettre en attente","pending"]] as const){
+    if(item.status===next)continue;
+    const b=document.createElement("button");b.type="button";b.textContent=labelText;b.style.cssText="margin:0 8px 8px 0;padding:10px 14px;cursor:pointer";
+    b.addEventListener("click",async()=>{try{await api("POST",{email:item.email,status:next});await load()}catch(e){status!.textContent=e instanceof Error?e.message:"Erreur"}});
+    row.append(b);
+   }
+   list!.append(row);
+  }
+ }catch(e){status!.textContent=e instanceof Error?e.message:"Erreur"}
+}
+load();
+</script>
+</Base>
