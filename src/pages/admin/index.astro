@@ -162,7 +162,7 @@ import { chemin } from "../../lib/paths";
     import * as exifr from "exifr";
 
     type Etape = { slug:string; titre:string; ville:string; pays:string; date:string; dateFin?:string; statut:string };
-    type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;alt:string;legacy?:boolean};
+    type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;dateHeure?:string|null;lieu?:string;legende?:string;commentaire?:string;latitude?:number|null;longitude?:number|null;alt:string;legacy?:boolean};
     type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null; prive:boolean };
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
     const status = $("admin-status");
@@ -428,7 +428,29 @@ import { chemin } from "../../lib/paths";
         const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo de voyage";img.loading="lazy";
         const body=document.createElement("div");body.className="admin-photo-body";
         const title=document.createElement("strong");title.textContent=photo.etape?etapes.find(x=>x.slug===photo.etape)?.ville||photo.etape:"Sans étape";
-        const date=document.createElement("small");date.textContent=photo.datePrise?"Prise le "+photo.datePrise:"Date EXIF inconnue";
+        const date=document.createElement("small");date.textContent=photo.datePrise?"Prise le "+photo.datePrise+(photo.dateHeure?" à "+photo.dateHeure.slice(11,16):""):"Date EXIF inconnue";
+        const dateEditor=document.createElement("div");dateEditor.className="admin-photo-date-editor";
+        const dateInput=document.createElement("input");dateInput.type="date";dateInput.value=photo.datePrise||"";dateInput.setAttribute("aria-label","Date de prise de la photo");
+        const timeInput=document.createElement("input");timeInput.type="time";timeInput.value=photo.dateHeure?.slice(11,16)||"";timeInput.setAttribute("aria-label","Heure de prise de la photo");
+        const saveDate=document.createElement("button");saveDate.type="button";saveDate.className="admin-secondary";saveDate.textContent="Enregistrer date/heure";
+        saveDate.addEventListener("click",async()=>{
+          saveDate.disabled=true;
+          try{
+            const dateValue=dateInput.value;
+            const timeValue=timeInput.value;
+            await post("/api/prive/admin/photo-modifier",{
+              key:photo.key,visibilite:photo.visibilite,datePrise:dateValue,
+              dateHeure:dateValue&&timeValue?dateValue+"T"+timeValue:"",
+              etape:photo.etape||"",
+              lieu:photo.lieu||"",legende:photo.legende||"",commentaire:photo.commentaire||"",
+              latitude:photo.latitude??"",longitude:photo.longitude??""
+            });
+            await refresh();
+            message("sync-result","Date et heure de la photo enregistrées.");
+          }catch(err){message("sync-result",err instanceof Error?err.message:"Impossible d’enregistrer la date et l’heure.");}
+          finally{saveDate.disabled=false;}
+        });
+        dateEditor.append(dateInput,timeInput,saveDate);
         const actions=document.createElement("div");actions.className="admin-photo-actions";
         const privateLabel=document.createElement("label");privateLabel.className="chosen-private";
         const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=photo.visibilite==="prive";checkbox.setAttribute("aria-label","Photo privée");
@@ -482,7 +504,7 @@ import { chemin } from "../../lib/paths";
           });
           actions.append(select,assign);
         }
-        body.append(title,date,actions);card.append(img,body);list.append(card);
+        body.append(title,date,dateEditor,actions);card.append(img,body);list.append(card);
       }
       if(visible.length>300){const more=document.createElement("p");more.textContent="Affichage limité aux 300 premières photos. Filtre par étape pour en voir davantage.";list.append(more);}
     }
@@ -806,7 +828,7 @@ import { chemin } from "../../lib/paths";
     .chosen-details span,.admin-photo-body small{color:var(--muted);font-size:.68rem}
     .chosen-private{font-size:.76rem;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap}
     .chosen-private input{accent-color:#a4563b;width:17px;height:17px}
-    .admin-photo-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px}
+    .admin-photo-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px}.admin-photo-date-editor{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}.admin-photo-date-editor input{min-width:0;width:auto;max-width:145px;min-height:32px;padding:6px;border:1px solid #bdc3ba;background:white;color:var(--ink);border-radius:3px;font:inherit;font-size:.78rem}.admin-photo-date-editor button{padding:7px 9px;font-size:.72rem}
     .admin-photo-actions select{max-width:170px;font-size:.72rem;padding:7px;min-height:32px}
     .admin-small-danger{background:none;border:0;color:#a74732;text-decoration:underline;font-size:.75rem;cursor:pointer}
     .admin-photo-list{max-height:550px;overflow-y:auto;margin-top:15px}
