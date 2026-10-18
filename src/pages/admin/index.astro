@@ -486,7 +486,7 @@ import { chemin } from "../../lib/paths";
   <script>
     // En mode intégré, ne montrer que l’action correspondant à la page publique d’origine.
     const adminContext = new URLSearchParams(window.location.search).get("context");
-    if (adminContext === "photos" || adminContext === "etapes") {
+    if (adminContext === "photos" || adminContext === "videos" || adminContext === "etapes") {
       const journey = document.querySelector<HTMLElement>(".admin-journey");
       const head = document.querySelector<HTMLElement>(".admin-head");
       const topline = document.querySelector<HTMLElement>(".admin-topline");
@@ -497,7 +497,7 @@ import { chemin } from "../../lib/paths";
       if (app) { app.style.gridTemplateColumns = "minmax(0, 1fr)"; app.style.gap = "0"; }
       const panels = Array.from(document.querySelectorAll<HTMLElement>("#admin-app .admin-panel"));
       panels.forEach((panel, index) => {
-        const keep = adminContext === "photos" ? index === 1 : index === 5;
+        const keep = adminContext === "photos" ? index === 1 : adminContext === "videos" ? index === 2 : index === 5;
         panel.hidden = !keep;
         if (keep) { panel.style.gridColumn = "1 / -1"; panel.style.width = "100%"; }
       });
