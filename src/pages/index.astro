@@ -149,7 +149,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const linkedStage=video.etape?stages.find(stage=>stage.slug===video.etape):undefined;
           const videoDay=videoDateKey(video);
           const mapStage=linkedStage||[...stages].filter(stage=>String(stage.date||"")<=videoDay).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||stages.find(stage=>stage.date===videoDay);
-          if(video.key&&mapStage&&Number.isFinite(Number(mapStage.latitude))&&Number.isFinite(Number(mapStage.longitude))){
+          const hasVideoGps=video.latitude!==null&&video.latitude!==undefined&&video.latitude!==""&&video.longitude!==null&&video.longitude!==undefined&&video.longitude!=="";
+          const mapLat=hasVideoGps?Number(video.latitude):Number(mapStage?.latitude);
+          const mapLon=hasVideoGps?Number(video.longitude):Number(mapStage?.longitude);
+          if(video.key&&Number.isFinite(mapLat)&&Math.abs(mapLat)<=85&&Number.isFinite(mapLon)&&Math.abs(mapLon)<=180&&(hasVideoGps||!!mapStage)){
             const mapButton=document.createElement("button");
             mapButton.type="button";
             mapButton.className="daily-video-map-link";
