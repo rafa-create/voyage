@@ -479,17 +479,20 @@ const points = etapes
               onRemove: () => linksControl.remove()
             } as maplibregl.IControl, "top-left");
             const mapVisibilityToggle = document.getElementById("map-visibility-toggle");
+            const dailyHeadingTitle = document.querySelector<HTMLElement>(".daily-heading-title");
             mapVisibilityToggle?.addEventListener("click", () => {
               const hidden = element.style.display === "none";
               if (hidden) {
                 element.style.display = "";
                 mapVisibilityToggle.textContent = "Masquer la carte";
                 mapVisibilityToggle.setAttribute("aria-expanded", "true");
+                dailyHeadingTitle?.classList.remove("daily-heading-visible");
                 requestAnimationFrame(() => map.resize());
               } else {
                 element.style.display = "none";
                 mapVisibilityToggle.textContent = "Afficher la carte";
                 mapVisibilityToggle.setAttribute("aria-expanded", "false");
+                dailyHeadingTitle?.classList.add("daily-heading-visible");
               }
             });
             // Les tracés changent de résolution aux seuils de zoom, sans recharger
