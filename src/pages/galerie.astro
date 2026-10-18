@@ -154,6 +154,24 @@ import { chemin } from "../lib/paths";
         const caption = document.createElement("figcaption");
         const dateLabel = video.date ? " · " + String(video.date).replace("T", " ").slice(0, 16) : "";
         caption.textContent = button.dataset.videoTitle + (button.dataset.lieu ? " · " + button.dataset.lieu : "") + dateLabel;
+        const linkedStep = steps.find((step: any) => step.slug === video.etape);
+        const videoLat = Number(video.latitude ?? linkedStep?.latitude);
+        const videoLon = Number(video.longitude ?? linkedStep?.longitude);
+        if (Number.isFinite(videoLat) && Math.abs(videoLat) <= 85 &&
+            Number.isFinite(videoLon) && Math.abs(videoLon) <= 180 &&
+            (video.latitude != null || video.longitude != null || linkedStep)) {
+          const mapLink = document.createElement("button");
+          mapLink.type = "button";
+          mapLink.className = "gallery-view-on-map";
+          mapLink.textContent = "Voir sur la carte";
+          mapLink.addEventListener("click", () => {
+            window.location.href = "/?videoMap=" + encodeURIComponent(String(video.id || video.key || id)) +
+              "&date=" + encodeURIComponent(String(video.date || "").slice(0, 10)) +
+              "&lat=" + encodeURIComponent(String(videoLat)) +
+              "&lon=" + encodeURIComponent(String(videoLon));
+          });
+          caption.append(document.createElement("br"), mapLink);
+        }
         figure.append(caption); unifiedGrid.append(figure);
       }
       for (const photo of (photosData.photos || [])) {
