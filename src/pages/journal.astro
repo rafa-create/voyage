@@ -51,7 +51,7 @@ import { etapes } from "../lib/data";
           }
         }
       }
-      const photos:Souvenir[]=allPhotos.filter((p:Souvenir)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(dateOf(p)));
+      const photos:Souvenir[]=allPhotos.filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
       const videoGroups = await Promise.all(etapes.map(async step => {
         try {
           const response=await fetch("/api/public/videos?etape="+encodeURIComponent(step.slug),{cache:"no-store"});
