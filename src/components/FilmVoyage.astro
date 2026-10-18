@@ -57,7 +57,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       fullscreenButton.textContent="⛶";
       fullscreenButton.setAttribute("aria-label",active?"Réduire le film":"Passer le film en plein écran");
       fullscreenButton.title=active?"Réduire le film":"Plein écran";
-      window.setTimeout(()=>map.resize(),100);
+      window.setTimeout(()=>{
+        map.resize();
+        if(activeFilmItem?.kind==="photo"){
+          map.jumpTo({center:[activeFilmItem.lon,activeFilmItem.lat],zoom:activeFilmItem.zoom});
+        }
+      },180);
     };
     fullscreenButton.addEventListener("click",()=>{
       filmSection.classList.toggle("film-browser-fullscreen");
@@ -71,6 +76,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         syncFullscreenButton();
       }
     });
+    let activeFilmItem:FilmItem|undefined;
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
     map.doubleClickZoom.disable();
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
@@ -189,6 +195,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     };
     const render=(animate=true)=>{
       const item=sequence[index];
+      activeFilmItem=item;
       place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":item.kind==="activite"?"Lieu de l’activité":"Localisation de l’étape");
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
