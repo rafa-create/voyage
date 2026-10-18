@@ -64,78 +64,55 @@ const nav = [
         }
       </script>
     </header>
-    <main id="contenu"><slot /></main>
     <aside id="admin-quick-tools" class="admin-quick-tools" hidden aria-label="Outils administrateur">
-      <button type="button" id="admin-tools-toggle" class="admin-tools-toggle" aria-expanded="false">Gérer cette page</button>
-      <section id="admin-tools-panel" class="admin-tools-panel" hidden>
-        <div class="admin-tools-heading">
-          <strong>Administration</strong>
-          <button type="button" id="admin-tools-close" aria-label="Fermer">×</button>
-        </div>
-        <p id="admin-tools-context">Actions adaptées à cette page.</p>
-        <div class="admin-tools-links">
-          <a id="admin-tools-primary" href={chemin("/admin/")}>Gérer le contenu</a>
-          <a id="admin-tools-challenge" href={chemin("/admin/defi/")}>Gérer le défi</a>
-          <a href={chemin("/admin/")}>Tous les outils</a>
-        </div>
-        <button type="button" id="admin-tools-open" class="admin-tools-open">Ouvrir les outils sans quitter cette page</button>
-      </section>
+      <div class="admin-quick-tools-inner">
+        <button type="button" id="admin-tools-toggle" class="admin-tools-toggle" aria-expanded="false">Gérer cette page</button>
+        <section id="admin-tools-panel" class="admin-tools-panel" hidden>
+          <div class="admin-tools-heading">
+            <strong id="admin-tools-context">Administration de cette page</strong>
+            <button type="button" id="admin-tools-close" aria-label="Fermer">×</button>
+          </div>
+          <iframe id="admin-tools-frame" title="Outils d’administration de cette page" loading="lazy"></iframe>
+        </section>
+      </div>
     </aside>
+    <main id="contenu"><slot /></main>
     <div id="admin-tools-modal" class="admin-tools-modal" hidden role="dialog" aria-modal="true" aria-label="Outils d’administration">
       <div class="admin-tools-modal-head">
         <strong id="admin-tools-modal-title">Administration</strong>
         <button type="button" id="admin-tools-modal-close">Fermer ×</button>
       </div>
-      <iframe id="admin-tools-frame" title="Outils d’administration" loading="lazy"></iframe>
+      <iframe id="admin-tools-modal-frame" title="Outils d’administration" loading="lazy"></iframe>
     </div>
     <script>
       const adminDock = document.getElementById("admin-quick-tools");
       const adminToggle = document.getElementById("admin-tools-toggle");
       const adminPanel = document.getElementById("admin-tools-panel");
-      const adminModal = document.getElementById("admin-tools-modal");
       const adminFrame = document.getElementById("admin-tools-frame") as HTMLIFrameElement | null;
       const adminPath = window.location.pathname;
       const isChallengePage = /\/defi\/?$/.test(adminPath);
-      const primaryAdminLink = document.getElementById("admin-tools-primary") as HTMLAnchorElement | null;
-      const challengeAdminLink = document.getElementById("admin-tools-challenge") as HTMLAnchorElement | null;
+      const isGalleryPage = /\/galerie\/?$/.test(adminPath);
+      const isJournalPage = /\/journal\/?$/.test(adminPath);
       const contextText = document.getElementById("admin-tools-context");
-      const openAdminTools = () => {
-        if (!adminModal || !adminFrame) return;
-        const target = isChallengePage ? "/admin/defi/" : "/admin/";
-        if (!adminFrame.src.endsWith(target)) adminFrame.src = target;
-        adminModal.hidden = false;
-        document.body.classList.add("admin-tools-modal-open");
-      };
-      fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
-        .then(async response => response.ok ? response.json() : null)
-        .then(user => {
-          if (!user?.isAdmin || !adminDock) return;
-          adminDock.hidden = false;
-          if (isChallengePage) {
-            if (primaryAdminLink) { primaryAdminLink.href = "/admin/defi/"; primaryAdminLink.textContent = "Gérer le défi du jour"; }
-            if (challengeAdminLink) challengeAdminLink.hidden = true;
-            if (contextText) contextText.textContent = "Défi quotidien : synchronisation des échecs et activités.";
-          } else if (/\/galerie\/?$/.test(adminPath)) {
-            if (primaryAdminLink) { primaryAdminLink.href = "/admin/"; primaryAdminLink.textContent = "Gérer les photos et vidéos"; }
-            if (contextText) contextText.textContent = "Galerie : ajouter, classer et gérer les photos.";
-          } else {
-            if (primaryAdminLink) { primaryAdminLink.href = "/admin/"; primaryAdminLink.textContent = "Gérer les étapes, photos et récits"; }
-            if (contextText) contextText.textContent = "Outils d’édition disponibles sans perdre cette page.";
-          }
-        }).catch(() => {});
+      const target = isChallengePage ? "/admin/defi/" : "/admin/?context=" + (isGalleryPage ? "photos" : isJournalPage ? "etapes" : "general");
+      if (!/^\/admin(?:\/|$)/.test(adminPath)) {
+        fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
+          .then(async response => response.ok ? response.json() : null)
+          .then(user => {
+            if (!user?.isAdmin || !adminDock) return;
+            adminDock.hidden = false;
+            if (contextText) contextText.textContent = isChallengePage ? "Défi quotidien" : isGalleryPage ? "Ajouter des photos" : isJournalPage ? "Ajouter une étape" : "Administration de cette page";
+          }).catch(() => {});
+      }
       adminToggle?.addEventListener("click", () => {
         const open = adminToggle.getAttribute("aria-expanded") === "true";
-        adminToggle.setAttribute("aria-expanded", String(!open));
+        if (!open && adminFrame && !adminFrame.src) adminFrame.src = target;
         if (adminPanel) adminPanel.hidden = open;
+        adminToggle?.setAttribute("aria-expanded", String(!open));
       });
       document.getElementById("admin-tools-close")?.addEventListener("click", () => {
         if (adminPanel) adminPanel.hidden = true;
         adminToggle?.setAttribute("aria-expanded", "false");
-      });
-      document.getElementById("admin-tools-open")?.addEventListener("click", openAdminTools);
-      document.getElementById("admin-tools-modal-close")?.addEventListener("click", () => {
-        if (adminModal) adminModal.hidden = true;
-        document.body.classList.remove("admin-tools-modal-open");
       });
     </script>
     <footer class="site-footer">
