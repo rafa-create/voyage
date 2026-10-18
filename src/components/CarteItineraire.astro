@@ -153,9 +153,8 @@ const points = etapes
           map.setPaintProperty(layerId, "text-color", selectedDay
             ? ["case", isCurrentDay, currentDayColor, "#df784a"]
             : "#df784a");
-          map.setPaintProperty(layerId, "text-halo-color", selectedDay
-            ? ["case", isCurrentDay, currentDayColor, "#fffdf8"]
-            : "#fffdf8");
+          // La couleur sauge s'applique au symbole, mais son contour reste blanc.
+          map.setPaintProperty(layerId, "text-halo-color", "#fffdf8");
         };
         const updateSelectedDay = (date:string, fitMap = true) => {
           selectedDay = date;
@@ -167,9 +166,12 @@ const points = etapes
             marker.style.transform = active ? "scale(1.08)" : "scale(.82)";
             marker.style.zIndex = marker.classList.contains("memory-map-photo-marker") ? "3" : "2";
             const isCurrentDay = !!selectedDay && marker.dataset.date === selectedDay;
-            marker.style.borderColor = isCurrentDay ? currentDayColor : "#fff";
+            // Les photos du jour gardent leur contour sauge ; le bouton d'activité
+            // conserve un contour blanc, même lorsque son fond passe en sauge.
+            const isPhotoMarker = marker.classList.contains("memory-map-photo-marker");
+            marker.style.borderColor = isCurrentDay && isPhotoMarker ? currentDayColor : "#fff";
             marker.style.borderWidth = "2px";
-            if (!marker.classList.contains("memory-map-photo-marker")) {
+            if (!isPhotoMarker) {
               marker.style.backgroundColor = isCurrentDay ? currentDayColor : "#c86f4d";
             }
           });
