@@ -382,8 +382,8 @@ import Base from "../layouts/Base.astro";
           statusOnly?"Défi actualisé.":"Défi affiché · vérification des dernières données en arrière-plan…";
         set("defi-loading",note);
         set("source-note","Une partie rapide et une activité comptent par jour. Appuie pour les détails.");
-        if(!statusOnly){backgroundChecks=0;setTimeout(()=>void load(false,true),5000);}
-        else if(backgroundChecks<3){backgroundChecks++;setTimeout(()=>void load(false,true),5000);}
+        if(!statusOnly){backgroundChecks=0;setTimeout(()=>void load(false,true),60000);}
+        else if(backgroundChecks<3){backgroundChecks++;setTimeout(()=>void load(false,true),60000);}
       }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
       finally{if(button)button.disabled=false;}
     }
