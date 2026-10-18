@@ -527,9 +527,15 @@ const points = etapes
                   if(Number.isFinite(lat)&&Number.isFinite(lon)){
                     // Centrer d'abord la carte, puis ouvrir la popup une fois le déplacement terminé :
                     // MapLibre peut ainsi calculer son placement à partir de la position finale.
+                    const destination = new maplibregl.LngLat(lon,lat);
+                    const alreadyCentered = map.getCenter().distanceTo(destination) < 8 && map.getZoom() >= 11;
                     map.stop();
-                    map.easeTo({center:[lon,lat],zoom:Math.max(map.getZoom(),11),duration:450});
-                    map.once("moveend",()=>target.click());
+                    if(alreadyCentered){
+                      target.click();
+                    }else{
+                      map.once("moveend",()=>target.click());
+                      map.easeTo({center:[lon,lat],zoom:Math.max(map.getZoom(),11),duration:450});
+                    }
                   }else{
                     target.click();
                   }
