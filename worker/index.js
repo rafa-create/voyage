@@ -205,9 +205,13 @@ export default {
       const latitude=input.latitude===""||input.latitude===null?null:Number(input.latitude),longitude=input.longitude===""||input.longitude===null?null:Number(input.longitude);
       if((latitude===null)!==(longitude===null)||(latitude!==null&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>85||Math.abs(longitude)>180)))return error("Coordonnées GPS invalides.");
       const all=await steps(env),etape=input.etape===""?null:input.etape;if(etape!==null&&(!slugOk(etape)||!all.some(s=>s.slug===etape)))return error("Étape inconnue.");
-      const metadata={...(file.customMetadata||{})};for(const field of ["datePrise","dateHeure","lieu","legende","commentaire","etape","latitude","longitude","precision"])delete metadata[field];
+      const metadata={...(file.customMetadata||{})};
+      const previousDateHeure=metadata.dateHeure;
+      for(const field of ["datePrise","lieu","legende","commentaire","etape","latitude","longitude","precision"])delete metadata[field];
       if(date)metadata.datePrise=date;
       if(typeof input.dateHeure==="string"&&/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(input.dateHeure)&&validDate(input.dateHeure.slice(0,10))&&(!date||input.dateHeure.slice(0,10)===date))metadata.dateHeure=input.dateHeure.length===16?input.dateHeure+":00":input.dateHeure;
+      else if(date&&typeof previousDateHeure==="string"&&previousDateHeure.slice(0,10)===date)metadata.dateHeure=previousDateHeure;
+      else delete metadata.dateHeure;
       if(typeof input.lieu==="string"&&input.lieu.trim())metadata.lieu=input.lieu.trim().slice(0,240);
       if(typeof input.commentaire==="string"&&input.commentaire.trim())metadata.commentaire=input.commentaire.trim().slice(0,2000);
       if(typeof input.legende==="string"&&input.legende.trim())metadata.legende=input.legende.trim().slice(0,2000);if(etape)metadata.etape=etape;
