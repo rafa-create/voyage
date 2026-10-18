@@ -31,7 +31,27 @@ import { etapes } from "../lib/data";
       ]);
       if(!photoResponse.ok)throw new Error("Chargement des photos impossible");
       const photoData=await photoResponse.json();
-      const photos:Souvenir[]=(photoData.photos||[]).filter((p:Souvenir)=>/^\d{4}-\d{2}-\d{2}$/.test(dateOf(p)));
+      const allPhotos:Souvenir[] = photoData.photos || [];
+      const recentRoot = document.querySelector<HTMLElement>("#journal-photos-recentes");
+      if (recentRoot) {
+        const recentPhotos = [...allPhotos].sort((a,b)=>String(b.dateHeure||b.datePrise||b.ajouteLe||"").localeCompare(String(a.dateHeure||a.datePrise||a.ajouteLe||""))).slice(0,6);
+        recentRoot.replaceChildren();
+        if (!recentPhotos.length) {
+          const empty = document.createElement("p"); empty.className = "empty-state"; empty.textContent = "Les photos récentes apparaîtront ici.";
+          recentRoot.append(empty);
+        } else {
+          for (const photo of recentPhotos) {
+            const figure = document.createElement("figure"); figure.className = "photo-tile";
+            const link = document.createElement("a"); link.className = "photo-open"; link.href = "/galerie/?photo="+encodeURIComponent(photo.src); link.setAttribute("aria-label","Afficher la photo dans la galerie");
+            const img = document.createElement("img"); img.src = photo.src; img.alt = photo.alt || "Souvenir du voyage"; img.loading = "lazy"; img.decoding = "async";
+            link.append(img); figure.append(link);
+            const caption = document.createElement("figcaption"); caption.textContent = String(photo.legende || photo.alt || "").trim();
+            if (caption.textContent) figure.append(caption);
+            recentRoot.append(figure);
+          }
+        }
+      }
+      const photos:Souvenir[]=allPhotos.filter((p:Souvenir)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(dateOf(p)));
       const videoGroups = await Promise.all(etapes.map(async step => {
         try {
           const response=await fetch("/api/public/videos?etape="+encodeURIComponent(step.slug),{cache:"no-store"});
