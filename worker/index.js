@@ -218,8 +218,9 @@ export default {
       return json({textes:await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{})});
     }
     if(path==="/api/prive/admin/textes-site"&&request.method==="POST"){
+      if(!mutationOk(request))return error("Action non autorisée.",403);
       const input=await readBody(request);
-      if(typeof input?.key!=="string"||input.key.length>180||!/^\/[a-z0-9/_-]*\|[a-z0-9]+\|[a-f0-9]{8}\|[0-9]{1,4}$/.test(input.key)||
+      if(typeof input?.key!=="string"||input.key.length>180||!/^\/[a-z0-9/%_-]*\|[a-z0-9]+\|[a-f0-9]{8}\|[0-9]{1,4}$/.test(input.key)||
         typeof input.text!=="string"||input.text.length>6000)return error("Texte éditorial invalide.");
       const textes=await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{});
       textes[input.key]=input.text;
