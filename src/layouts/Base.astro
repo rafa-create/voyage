@@ -254,7 +254,8 @@ const nav = [
             for (const figure of main.querySelectorAll<HTMLElement>("figure.photo-tile")) {
               if (figure.dataset.adminPhotoPencil) continue;
               const image = figure.querySelector("img");
-              if (!image) continue;
+              const photoControl = figure.querySelector<HTMLButtonElement>("button.photo-open[data-photo]") || figure.querySelector<HTMLAnchorElement>("a.photo-open[href]");
+              if (!image || !photoControl) continue;
               figure.dataset.adminPhotoPencil = "true";
               figure.style.position = figure.style.position || "relative";
               const pencil = document.createElement("button");
@@ -264,6 +265,20 @@ const nav = [
               pencil.addEventListener("click", () => {
                 const src = image.getAttribute("src") || "";
                 if (!src) return;
+                if (/\/galerie\/?$/.test(location.pathname)) {
+                  const target = figure.querySelector<HTMLButtonElement>("button.photo-open[data-photo]");
+                  if (target) {
+                    target.click();
+                    let attempts = 0;
+                    const openEditor = () => {
+                      const edit = document.querySelector<HTMLButtonElement>(".lightbox-edit");
+                      if (edit && !edit.hidden) { edit.click(); return; }
+                      if (++attempts < 30) window.setTimeout(openEditor, 100);
+                    };
+                    window.setTimeout(openEditor, 100);
+                    return;
+                  }
+                }
                 const photoUrl = new URL("/galerie/", location.origin);
                 photoUrl.searchParams.set("photo", new URL(src, location.origin).pathname);
                 photoUrl.searchParams.set("edit", "1");
