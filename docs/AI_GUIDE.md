@@ -47,3 +47,13 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 2. Exécuter les tests et la validation localement si l'environnement et les dépendances sont disponibles; indiquer clairement tout contrôle non exécuté.
 3. Tester mobile, navigation clavier, états sans photos et photos sans métadonnées.
 4. Ne pas supposer qu'une PR est déployée : l'URL de production ne change qu'après un déploiement réussi.
+
+## Incident — accueil figé en mode administrateur (2026-10-18)
+- **Symptôme rapporté :** le site public fonctionnait, mais l'accueil se figeait en session administrateur avec la carte qui semblait charger à l'infini. Le problème se reproduisait dans Brave et Safari; le Journal restait utilisable.
+- **Correctif appliqué :** dans `src/layouts/Base.astro`, le script d'édition inline (crayons pour textes et photos) retourne immédiatement sur `/` et `/index.html`. Les stylos sont donc désactivés sur l'accueil uniquement; les autres pages conservent leur mécanisme d'édition.
+- **Commit correctif :** [`834f4d23`](https://github.com/rafa-create/voyage/commit/834f4d23f80f30b17dec1b9db834b743cb510100).
+- **Résultat rapporté par l'utilisateur :** le problème est réglé après ce changement.
+- **Interprétation prudente :** cela indique que le script des stylos / son interaction avec le DOM dynamique de l'accueil était impliqué, mais la cause précise n'a pas été isolée. Le script utilisait un `MutationObserver` sur `main` et relançait le scan des textes et des photos lors des mutations; l'accueil met à jour dynamiquement ses contenus.
+- **Ne pas réactiver les stylos sur l'accueil sans test.** Si l'édition inline sur l'accueil redevient nécessaire, diagnostiquer et optimiser l'observateur (limiter les nœuds surveillés, ignorer les mutations produites par les boutons admin, éviter un scan global répétitif) puis tester en admin sur Safari et Brave, sur mobile et ordinateur.
+- **Vérification de suivi recommandée :** confirmer que le déploiement correspondant au commit est actif; tester l'accueil public, l'accueil admin, le Journal et la Galerie. Vérifier que les fonctions d'édition des pages hors accueil restent disponibles et que les photos, activités et données R2 n'ont pas été affectées.
+
