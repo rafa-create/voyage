@@ -149,9 +149,9 @@ const nav = [
             return !!value && !/^chargement/i.test(value);
           };
           const setText = (element: HTMLElement, value: string) => {
-            const dot = element.querySelector<HTMLElement>(":scope > .heading-dot");
+            const hadDot = !!element.querySelector<HTMLElement>(":scope > .heading-dot") || element.dataset.adminHasHeadingDot === "true";
             element.textContent = value;
-            if (dot) {
+            if (hadDot) {
               const marker = document.createElement("span");
               marker.className = "heading-dot";
               marker.textContent = ".";
@@ -223,6 +223,7 @@ const nav = [
             for (const element of elements) {
               const original = element.dataset.adminOriginalText ?? cleanText(element);
               element.dataset.adminOriginalText = original;
+              if (element.querySelector(":scope > .heading-dot")) element.dataset.adminHasHeadingDot = "true";
               if (!element.dataset.adminTextKey) {
                 const signature = element.tagName.toLowerCase() + "|" + hash(original);
                 const occurrence = counts.get(signature) || 0;
