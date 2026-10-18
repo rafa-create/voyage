@@ -408,14 +408,14 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 .home-full-width-map .voyage-map-shell, .home-full-width-map .voyage-map { width:100%; }
 
 /* Accueil : conserver une carte ample sans trop descendre dans la page. */
-.home-full-width-map .voyage-map { height: 700px; }
+.home-full-width-map .voyage-map { height: 560px; }
 @media(max-width:900px) {
   .home-full-width-map { width:calc(100% - 32px); }
-  .home-full-width-map .voyage-map { height: 610px; }
+  .home-full-width-map .voyage-map { height: 488px; }
 }
 @media(max-width:650px) {
   .home-full-width-map { width:calc(100% - 20px); }
-  .home-full-width-map .voyage-map { height: 520px; }
+  .home-full-width-map .voyage-map { height: 416px; }
 }
 
 
