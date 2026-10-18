@@ -50,6 +50,12 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 
 - Dans la fenêtre d’édition de la Galerie, le bouton rouge « Supprimer définitivement cette photo » est visible uniquement pour les administrateurs et les photos répertoriées dans la bibliothèque R2. Il demande confirmation puis appelle l’endpoint existant `POST /api/prive/admin/supprimer-photo` avec `key` et `visibilite`; l’API Worker impose déjà l’authentification admin et la protection `Origin`/`X-Voyage-Admin`. Après succès, la vignette est retirée de l’interface. Ne pas utiliser ce bouton pour des photos statiques provenant uniquement des fichiers du site.
 
+## Galerie — accès direct à la position d’une photo
+- Pour les photos renvoyées par `/api/public/photos` qui ont des coordonnées GPS valides et une date exploitable, la légende affiche « Voir sur la carte ».
+- Le lien renvoie à l’accueil avec la clé de la photo, sa date et ses coordonnées; `CarteItineraire.astro` sélectionne le jour, centre la carte sur le marqueur correspondant et ouvre sa popup quand le marqueur est disponible. Les coordonnées de l’URL servent de repli pour centrer la carte.
+- Les photos sans coordonnées GPS valides n’affichent pas ce bouton, car aucun point précis ne peut être ciblé.
+- Ne pas déployer automatiquement; tester le flux depuis la galerie vers l’accueil en navigateur.
+
 ## Vérification avant livraison
 1. Inspecter `package.json` avant de choisir les commandes.
 2. Exécuter les tests et la validation localement si l'environnement et les dépendances sont disponibles; indiquer clairement tout contrôle non exécuté.
