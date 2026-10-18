@@ -4,7 +4,7 @@ interface Props { etapes: Etape[]; }
 const { etapes } = Astro.props;
 const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
   .sort((a,b) => a.date.localeCompare(b.date))
-  .map((e) => ({ date:e.date, titre:e.titre, ville:e.ville, pays:e.pays, latitude:e.latitude, longitude:e.longitude, statut:e.statut || "passee" }));
+  .map((e) => ({ slug:e.slug, date:e.date, titre:e.titre, ville:e.ville, pays:e.pays, latitude:e.latitude, longitude:e.longitude, statut:e.statut || "passee" }));
 ---
 <section class="voyage-film container" aria-labelledby="voyage-film-title">
   <div class="film-heading">
@@ -14,7 +14,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   </div>
   <div class="film-stage">
     <div class="film-map-wrap">
-      <div id="film-map" aria-label="Carte animée du voyage"></div>
+      <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
       <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><span id="film-date"></span></div>
     </div>
     <div class="film-memory" id="film-memory">
