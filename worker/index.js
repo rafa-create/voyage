@@ -214,6 +214,18 @@ export default {
       if(latitude!==null){metadata.latitude=String(latitude);metadata.longitude=String(longitude);metadata.precision="exact";}
       await bucket.put(key,file.body,{httpMetadata:file.httpMetadata,customMetadata:metadata});return json({ok:true});
     }
+    if(path==="/api/prive/admin/textes-site"&&request.method==="GET"){
+      return json({textes:await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{})});
+    }
+    if(path==="/api/prive/admin/textes-site"&&request.method==="POST"){
+      const input=await readBody(request);
+      if(typeof input?.key!=="string"||input.key.length>180||!/^\/[a-z0-9/_-]*\|[a-z0-9]+\|[a-f0-9]{8}\|[0-9]{1,4}$/.test(input.key)||
+        typeof input.text!=="string"||input.text.length>6000)return error("Texte éditorial invalide.");
+      const textes=await getJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",{});
+      textes[input.key]=input.text;
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/textes-site.json",textes);
+      return json({ok:true});
+    }
     if(path==="/api/prive/admin/etape-modifier"){
       const input=await readBody(request);if(!slugOk(input?.slug)||typeof input.texte!=="string"||input.texte.length>6000)return error("Texte d’étape invalide.");
       const all=await steps(env),current=all.find(s=>s.slug===input.slug);if(!current)return error("Étape inconnue.",404);
