@@ -243,7 +243,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     #daily-date-picker { width: 42px; min-width: 42px; height: 32px; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); cursor: pointer; }
     #daily-date-picker:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .home-map-control-row #daily-date { margin: 0; }
-    .home-map-control-row .daily-controls { display: none; }
+    .home-map-control-row .daily-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    .home-map-control-row .daily-controls button { min-height: 36px; padding: 8px 12px; font-size: .8rem; }
+    /* Deux colonnes donnent plus de place aux photos ; les vidéos occupent toute la largeur. */
+    .daily-view .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .daily-view .gallery-grid .daily-video-tile { grid-column: 1 / -1; }
+    .daily-view .daily-video-tile iframe,
+    .daily-view .daily-video-tile video { display: block; width: 100%; aspect-ratio: 16 / 9; }
+
     #map-visibility-toggle { flex: 0 0 auto; width: auto; min-height: 32px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--forest); font: 600 .76rem 'DM Sans',sans-serif; cursor: pointer; white-space: nowrap; transition: background-color .16s ease, border-color .16s ease; }
     #map-visibility-toggle:hover { background: var(--white); border-color: #b9b3a5; }
     #map-visibility-toggle:active { background: #f2f0e9; }
