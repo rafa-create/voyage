@@ -175,6 +175,24 @@ import { chemin } from "../lib/paths";
         const lieu = photo.etape ? "Étape : " + photo.etape : "";
         const heure = stamp ? " · " + stamp.replace("T", " ").slice(0, 16) : "";
         cap.textContent = (photo.legende || photo.commentaire || photo.alt || "Photo de voyage") + (lieu ? " · " + lieu : "") + heure;
+        const latitude = Number(photo.latitude);
+        const longitude = Number(photo.longitude);
+        const photoDate = stamp.slice(0, 10);
+        if (Number.isFinite(latitude) && Math.abs(latitude) <= 85 &&
+            Number.isFinite(longitude) && Math.abs(longitude) <= 180 &&
+            /^\\d{4}-\\d{2}-\\d{2}$/.test(photoDate)) {
+          const mapLink = document.createElement("button");
+          mapLink.type = "button";
+          mapLink.className = "gallery-view-on-map";
+          mapLink.textContent = "Voir sur la carte";
+          mapLink.addEventListener("click", () => {
+            window.location.href = "/?photoMap=" + encodeURIComponent(photo.src) +
+              "&date=" + encodeURIComponent(photoDate) +
+              "&lat=" + encodeURIComponent(String(latitude)) +
+              "&lon=" + encodeURIComponent(String(longitude));
+          });
+          cap.append(document.createElement("br"), mapLink);
+        }
         figure.append(button, cap); unifiedGrid.append(figure);
       }
       sortUnified();
@@ -469,6 +487,8 @@ import { chemin } from "../lib/paths";
     :global(.gallery-month>summary>span:first-of-type){flex:1;min-width:0}
     :global(.gallery-month-count){font:.75rem 'DM Sans',sans-serif;color:var(--muted,#777);white-space:nowrap;text-align:right;flex-shrink:0}
     :global(.gallery-month .gallery-grid){padding:0 0 1.1rem}
+    :global(.gallery-view-on-map){display:inline-block;margin-top:.35rem;padding:.35rem .65rem;border:1px solid var(--line,#d8d8d0);border-radius:3px;background:var(--white,#fffdf8);color:var(--forest,#274c41);font:600 .78rem 'DM Sans',sans-serif;cursor:pointer}
+    :global(.gallery-view-on-map:hover){background:var(--forest,#274c41);color:#fff}
     @media(max-width:600px){:global(.gallery-month>summary){padding:.95rem 0;font-size:1.1rem;gap:.65rem}:global(.gallery-month .gallery-grid){padding:0 0 .8rem}}
   </style>
   <style>
