@@ -288,7 +288,9 @@ import { chemin } from "../lib/paths";
       window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
     });
     const extraireCoordonneesMaps = (raw: string): [number, number] | null => {
-      let coordinates: RegExpMatchArray | null = raw.match(/@(-?\d{1,2}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/);
+      // Accepte aussi un copier-coller direct du type (43.2089488, 5.5977903).
+      let coordinates: RegExpMatchArray | null = raw.match(/^\s*\(?\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*\)?\s*$/);
+      if (!coordinates) coordinates = raw.match(/@(-?\d{1,2}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/);
       if (!coordinates) coordinates = raw.match(/!3d(-?\d{1,2}(?:\.\d+)?)!4d(-?\d{1,3}(?:\.\d+)?)/);
       if (!coordinates) {
         try {
@@ -304,7 +306,7 @@ import { chemin } from "../lib/paths";
     };
     document.querySelector<HTMLButtonElement>("#edit-photo-map-use")?.addEventListener("click", async () => {
       const raw = editMapUrl?.value.trim() || "";
-      if (!raw) { if (editStatus) editStatus.textContent = "Colle d’abord un lien Google Maps."; return; }
+      if (!raw) { if (editStatus) editStatus.textContent = "Colle un lien Google Maps ou des coordonnées (latitude, longitude)."; return; }
       if (editStatus) editStatus.textContent = "Recherche des coordonnées…";
       let coords = extraireCoordonneesMaps(raw);
       if (!coords) {
