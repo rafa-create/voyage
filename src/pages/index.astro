@@ -94,7 +94,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const caption=document.createElement("figcaption");
           const place = String(photo.etape || "").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
           const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
-          caption.textContent=(place || "Photo")+time;figure.append(caption);grid.append(figure);
+          caption.textContent=(place || "Photo")+time;
+          const mapLink=document.createElement("button");
+          mapLink.type="button";mapLink.className="daily-map-link";mapLink.textContent="Voir sur la carte ↗";
+          mapLink.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"photo",key:photo.src}})));
+          figure.append(caption,mapLink);grid.append(figure);
         }
         empty.hidden = dayPhotos.length>0;
         if (activitiesWrap && activitiesGrid) {
@@ -104,6 +108,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           for (const activity of dayActivities) {
             const item = document.createElement("article");
             item.className = "daily-activity";
+            const copy = document.createElement("div");
+            copy.className = "daily-activity-copy";
             const name = document.createElement("strong");
             name.textContent = activity.titre || "Activité";
             const details = document.createElement("span");
@@ -115,13 +121,21 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
               if (clock) parts.push(clock);
             }
             details.textContent = parts.filter(Boolean).join(" · ");
-            item.append(name, details);
+            copy.append(name, details);
+            item.append(copy);
+            const actions = document.createElement("div");
+            actions.className = "daily-activity-actions";
+            const mapLink=document.createElement("button");
+            mapLink.type="button";mapLink.className="daily-map-link";mapLink.textContent="Voir sur la carte ↗";
+            mapLink.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"sport",key:activity.id ? String(activity.id) : ""}})));
+            actions.append(mapLink);
             if (activity.url && /^https:\/\/(www\.)?strava\.com\//.test(activity.url)) {
               const link = document.createElement("a");
               link.href = activity.url; link.target = "_blank"; link.rel = "noopener noreferrer";
-              link.textContent = "Voir ↗";
-              item.append(link);
+              link.textContent = "Strava ↗";
+              actions.append(link);
             }
+            item.append(actions);
             activitiesGrid.append(item);
           }
           activitiesWrap.hidden = dayActivities.length === 0;
@@ -149,15 +163,20 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .daily-activities[hidden] { display: none !important; }
     .daily-activities h3 { font: 700 .8rem 'DM Sans',sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
     #daily-activities { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
-    .daily-activity { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 13px 15px; border: 1px solid var(--line); background: var(--white); }
-    .daily-activity strong { font-size: .88rem; color: var(--forest); }
-    .daily-activity span { grid-column: 1; color: var(--muted); font-size: .76rem; }
-    .daily-activity a { grid-column: 2; grid-row: 1 / span 2; color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+    .daily-activity { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); background: var(--white); }
+    .daily-activity-copy { display: grid; gap: 5px; min-width: 0; }
+    .daily-activity strong { font-size: .9rem; line-height: 1.35; color: var(--forest); }
+    .daily-activity span { color: var(--muted); font-size: .78rem; }
+    .daily-activity-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .daily-activity a, .daily-map-link { color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+    .daily-map-link { border: 0; padding: 0; background: transparent; cursor: pointer; font-family: inherit; }
+    .photo-tile .daily-map-link { display: inline-block; margin-top: 7px; }
     .daily-all { margin-top: 20px; }
     @media(max-width:650px) {
       .daily-view { padding-top: 38px; }
       #daily-activities { grid-template-columns: 1fr; }
-      .daily-activity { padding: 11px 12px; }
+      .daily-activity { align-items: flex-start; flex-direction: column; padding: 12px; gap: 9px; }
+      .daily-activity-actions { flex-wrap: wrap; }
     }
   </style>
 </Base>
