@@ -275,14 +275,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
-      if(item.kind!=="photo"){
-        if(item.kind!=="activite"){
-          const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="video"?"Vidéo YouTube":item.kind==="video-fichier"?"Vidéo importée":"Étape";
-          memory.append(tag);
-        }
-        const title=document.createElement("h3");title.textContent=item.title;
-        memory.append(title);
-      }
+      // Afficher d'abord le média, puis ses informations pour une carte plus naturelle.
       if(item.youtubeId){
         const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(item.youtubeId)+"?rel=0";frame.title=item.title;frame.loading="lazy";frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";frame.allowFullscreen=true;frame.className="film-video-frame";memory.append(frame);
       }else if(item.fileVideoSrc){
@@ -315,6 +308,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }else if(item.kind!=="activite"){
         const icon=document.createElement("div");icon.className="film-memory-icon";icon.textContent="⌖";icon.setAttribute("aria-hidden","true");memory.append(icon);
       }
+      if(item.kind!=="activite"&&item.kind!=="photo"){
+        const tag=document.createElement("span");tag.className="film-kind";tag.textContent=item.kind==="video"?"Vidéo YouTube":item.kind==="video-fichier"?"Vidéo importée":"Étape";
+        memory.append(tag);
+      }
+      const title=document.createElement("h3");title.textContent=item.title;
+      memory.append(title);
       if(item.detail.trim()){const detail=document.createElement("p");detail.className=item.kind==="photo"?"film-photo-description":"";detail.textContent=item.detail;memory.append(detail);}
       if(item.kind==="activite"&&item.location){const location=document.createElement("p");location.className="film-activity-location";location.textContent=item.location;memory.append(location);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
