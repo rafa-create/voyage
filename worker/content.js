@@ -77,7 +77,7 @@ export async function listedPhotos(env,visibility="public"){
   const legacy=new Map(visibility==="public"?legacyPhotos().map(x=>[x.key,x]):[]);
   return objects.filter(x=>imageKey(x.key)).map(x=>{
     const fromLegacy=legacy.get(x.key);
-    const step=x.key.startsWith("etapes/")?x.key.split("/")[1]:fromLegacy?.etape||null;
+    const step=x.key.startsWith("etapes/")?x.key.split("/")[1]:(x.customMetadata?.etape||fromLegacy?.etape||null);
     return infoObject(x,visibility,step,fromLegacy?.alt,fromLegacy?.legende,Boolean(fromLegacy));
   });
 }
