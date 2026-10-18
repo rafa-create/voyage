@@ -65,6 +65,29 @@ const nav = [
       </script>
     </header>
     <main id="contenu"><slot /></main>
+    <aside id="admin-quick-tools" class="admin-quick-tools" hidden aria-label="Outils administrateur">
+      <button type="button" id="admin-tools-toggle" class="admin-tools-toggle" aria-expanded="false">Gérer cette page</button>
+      <section id="admin-tools-panel" class="admin-tools-panel" hidden>
+        <div class="admin-tools-heading">
+          <strong>Administration</strong>
+          <button type="button" id="admin-tools-close" aria-label="Fermer">×</button>
+        </div>
+        <p id="admin-tools-context">Actions adaptées à cette page.</p>
+        <div class="admin-tools-links">
+          <a id="admin-tools-primary" href={chemin("/admin/")}>Gérer le contenu</a>
+          <a id="admin-tools-challenge" href={chemin("/admin/defi/")}>Gérer le défi</a>
+          <a href={chemin("/admin/")}>Tous les outils</a>
+        </div>
+        <button type="button" id="admin-tools-open" class="admin-tools-open">Ouvrir les outils sans quitter cette page</button>
+      </section>
+    </aside>
+    <div id="admin-tools-modal" class="admin-tools-modal" hidden role="dialog" aria-modal="true" aria-label="Outils d’administration">
+      <div class="admin-tools-modal-head">
+        <strong id="admin-tools-modal-title">Administration</strong>
+        <button type="button" id="admin-tools-modal-close">Fermer ×</button>
+      </div>
+      <iframe id="admin-tools-frame" title="Outils d’administration" loading="lazy"></iframe>
+    </div>
     <footer class="site-footer">
       <div class="container footer-inner">
         <span>© {new Date().getFullYear()} · Carnet de voyage</span>
