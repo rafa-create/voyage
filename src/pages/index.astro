@@ -163,7 +163,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           }
           dailyVideosWrap.hidden = dailyVideosGrid.childElementCount===0;
         }
-        empty.hidden = dayPhotos.length>0 || dayVideos.length>0;
+        empty.hidden = dayPhotos.length>0 || (dailyVideosGrid?.childElementCount || 0)>0;
         if (activitiesWrap && activitiesGrid) {
           activitiesGrid.replaceChildren();
           const dayActivities = courses.filter((course:any) => activityDate(course) === day)
