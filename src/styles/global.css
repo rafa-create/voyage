@@ -416,7 +416,7 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 /* Administration contextuelle : commande immédiatement sous l’en-tête, alignée sur la page. */
 .admin-quick-tools { display:block; width:100%; margin:0; padding:0; }
 .admin-quick-tools[hidden] { display:none !important; }
-.admin-quick-tools-inner { width:min(100% - 48px, 1180px); margin:0 auto; }
+.admin-quick-tools-inner { width:min(1140px, calc(100% - 48px)); margin:0 auto; }
 .admin-tools-toggle { display:block; width:100%; min-height:44px; padding:11px 16px; border:1px solid var(--forest); background:var(--forest); color:#fff; text-align:left; font:700 .82rem 'DM Sans',sans-serif; cursor:pointer; }
 .admin-tools-toggle:hover { background:#24534f; }
 .admin-tools-panel { width:100%; margin:0 0 20px; padding:14px; border:1px solid var(--line); border-top:0; background:var(--white); }
