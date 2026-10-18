@@ -146,6 +146,15 @@ import { chemin } from "../lib/paths";
         const target = Array.from(document.querySelectorAll<HTMLButtonElement>(".photo-open"))
           .find(button => button.dataset.photo === requested || decodeURIComponent(button.dataset.photo || "") === requested);
         target?.click();
+        if (target && new URLSearchParams(location.search).get("edit") === "1") {
+          let attempts = 0;
+          const openEditor = () => {
+            const editButton = document.querySelector<HTMLButtonElement>(".lightbox-edit");
+            if (editButton && !editButton.hidden) { editButton.click(); return; }
+            if (++attempts < 30) window.setTimeout(openEditor, 100);
+          };
+          window.setTimeout(openEditor, 100);
+        }
       }
     }
     loadUnifiedGallery().catch(() => sortUnified());
