@@ -237,7 +237,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }else if(item.kind!=="activite"){
         const icon=document.createElement("div");icon.className="film-memory-icon";icon.textContent="⌖";icon.setAttribute("aria-hidden","true");memory.append(icon);
       }
-      if(item.detail && !(item.kind==="photo" && item.detail.trim()===item.title.trim())){const detail=document.createElement("p");detail.textContent=item.detail;memory.append(detail);}
+      if(item.detail.trim()){const detail=document.createElement("p");detail.className=item.kind==="photo"?"film-photo-description":"";detail.textContent=item.detail;memory.append(detail);}
       if(item.kind==="activite"&&item.location){const location=document.createElement("p");location.className="film-activity-location";location.textContent=item.location;memory.append(location);}
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       filmSection.classList.toggle("film-showing-activity",item.kind==="activite");
