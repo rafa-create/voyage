@@ -124,12 +124,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         }catch{return [];}
       }));
       for(const video of videoGroups.flat()){
-        const match=String(video.url||"").match(/(?:youtu\\.be\\/|[?&]v=|\\/(?:embed|shorts|live)\\/)([a-zA-Z0-9_-]{11})/);
+        const match=String(video.url||"").match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/);
         const youtubeId=match?.[1];
         const stage=video.stage;
         if(!youtubeId||!valid(stage?.latitude,stage?.longitude))continue;
         const rawDate=String(video.dateHeure||video.datePrise||video.date||stage.date||"").slice(0,10);
-        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate))continue;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(rawDate))continue;
         const hasVideoGps=valid(video.latitude,video.longitude);
         const lat=hasVideoGps?Number(video.latitude):stage.latitude;
         const lon=hasVideoGps?Number(video.longitude):stage.longitude;
