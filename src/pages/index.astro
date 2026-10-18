@@ -42,7 +42,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       <h3>Activités</h3>
       <div id="daily-activities"></div>
     </section>
-    <p class="daily-all"><a class="text-link" href="/galerie/">Toute la galerie</a></p>
   </section>
 
   <script>
@@ -192,7 +191,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .daily-activity-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
     .photo-tile figcaption { margin-top: 7px; color: var(--forest); font-size: .82rem; text-decoration: none; }
     .daily-activity a { color: var(--forest); font-size: .76rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-    .daily-all { margin-top: 20px; }
     @media(max-width:650px) {
       .daily-view { padding-top: 38px; }
       #daily-activities { grid-template-columns: 1fr; }
