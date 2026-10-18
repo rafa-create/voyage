@@ -61,6 +61,7 @@ const points = etapes
       const mapEventsPromise = Promise.all([
         fetch("/api/public/photos").catch(() => null),
         fetch("/api/public/carte-evenements").catch(() => null),
+        fetch("/api/public/videos-fichiers").catch(() => null),
       ]);
       const map = new maplibregl.Map({
         container: element,
@@ -303,9 +304,9 @@ const points = etapes
         // GPX publiées sont positionnées selon l'heure de leur capture/départ.
         // Une position de ville/étape reste explicitement approximative.
         void (async()=>{
-          type Event={type:"photo"|"video"|"sport"|"etape";date:string;dateHeure?:string|null;
+          type Event={type:"photo"|"video"|"video-fichier"|"sport"|"etape";date:string;dateHeure?:string|null;
             order:string|null;latitude:number;longitude:number;titre:string;
-            src?:string;youtubeId?:string;etape?:string;id?:string;distance?:number;km?:number;minutes?:number;sport?:string;precision:string;parcours?:boolean};
+            src?:string;key?:string;youtubeId?:string;etape?:string;id?:string;distance?:number;km?:number;minutes?:number;sport?:string;precision:string;parcours?:boolean};
           const valid=(lat:unknown,lon:unknown)=>
             typeof lat==="number"&&typeof lon==="number"&&Number.isFinite(lat)&&
             Number.isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180;
@@ -318,13 +319,14 @@ const points = etapes
             return n("year")+"-"+n("month")+"-"+n("day")+"T"+n("hour")+":"+n("minute");
           };
           try{
-            const [photosResponse,sportsResponse]=await mapEventsPromise;
+            const [photosResponse,sportsResponse,fileVideosResponse]=await mapEventsPromise;
             // La carte et son bouton de tracés doivent rester disponibles même si
             // l'une des API d'événements est momentanément indisponible.
             const photoData=photosResponse?.ok?await photosResponse.json():{};
             const sportData=sportsResponse?.ok?await sportsResponse.json():{};
             const photos=photoData.photos;
             const courses=sportData.courses;
+            const fileVideoData=fileVideosResponse?.ok?await fileVideosResponse.json():{};
             const videoGroups=await Promise.all(points.map(async stage=>{
               try{
                 const response=await fetch("/api/public/videos?etape="+encodeURIComponent(stage.slug));
@@ -346,6 +348,17 @@ const points = etapes
                 longitude:hasGps?Number(video.longitude):stage.longitude,
                 precision:hasGps?"GPS vidéo":"Emplacement indicatif de l'étape",
                 titre:video.titre||"Vidéo YouTube",youtubeId,etape:stage.slug});
+            }
+            for(const video of (Array.isArray(fileVideoData.videos)?fileVideoData.videos:[])){
+              const date=String(video.date||video.ajouteLe||"").slice(0,10);
+              if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+              const stage=(video.etape?points.find(p=>p.slug===video.etape):undefined)||
+                [...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||
+                points.find(p=>p.date===date);
+              if(!stage||!valid(stage.latitude,stage.longitude))continue;
+              memories.push({type:"video-fichier",date,order:date+"T23:58",latitude:stage.latitude,
+                longitude:stage.longitude,precision:"Emplacement indicatif de l'étape",
+                titre:video.titre||"Vidéo du voyage",src:video.src,key:video.key,etape:video.etape});
             }
             const parisToday = new Intl.DateTimeFormat("en-CA", {
               timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
