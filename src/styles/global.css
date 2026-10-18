@@ -360,6 +360,25 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 }
 .map-day-control .daily-day-arrow:disabled { opacity:.32; cursor:not-allowed; }
 .map-day-control .daily-day-arrow:hover:not(:disabled) { background:#ebe6da; border-radius:3px; }
+.map-day-control .daily-day-arrow:focus:not(:focus-visible),
+.map-day-control .daily-day-arrow:active,
+.daily-view .daily-controls button:focus:not(:focus-visible),
+.daily-view .daily-controls button:active,
+.map-visibility-toolbar button:focus:not(:focus-visible),
+.map-visibility-toolbar button:active {
+  outline: none;
+  box-shadow: 0 1px 4px #00000012;
+  transform: none;
+}
+.map-day-control .daily-day-arrow:focus:not(:focus-visible),
+.map-day-control .daily-day-arrow:active,
+.daily-view .daily-controls button:focus:not(:focus-visible),
+.daily-view .daily-controls button:active,
+.map-visibility-toolbar button:focus:not(:focus-visible),
+.map-visibility-toolbar button:active {
+  background-color: var(--white);
+  color: var(--forest);
+}
 @media(max-width:600px) {
   .map-day-control { gap:5px; margin:0 0 7px 7px; padding:5px 6px; flex-wrap:nowrap; }
   .map-day-control #daily-date { width:auto; font-size:.65rem; }
