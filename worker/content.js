@@ -2,6 +2,9 @@ import etapesInitiales from "../src/data/etapes.json" with { type: "json" };
 import * as exifr from "exifr";
 
 export const types = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp", avif:"image/avif", gif:"image/gif", heic:"image/heic", heif:"image/heif" };
+export const videoTypes = { mp4:"video/mp4", m4v:"video/x-m4v", mov:"video/quicktime", webm:"video/webm", ogv:"video/ogg" };
+export const videoKey = key => Boolean(key && key.length < 700 && !key.split("/").some(x=>!x||x==="."||x==="..") && /\.(?:mp4|m4v|mov|webm|ogv)$/i.test(key));
+export const mediaKey = key => imageKey(key) || videoKey(key);
 export const slugOk = value => typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length < 90;
 export const imageKey = key => Boolean(key && key.length < 700 && !key.split("/").some(x=>!x||x==="."||x==="..") && /\.(?:jpe?g|png|webp|avif|gif|heic|heif)$/i.test(key));
 export const validDate = x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x) && !Number.isNaN(Date.parse(x+"T12:00:00Z")) && new Date(x+"T12:00:00Z").toISOString().slice(0,10) === x;
@@ -80,6 +83,17 @@ export async function listedPhotos(env,visibility="public"){
     const step=x.key.startsWith("etapes/")?x.key.split("/")[1]:(x.customMetadata?.etape||fromLegacy?.etape||null);
     return infoObject(x,visibility,step,fromLegacy?.alt,fromLegacy?.legende,Boolean(fromLegacy));
   });
+}
+export async function listedVideos(env,visibility="public"){
+  const bucket=visibility==="public"?env.PHOTOS_PUBLIQUES:env.PHOTOS_PRIVEES;
+  const objects=await listAll(bucket,"videos/",5200);
+  return objects.filter(x=>videoKey(x.key)).map(x=>({
+    key:x.key,src:photoPath(x.key,visibility),visibilite:visibility,
+    titre:x.customMetadata?.titre||x.key.split("/").pop().replace(/\.[^.]+$/,""),
+    etape:x.customMetadata?.etape||null,
+    date:x.customMetadata?.datePrise||x.uploaded?.toISOString().slice(0,10)||null,
+    ajouteLe:x.uploaded?.toISOString()||null,
+  }));
 }
 export function urlYoutube(url){
   try{
