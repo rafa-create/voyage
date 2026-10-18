@@ -232,7 +232,7 @@ import { chemin } from "../lib/paths";
       <label for="edit-photo-map-search">Rechercher sur Google Maps</label>
       <div class="photo-map-search"><input id="edit-photo-map-search" type="search" maxlength="240" placeholder="Nom du lieu, adresse…"/><button type="button" id="edit-photo-map-open">Rechercher</button></div>
       <label for="edit-photo-map-url">Lien Google Maps du point choisi</label>
-      <input id="edit-photo-map-url" type="url" placeholder="Colle ici le lien Google Maps complet"/>
+      <input id="edit-photo-map-url" type="text" inputmode="text" autocomplete="off" placeholder="Lien Google Maps ou coordonnées (lat, lon)"/>
       <button type="button" id="edit-photo-map-use">Récupérer les coordonnées depuis le lien</button>
       <p class="photo-map-help">Ouvre Maps, choisis le lieu puis copie son lien. Si le lien contient les coordonnées, elles seront ajoutées ci-dessous. Vérifie le point avant d’enregistrer.</p>
       <label for="edit-photo-lat">Latitude</label><input id="edit-photo-lat" type="number" step="any" min="-85" max="85"/>
