@@ -198,8 +198,13 @@ import { chemin } from "../lib/paths";
         openVideo.dataset.videoFile = video.src;
         openVideo.dataset.videoTitle = video.titre || "Vidéo du voyage";
         openVideo.dataset.alt = openVideo.dataset.videoTitle;
-        openVideo.dataset.date = stamp;
+        openVideo.dataset.date = stamp.slice(0, 10);
         openVideo.dataset.lieu = video.lieu || "";
+        openVideo.dataset.videoFileKey = video.key || "";
+        openVideo.dataset.videoVisibility = video.visibilite || "public";
+        openVideo.dataset.latitude = video.latitude == null ? "" : String(video.latitude);
+        openVideo.dataset.longitude = video.longitude == null ? "" : String(video.longitude);
+        openVideo.dataset.etape = video.etape || "";
         openVideo.setAttribute("aria-label", "Lire dans le diaporama : " + openVideo.dataset.videoTitle);
         openVideo.textContent = "▶ Diaporama";
         openVideo.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:0;max-width:100%;margin:0 0 .45rem;padding:.35rem .65rem;border:1px solid #d8d8d0;border-radius:999px;background:#fffdf8;color:#274c41;font:600 .78rem 'DM Sans',sans-serif;line-height:1.3;cursor:pointer;position:relative;z-index:1";
@@ -446,12 +451,12 @@ import { chemin } from "../lib/paths";
       const item=selectedPhoto();
       if(details){details.replaceChildren();const bits=[item?.datePrise||bouton.dataset.date,bouton.dataset.videoTitle||item?.lieu,item?.commentaire||item?.legende].filter(Boolean);for(const bit of bits){const line=document.createElement("span");line.textContent=String(bit);details.append(line);}details.hidden=!bits.length;}
       const editButton=dialog?.querySelector<HTMLButtonElement>(".lightbox-edit");
-      if(editButton)editButton.hidden=!(isAdmin&&(item||bouton.dataset.video));
+      if(editButton)editButton.hidden=!(isAdmin&&(item||bouton.dataset.video||bouton.dataset.videoFile));
       const deleteButton=dialog?.querySelector<HTMLButtonElement>("#edit-photo-delete");
       if(deleteButton)deleteButton.hidden=!(isAdmin&&item&&!bouton.dataset.video);
       if(editor){editor.hidden=true;
         if(item){if(editDate)editDate.value=item.datePrise||"";if(editTime)editTime.value=typeof item.dateHeure==="string"?item.dateHeure.slice(11,16):"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value="";}
-        else if(bouton.dataset.video){if(editDate)editDate.value=bouton.dataset.date||"";if(editTime)editTime.value="";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value=bouton.dataset.latitude||"";if(editLon)editLon.value=bouton.dataset.longitude||"";if(editStage)editStage.value=bouton.dataset.etape||"";}
+        else if(bouton.dataset.video||bouton.dataset.videoFile){if(editDate)editDate.value=bouton.dataset.date||"";if(editTime)editTime.value="";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value=bouton.dataset.latitude||"";if(editLon)editLon.value=bouton.dataset.longitude||"";if(editStage)editStage.value=bouton.dataset.etape||"";}
         if(editStatus)editStatus.textContent="";}
     };
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
@@ -539,7 +544,7 @@ import { chemin } from "../lib/paths";
       }
     });
     editor?.addEventListener("submit",async event=>{
-      event.preventDefault();const p=selectedPhoto();const button=photos[index];if((!p&&!button?.dataset.video)||!editDate||!editTime||!editPlace||!editComment||!editStage||!editLat||!editLon||!editStatus)return;
+      event.preventDefault();const p=selectedPhoto();const button=photos[index];if((!p&&!button?.dataset.video&&!button?.dataset.videoFile)||!editDate||!editTime||!editPlace||!editComment||!editStage||!editLat||!editLon||!editStatus)return;
       editStatus.textContent="Enregistrement…";
       try{
         if(button?.dataset.video){
@@ -547,6 +552,14 @@ import { chemin } from "../lib/paths";
           const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Modification vidéo indisponible.");
           button.dataset.date=editDate.value;button.dataset.lieu=editPlace.value;button.dataset.latitude=editLat.value;button.dataset.longitude=editLon.value;button.dataset.videoTitle=editComment.value;button.dataset.alt=editComment.value;button.dataset.etape=editStage.value;
           const caption=button.closest("figure")?.querySelector("figcaption");if(caption)caption.textContent=editComment.value+(editPlace.value?" · "+editPlace.value:"");
+          editStatus.textContent="Modifications enregistrées.";return;
+        }
+        if(button?.dataset.videoFile){
+          const response=await fetch("/api/prive/admin/video-file-modifier",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify({key:button.dataset.videoFileKey,visibilite:button.dataset.videoVisibility,titre:editComment.value,date:editDate.value,lieu:editPlace.value,latitude:editLat.value,longitude:editLon.value,etape:editStage.value})});
+          const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Modification de la vidéo importée impossible.");
+          button.dataset.date=editDate.value;button.dataset.lieu=editPlace.value;button.dataset.latitude=editLat.value;button.dataset.longitude=editLon.value;button.dataset.videoTitle=editComment.value;button.dataset.alt=editComment.value;button.dataset.etape=editStage.value;
+          const caption=button.closest("figure")?.querySelector("figcaption");if(caption)caption.textContent=editComment.value+(editDate.value?" · "+editDate.value:"");
+          const player=button.closest("figure")?.querySelector("video");if(player)player.setAttribute("aria-label",editComment.value);
           editStatus.textContent="Modifications enregistrées.";return;
         }
         if(!p)return;
