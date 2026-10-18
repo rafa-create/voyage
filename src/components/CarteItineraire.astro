@@ -289,12 +289,14 @@ const points = etapes
             const courses=sportData.courses;
             const memories:Event[]=[];
             for(const photo of (Array.isArray(photos)?photos:[])){
-              if(!photo||!photo.etape)continue;
-              const stage=points.find(p=>p.slug===photo.etape);
+              if(!photo)continue;
+              // Les coordonnées GPS suffisent à afficher une photo sur la carte :
+              // aucune étape n'est nécessaire. L'étape ne sert que de repli indicatif.
+              const stage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
               const gps=valid(photo.latitude,photo.longitude);
               if(!gps&&!stage)continue;
-              const date=String(photo.datePrise||stage?.date||"");
               const dateHeure=typeof photo.dateHeure==="string"?photo.dateHeure:null;
+              const date=String(dateHeure?.slice(0,10)||photo.datePrise||photo.ajouteLe?.slice(0,10)||stage?.date||"");
               memories.push({type:"photo",date,dateHeure,
                 order:dateHeure||(date?date+"T23:59":null),
                 latitude:gps?photo.latitude:stage!.latitude,
@@ -542,9 +544,9 @@ const points = etapes
                 action.style.cssText="cursor:pointer;border:0;background:none;color:#274c41;font-weight:700;text-decoration:underline;padding:6px 0;";
                 action.addEventListener("click",()=>void showTrace(memory.id!,memory.date));
                 panel.append(action);
-              }else if(memory.type==="photo"&&memory.etape){
+              }else if(memory.type==="photo"&&memory.src){
                 const link=document.createElement("a");
-                link.href="/galerie/?photo="+encodeURIComponent(memory.src||"");
+                link.href="/galerie/?photo="+encodeURIComponent(memory.src);
                 link.textContent="Voir dans la galerie ↗";panel.append(link);
               }
               if(selectedDay && selectedDay !== memory.date){
