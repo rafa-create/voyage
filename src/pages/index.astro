@@ -59,8 +59,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const activitiesGrid = document.querySelector<HTMLElement>("#daily-activities");
     const previous = document.querySelector<HTMLButtonElement>("#day-previous");
     const next = document.querySelector<HTMLButtonElement>("#day-next");
-    const headingPrevious = document.querySelector<HTMLButtonElement>("#daily-heading-previous");
-    const headingNext = document.querySelector<HTMLButtonElement>("#daily-heading-next");
     const dailyDatePicker = document.querySelector<HTMLInputElement>("#daily-date-picker");
     async function initDailyView() {
       if (!grid || !empty || !previous || !next) return;
