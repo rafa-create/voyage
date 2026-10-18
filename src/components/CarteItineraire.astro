@@ -58,11 +58,20 @@ const points = etapes
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     const central = points.find((p) => p.statut === "actuelle") || points[points.length - 1];
     if (central) {
+      // Préparer le cadrage avant le premier rendu pour éviter le zoom provisoire.
+      const initialBounds = new maplibregl.LngLatBounds();
+      points.forEach((p) => initialBounds.extend([p.longitude, p.latitude]));
+      // Démarrer le chargement des souvenirs pendant que le fond de carte s'initialise.
+      const mapEventsPromise = Promise.all([
+        fetch("/api/public/photos").catch(() => null),
+        fetch("/api/public/carte-evenements").catch(() => null),
+      ]);
       const map = new maplibregl.Map({
         container: element,
         style: "https://tiles.openfreemap.org/styles/liberty",
         center: [central.longitude, central.latitude],
         zoom: points.length === 1 ? 10 : 5,
+        ...(points.length > 1 ? { bounds: initialBounds, fitBoundsOptions: { padding: 55, maxZoom: 10 } } : {}),
         cooperativeGestures: false,
         scrollZoom: false,
         attributionControl: false,
@@ -307,14 +316,11 @@ const points = etapes
             return n("year")+"-"+n("month")+"-"+n("day")+"T"+n("hour")+":"+n("minute");
           };
           try{
-            const [photosResponse,sportsResponse]=await Promise.all([
-              fetch("/api/public/photos",{cache:"no-store"}),
-              fetch("/api/public/carte-evenements",{cache:"no-store"})
-            ]);
+            const [photosResponse,sportsResponse]=await mapEventsPromise;
             // La carte et son bouton de tracés doivent rester disponibles même si
             // l'une des API d'événements est momentanément indisponible.
-            const photoData=photosResponse.ok?await photosResponse.json():{};
-            const sportData=sportsResponse.ok?await sportsResponse.json():{};
+            const photoData=photosResponse?.ok?await photosResponse.json():{};
+            const sportData=sportsResponse?.ok?await sportsResponse.json():{};
             const photos=photoData.photos;
             const courses=sportData.courses;
             const memories:Event[]=[];
@@ -671,11 +677,6 @@ const points = etapes
             if (selectedDay) updateSelectedDay(selectedDay, false);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
-        if (points.length > 1) {
-          const bornes = new maplibregl.LngLatBounds();
-          points.forEach((p) => bornes.extend([p.longitude, p.latitude]));
-          map.fitBounds(bornes, { padding: 55, maxZoom: 10, duration: 0 });
-        }
       });
     } else {
       element.textContent = "La carte apparaîtra lorsque les premières étapes seront ajoutées.";
