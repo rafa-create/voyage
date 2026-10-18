@@ -477,6 +477,32 @@ export default {
       await bucket.delete(input.key);
       return json({ok:true});
     }
+    if(path==="/api/prive/admin/video-file-modifier"){
+      const input=await readBody(request);
+      const bucket=bucketFor(env,input?.visibilite);
+      if(!bucket||!videoKey(input?.key)||!input.key.startsWith("videos/"))return error("Fichier vidéo invalide.");
+      const titre=typeof input.titre==="string"?input.titre.trim():"";
+      if(!titre||titre.length>180)return error("Le titre doit contenir entre 1 et 180 caractères.");
+      const date=input.date===""||input.date==null?null:input.date;
+      if(date!==null&&!validDate(date))return error("Date invalide.");
+      const lieu=typeof input.lieu==="string"?input.lieu.trim():"";
+      if(lieu.length>240)return error("Lieu trop long.");
+      const etape=typeof input.etape==="string"?input.etape:"";
+      if(etape&&(!slugOk(etape)||!await stageExists(env,etape)))return error("Étape inconnue.");
+      const latitude=input.latitude===""||input.latitude==null?null:Number(input.latitude);
+      const longitude=input.longitude===""||input.longitude==null?null:Number(input.longitude);
+      if((latitude===null)!==(longitude===null)||(latitude!==null&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>85||Math.abs(longitude)>180)))return error("Coordonnées GPS invalides.");
+      const file=await bucket.get(input.key);
+      if(!file)return error("Vidéo introuvable.",404);
+      const customMetadata={...(file.customMetadata||{}),titre};
+      if(date)customMetadata.datePrise=date;else delete customMetadata.datePrise;
+      if(lieu)customMetadata.lieu=lieu;else delete customMetadata.lieu;
+      if(etape)customMetadata.etape=etape;else delete customMetadata.etape;
+      if(latitude!==null){customMetadata.latitude=String(latitude);customMetadata.longitude=String(longitude);}
+      else{delete customMetadata.latitude;delete customMetadata.longitude;delete customMetadata.precision;}
+      await bucket.put(input.key,file.body,{httpMetadata:file.httpMetadata,customMetadata});
+      return json({ok:true,video:{key:input.key,titre,date,lieu,etape:etape||null,latitude,longitude}});
+    }
     if(path==="/api/prive/admin/video-ajouter"){
       const input=await readBody(request);
       const slug=typeof input?.slug==="string"&&input.slug?input.slug:"sans-etape";
