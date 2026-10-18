@@ -95,7 +95,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const figure=document.createElement("figure");figure.className="photo-tile";
           const button=document.createElement("button");button.type="button";button.className="photo-open";
           button.dataset.photo=photo.src;button.dataset.alt=photo.alt||"Photo du voyage";
-          button.setAttribute("aria-label","Afficher dans la galerie : "+(photo.alt||"photo du voyage"));
+          button.setAttribute("aria-label","Afficher cette photo sur la carte : "+(photo.alt||"photo du voyage"));
           button.addEventListener("click",()=>window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:day,kind:"photo",key:photo.src}})));
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
