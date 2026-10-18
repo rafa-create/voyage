@@ -267,8 +267,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     playButton.disabled=false;playButton.textContent="Lancer le film";
     playButton.addEventListener("click",()=>playing?stop():start());
     speedSelect?.addEventListener("change",()=>{if(playing)scheduleNext();});
-    prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
-    nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render();});
+    prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render(false);});
+    nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render(false);});
     daySelect?.addEventListener("change",()=>{
       const day=daySelect.value;
       const target=sequence.findIndex(item=>item.date===day);
