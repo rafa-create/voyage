@@ -123,6 +123,32 @@ export default {
     }
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
+    if(path==="/api/public/resolve-maps-link"&&request.method==="GET"){
+      const raw=url.searchParams.get("url")||"";
+      if(raw.length>2048)return error("Lien trop long.");
+      let target;
+      try{target=new URL(raw);}catch{return error("Lien Google Maps invalide.");}
+      const allowedHosts=new Set(["maps.app.goo.gl","goo.gl","google.com","www.google.com","maps.google.com","maps.google.fr"]);
+      if(target.protocol!=="https:"||!allowedHosts.has(target.hostname.toLowerCase())||target.username||target.password)
+        return error("Seuls les liens Google Maps sont acceptés.");
+      try{
+        for(let i=0;i<6;i++){
+          if(!allowedHosts.has(target.hostname.toLowerCase()))return error("Redirection vers un domaine non autorisé.",422);
+          const response=await fetch(target.href,{redirect:"manual",headers:{"User-Agent":"Mozilla/5.0 (compatible; VoyageMapsResolver/1.0)","Accept":"text/html,application/xhtml+xml"}});
+          if(response.status>=300&&response.status<400){
+            const location=response.headers.get("Location");
+            if(!location)return error("Redirection Google Maps incomplète.",422);
+            const next=new URL(location,target);
+            if(next.protocol!=="https:"||!allowedHosts.has(next.hostname.toLowerCase()))return error("Redirection vers un domaine non autorisé.",422);
+            target=next;
+            continue;
+          }
+          if(!response.ok)return error("Google Maps n’a pas pu résoudre ce lien. Essaie de copier le lien depuis le point ouvert.",422);
+          return json({url:target.href});
+        }
+        return error("Trop de redirections Google Maps.",422);
+      }catch{return error("Impossible de résoudre ce lien Google Maps pour le moment.",502);}
+    }
     if(path==="/api/public/defi"&&request.method==="GET"){
       if(url.searchParams.get("statut")==="1")return json(await publicChallenge(env));
       const snapshot=await publicChallenge(env);
