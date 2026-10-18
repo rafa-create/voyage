@@ -91,9 +91,9 @@ import { chemin } from "../../lib/paths";
           <label for="site-access-mode">Visibilité du site</label>
           <select id="site-access-mode" required>
             <option value="open">Ouvert à tous — aucune connexion demandée</option>
-            <option value="restricted">Restreint — adresse e-mail approuvée requise</option>
+            <option value="restricted">Restreint — connexion Cloudflare Access requise</option>
           </select>
-          <p class="admin-note">En mode restreint, les visiteurs saisissent leur adresse e-mail. Tu approuves les demandes ci-dessus ; les adresses approuvées peuvent ensuite consulter le carnet. Les photos privées de l’espace administrateur restent protégées séparément.</p>
+          <p class="admin-note">Ce réglage concerne l’accès au site public. Les photos privées restent protégées séparément et ne sont jamais publiées par ce réglage. Le mode restreint nécessite que Cloudflare Access protège aussi les pages publiques et autorise les personnes souhaitées.</p>
           <button class="admin-primary" type="submit">Enregistrer les paramètres d’accès</button>
           <p id="site-access-feedback" role="status" class="admin-feedback"></p>
         </form>
@@ -211,7 +211,7 @@ import { chemin } from "../../lib/paths";
       const feedback=$("site-access-feedback");
       try{
         await post("/api/prive/admin/site-access",{mode});
-        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Les visiteurs devront utiliser une adresse e-mail approuvée.":"Le site est maintenant ouvert à tous.");
+        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Vérifie que Cloudflare Access protège bien toutes les pages publiques avant de partager le site.":"Le site est maintenant ouvert à tous.");
       }catch(err){if(feedback)feedback.textContent=err instanceof Error?err.message:"Enregistrement impossible.";}
     });
     $("refresh-btn")?.addEventListener("click",async()=>{
