@@ -102,7 +102,7 @@ const points = etapes
         pays.textContent = p.pays;
         const lien = document.createElement("a");
         lien.href = base + "/etapes/" + encodeURIComponent(p.slug) + "/";
-        lien.textContent = "Voir les photos et le récit ↗";
+        lien.textContent = "Voir les photos et le récit";
         contenu.append(label, titre, pays, lien);
 
         new maplibregl.Marker({ element: marker, anchor: "center" })
@@ -557,14 +557,14 @@ const points = etapes
               }
               if(memory.type==="sport"&&memory.id&&memory.parcours){
                 const action=document.createElement("button");
-                action.type="button";action.textContent="Zoomer sur le parcours ↗";
+                action.type="button";action.textContent="Zoomer sur le parcours";
                 action.style.cssText="cursor:pointer;border:0;background:none;color:#274c41;font-weight:700;text-decoration:underline;padding:6px 0;";
                 action.addEventListener("click",()=>void showTrace(memory.id!,memory.date));
                 panel.append(action);
               }else if(memory.type==="photo"&&memory.src){
                 const link=document.createElement("a");
                 link.href="/galerie/?photo="+encodeURIComponent(memory.src);
-                link.textContent="Voir dans la galerie ↗";panel.append(link);
+                link.textContent="Voir dans la galerie";panel.append(link);
               }
               if(selectedDay && selectedDay !== memory.date){
                 marker.style.opacity=".38";marker.style.transform="scale(.82)";
