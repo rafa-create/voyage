@@ -69,9 +69,9 @@ const points = etapes
       const map = new maplibregl.Map({
         container: element,
         style: "https://tiles.openfreemap.org/styles/liberty",
-        center: [central.longitude, central.latitude],
-        zoom: points.length === 1 ? 10 : 5,
-        ...(points.length > 1 ? { bounds: initialBounds, fitBoundsOptions: { padding: 55, maxZoom: 10 } } : {}),
+        // Vue globale au départ ; l'animation vers les souvenirs arrive après leur chargement.
+        center: [0, 20],
+        zoom: 0,
         cooperativeGestures: false,
         scrollZoom: false,
         attributionControl: false,
@@ -333,6 +333,14 @@ const points = etapes
             const photos=photoData.photos;
             const courses=sportData.courses;
             const memories:Event[]=[];
+            const parisToday = new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
+            }).format(new Date());
+            const yesterday = new Date(parisToday + "T12:00:00");
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayKey = new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
+            }).format(yesterday);
             for(const photo of (Array.isArray(photos)?photos:[])){
               if(!photo)continue;
               // Les coordonnées GPS suffisent à afficher une photo sur la carte :
@@ -367,6 +375,30 @@ const points = etapes
               latitude:p.latitude,longitude:p.longitude,titre:p.ville,precision:"Étape du voyage"}));
             const timeline=[...stages,...memories].filter(e=>e.order)
               .sort((a,b)=>String(a.order).localeCompare(String(b.order)));
+            // Utiliser hier si des données existent, sinon le dernier jour passé documenté.
+            const datedMemories = [...memories, ...stages].filter(e => e.date && e.date < parisToday);
+            const targetDay = datedMemories.some(e => e.date === yesterdayKey)
+              ? yesterdayKey
+              : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
+            const targetEvents = datedMemories.filter(e => e.date === targetDay);
+            if (targetEvents.length) {
+              document.documentElement.dataset.voyageDay = targetDay;
+              const targetBounds = new maplibregl.LngLatBounds();
+              for (const event of targetEvents) targetBounds.extend([event.longitude, event.latitude]);
+              const targetCenter = targetBounds.getCenter();
+              const animateToYesterday = () => {
+                map.jumpTo({ center: [0, 20], zoom: 0 });
+                map.flyTo({
+                  center: [targetCenter.lng, targetCenter.lat],
+                  zoom: targetEvents.length === 1 ? 11 : 10,
+                  duration: 2400,
+                  essential: true
+                });
+                window.dispatchEvent(new CustomEvent("voyage:jour", { detail: { date: targetDay } }));
+              };
+              if (map.loaded()) animateToYesterday();
+              else map.once("load", animateToYesterday);
+            }
             if(timeline.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{
                 type:"Feature",properties:{},
