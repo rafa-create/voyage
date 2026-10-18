@@ -93,7 +93,7 @@ import { chemin } from "../../lib/paths";
           <input id="video-files" class="visually-hidden" type="file" accept="video/mp4,video/quicktime,video/webm,video/ogg,.mp4,.m4v,.mov,.webm,.ogv" multiple />
           <div id="chosen-video-files" class="chosen-files"></div>
           <button class="admin-primary" type="submit">Envoyer les vidéos</button>
-          <p class="admin-note">Les fichiers sont envoyés tels quels. Avant une publication publique, vérifie qu’ils ne contiennent pas de métadonnées de localisation. Utilise « Privée » pour conserver une vidéo dans le bucket protégé.</p>
+          <p class="admin-note">Les vidéos sont vérifiées avant l’envoi. Si nécessaire, le navigateur les convertit en MP4/H.264 pour améliorer la compatibilité. La conversion peut être longue sur téléphone et nécessite le chargement d’un moteur de conversion. Les fichiers déjà présents dans R2 ne sont pas modifiés. Avant une publication publique, vérifie les métadonnées de localisation. Utilise « Privée » pour le bucket protégé.</p>
           <p id="video-file-feedback" role="status" class="admin-feedback"></p>
         </form>
         <div id="video-file-list" class="admin-video-file-list"></div>
@@ -535,8 +535,64 @@ import { chemin } from "../../lib/paths";
     $("video-files")?.addEventListener("change",e=>{
       selectedVideoFiles=Array.from((e.target as HTMLInputElement).files||[]);
       renderChosenVideoFiles();
-      message("video-file-feedback",selectedVideoFiles.length+" fichier(s) vidéo sélectionné(s).");
+      message("video-file-feedback",selectedVideoFiles.length+" fichier(s) vidéo sélectionné(s). Les fichiers seront vérifiés avant l’envoi.");
     });
+    let ffmpegInstance:any=null;
+    async function getFFmpeg(){
+      if(ffmpegInstance?.isLoaded?.())return ffmpegInstance;
+      const w=window as any;
+      if(!w.FFmpeg){
+        await new Promise<void>((resolve,reject)=>{
+          const script=document.createElement("script");
+          script.src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js";
+          script.onload=()=>resolve();
+          script.onerror=()=>reject(new Error("Impossible de charger le moteur de conversion vidéo. Vérifie ta connexion puis réessaie."));
+          document.head.append(script);
+        });
+      }
+      if(!w.FFmpeg?.createFFmpeg)throw new Error("Le moteur de conversion vidéo n’est pas disponible dans ce navigateur.");
+      ffmpegInstance=w.FFmpeg.createFFmpeg({log:true,corePath:"https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"});
+      await ffmpegInstance.load();
+      return ffmpegInstance;
+    }
+    async function makeBrowserCompatible(file:File,index:number,total:number):Promise<File>{
+      // HEVC and other codecs can be inside an MP4. Inspect the stream instead of trusting its extension.
+      const ffmpeg=await getFFmpeg();
+      const inputName="input_"+index+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80);
+      const outputName="output_"+index+".mp4";
+      const logs:string[]=[];
+      const oldLogger=(ffmpeg as any).logger;
+      ffmpeg.setLogger?.(({message:line}:any)=>logs.push(String(line)));
+      try{
+        ffmpeg.FS("writeFile",inputName,new Uint8Array(await file.arrayBuffer()));
+        message("video-file-feedback","Vérification du codec "+(index+1)+"/"+total+" · "+file.name);
+        try{await ffmpeg.run("-i",inputName,"-f","null","-");}catch{/* ffmpeg returns a nonzero exit code for the null probe on some builds */}
+        const report=logs.join("\n");
+        const videoLine=report.split("\n").find(line=>/Video:/.test(line))||"";
+        const audioLine=report.split("\n").find(line=>/Audio:/.test(line))||"";
+        const isH264=/Video:.*\b(h264|avc1)\b/i.test(videoLine);
+        const isAac=!audioLine||/Audio:.*\baac\b/i.test(audioLine);
+        if(isH264&&isAac){
+          ffmpeg.FS("unlink",inputName);
+          return file;
+        }
+        message("video-file-feedback","Conversion en MP4/H.264 "+(index+1)+"/"+total+" · "+file.name+" — garde cette page ouverte.");
+        await ffmpeg.run("-i",inputName,"-c:v","libx264","-preset","ultrafast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart",outputName);
+        const output=ffmpeg.FS("readFile",outputName);
+        if(!output?.length)throw new Error("La conversion n’a produit aucun fichier.");
+        const baseName=file.name.replace(/\.[^.]+$/,"").slice(0,150)||"video";
+        const converted=new File([output.buffer.slice(output.byteOffset,output.byteOffset+output.byteLength)],baseName+".mp4",{type:"video/mp4",lastModified:Date.now()});
+        ffmpeg.FS("unlink",inputName);
+        ffmpeg.FS("unlink",outputName);
+        return converted;
+      }catch(error){
+        try{ffmpeg.FS("unlink",inputName);}catch{}
+        try{ffmpeg.FS("unlink",outputName);}catch{}
+        throw new Error("Conversion impossible pour "+file.name+". "+(error instanceof Error?error.message:"Réessaie avec une vidéo moins volumineuse."));
+      }finally{
+        ffmpeg.setLogger?.(oldLogger||(()=>{}));
+      }
+    }
     async function renderVideoFiles(){
       const list=$("video-file-list");if(!list)return;
       const data=await api("/api/prive/admin/videos-fichiers");
@@ -566,17 +622,22 @@ import { chemin } from "../../lib/paths";
       if(btn)btn.disabled=true;
       let done=0;
       try{
-        for(const file of selectedVideoFiles){
-          if(file.size>95*1024*1024)throw Error(file.name+" dépasse 95 Mo.");
-          const extension=file.name.split(".").pop()?.toLowerCase()||"";
+        for(let index=0;index<selectedVideoFiles.length;index++){
+          const original=selectedVideoFiles[index];
+          if(original.size>95*1024*1024)throw Error(original.name+" dépasse 95 Mo.");
+          const extension=original.name.split(".").pop()?.toLowerCase()||"";
           const mimeByExtension:Record<string,string>={mp4:"video/mp4",m4v:"video/x-m4v",mov:"video/quicktime",webm:"video/webm",ogv:"video/ogg"};
-          const type=file.type||mimeByExtension[extension];
-          if(!type||!Object.values(mimeByExtension).includes(type))throw Error("Format vidéo non pris en charge : "+file.name);
+          const type=original.type||mimeByExtension[extension];
+          if(!type||!Object.values(mimeByExtension).includes(type))throw Error("Format vidéo non pris en charge : "+original.name);
+          const file=await makeBrowserCompatible(original,index,selectedVideoFiles.length);
+          if(file.size>95*1024*1024)throw Error(file.name+" dépasse 95 Mo après conversion.");
+          const convertedExtension=file.name.split(".").pop()?.toLowerCase()||"mp4";
+          const uploadType=file.type||mimeByExtension[convertedExtension]||type;
           const params=new URLSearchParams({visibilite:$<HTMLSelectElement>("video-file-visibility")?.value||"public",titre:file.name.replace(/\.[^.]+$/,"").slice(0,180)});
           const slug=$<HTMLSelectElement>("video-file-etape")?.value||"sans-etape";
           if(slug!=="sans-etape")params.set("etape",slug);
           message("video-file-feedback","Envoi "+(done+1)+"/"+selectedVideoFiles.length+" · "+file.name);
-          await api("/api/prive/admin/upload-video?"+params.toString(),{method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":type},body:file});
+          await api("/api/prive/admin/upload-video?"+params.toString(),{method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":uploadType},body:file});
           done++;
         }
         selectedVideoFiles=[];
