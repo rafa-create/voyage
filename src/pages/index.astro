@@ -6,13 +6,8 @@ import { etapes } from "../lib/data";
 const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
 ---
 
-<Base title="Accueil" active="accueil">
+<Base title="Mon itinéraire" headerTitle="Mon itinéraire" active="accueil">
   <section class="route-section home-map-only">
-    <div class="container">
-      <div class="route-map-title">
-        <h1>Mon itinéraire</h1>
-      </div>
-    </div>
     <div class="route-map-card home-full-width-map">
       <CarteItineraire etapes={etapes}/>
     </div>
