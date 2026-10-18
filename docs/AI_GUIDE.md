@@ -71,3 +71,10 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - **Limite de vérification :** le code a été modifié sur `main`; le site n'a pas été déployé automatiquement. Tester en production après déploiement autorisé : absence de crayons de texte sur les pages, ajout photo/vidéo dans la Galerie, édition d'une description de photo, fonctionnement du Journal, de la carte et des outils d'administration.
 - **Prudence :** la cause exacte du gel initial n'a pas été isolée. Ne pas réintroduire l'édition générique sans une solution explicite et des tests dédiés.
 
+
+
+## Résolution des liens courts Google Maps dans la galerie
+- Le bouton de récupération GPS essaie d’abord d’extraire les coordonnées du lien fourni.
+- Pour les liens courts Google Maps, il utilise `GET /api/public/resolve-maps-link?url=...` côté Worker afin d’éviter les limites CORS du navigateur.
+- L’endpoint n’accepte que des URL HTTPS de domaines Google Maps autorisés et contrôle chaque hôte de redirection, avec un nombre de redirections limité. Il renvoie l’URL finale pour l’extraction côté navigateur ; il ne garantit pas que Google fournisse toujours des coordonnées.
+- Si Google bloque la résolution ou si le lien final ne contient pas de coordonnées lisibles, l’interface indique une solution de repli manuelle. Aucun déploiement en production sans autorisation explicite.
