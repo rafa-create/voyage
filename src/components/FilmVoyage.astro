@@ -15,7 +15,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
-      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select><span id="film-date"></span></div>
+      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><select id="film-day-select" aria-label="Jour du film" disabled><option>Chargement des jours…</option></select></div>
     </div>
     <div class="film-memory" id="film-memory">
       <div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div>
@@ -48,7 +48,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
   async function initFilm(){
-    if(!mapElement||!memory||!place||!dateLabel||!progress||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection||!points.length)return;
+    if(!mapElement||!memory||!place||!progress||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection||!points.length)return;
     const syncFullscreenButton=()=>{
       const active=filmSection.classList.contains("film-browser-fullscreen");
       fullscreenButton.textContent="⛶";
@@ -184,7 +184,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const render=(animate=true)=>{
       const item=sequence[index];
       place.textContent=item.title;
-      dateLabel.textContent=prettyDate(item.date);
       if(daySelect)daySelect.value=item.date;
       progress.textContent=(index+1)+" / "+sequence.length;
       memory.replaceChildren();
