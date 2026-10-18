@@ -5,15 +5,15 @@ import Base from "../layouts/Base.astro";
   <main class="container access-page">
     <p class="eyebrow">CARNET DE VOYAGE</p>
     <h1>Ce carnet est momentanément privé.</h1>
-    <p class="intro">Tu peux demander l'accès en indiquant ton adresse e-mail. La demande sera examinée par l'administrateur.</p>
+    <p class="intro">Saisis ton adresse e-mail. Si tu n’as pas encore accès, une demande sera envoyée à l’administrateur.</p>
     <form id="access-request-form">
       <label for="access-email">Ton adresse e-mail</label>
       <input id="access-email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="toi@exemple.fr" />
-      <button type="submit">Demander l'accès</button>
+      <button type="submit">Continuer avec mon e-mail</button>
       <p id="access-feedback" role="status" aria-live="polite"></p>
     </form>
-    <p class="small">Si ta demande est acceptée, tu pourras te connecter avec l'adresse approuvée.</p>
-    <a class="back-link" href="/cdn-cgi/access/login">J'ai déjà un accès · Se connecter</a>
+    <p class="small">Après acceptation, saisis à nouveau la même adresse ici pour ouvrir le carnet. Aucun mot de passe ni code ne sera demandé.</p>
+
   </main>
   <script>
     const form = document.querySelector<HTMLFormElement>("#access-request-form");
@@ -36,6 +36,7 @@ import Base from "../layouts/Base.astro";
         if (!response.ok) throw new Error(result.error || "La demande n'a pas pu être envoyée.");
         if (feedback) feedback.textContent = result.message || "Demande envoyée.";
         form.reset();
+        if (result.loggedIn) window.location.href = "/";
       } catch (error) {
         if (feedback) feedback.textContent = error instanceof Error ? error.message : "Erreur pendant l'envoi.";
       } finally {
