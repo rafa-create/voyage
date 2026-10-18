@@ -184,10 +184,17 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     .home-map-control-row .section-heading { display: flex; align-items: center; gap: 12px; margin: 0; min-width: 0; flex-wrap: wrap; }
     .home-map-control-row .section-heading h2 { margin: 0; white-space: nowrap; }
     .daily-map-controls .daily-heading-title { display: flex; align-items: center; gap: 8px; }
+    .daily-heading-arrows { display: flex; align-items: center; }
+    .daily-heading-arrows button { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--forest); font: 500 1rem 'DM Sans',sans-serif; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+    .daily-heading-arrows button:hover:not(:disabled) { background: #f2f0e9; border-color: #b9b3a5; }
+    .daily-heading-arrows button:active:not(:disabled) { background: #e8e5dc; }
+    .daily-heading-arrows button:disabled { opacity: 1; color: #a9a69d; border-color: #e8e5dd; background: #faf9f6; cursor: default; }
+    .daily-heading-arrows button:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .home-map-control-row #daily-date { margin: 0; }
     .home-map-control-row .daily-controls { display: none; }
-    #map-visibility-toggle { flex: 0 0 auto; width: auto; min-height: 0; padding: 5px 0; border: 0; background: transparent; color: var(--forest); font: 600 .8rem 'DM Sans',sans-serif; cursor: pointer; white-space: nowrap; }
-    #map-visibility-toggle:hover { text-decoration: underline; }
+    #map-visibility-toggle { flex: 0 0 auto; width: auto; min-height: 32px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--forest); font: 600 .76rem 'DM Sans',sans-serif; cursor: pointer; white-space: nowrap; transition: background-color .16s ease, border-color .16s ease; }
+    #map-visibility-toggle:hover { background: var(--white); border-color: #b9b3a5; }
+    #map-visibility-toggle:active { background: #f2f0e9; }
     #map-visibility-toggle:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; }
     .daily-view:not(.daily-map-controls) { padding-top: 28px; }
     .daily-heading-title { display: none; }
