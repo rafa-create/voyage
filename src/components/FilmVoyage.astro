@@ -25,11 +25,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-controls">
     <button type="button" id="film-fullscreen" aria-label="Passer le film en plein écran" title="Plein écran">⛶</button>
     <button type="button" id="film-prev" aria-label="Souvenir précédent">←</button>
-    <button type="button" id="film-play" class="film-play" disabled>Lancer le diapo</button>
+    <button type="button" id="film-play" class="film-play" aria-label="Lancer le diaporama" title="Lancer le diaporama" disabled>▶</button>
     <button type="button" id="film-next" aria-label="Souvenir suivant">→</button>
     <select id="film-speed" class="film-speed-select" aria-label="Vitesse de déroulement du film" title="Vitesse du film">
       <option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option><option value="5">5×</option>
     </select>
+    <label class="film-activities-toggle" for="film-show-activities"><input type="checkbox" id="film-show-activities" checked /> <span>Activité</span></label>
   </div>
 </section>
 <script>
@@ -143,19 +144,26 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     }catch{/* Le film utilise les photos et activités disponibles, sans ajouter d'étapes de destination. */}
     const unique=new Map<string,FilmItem>();
     for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
-    const sequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
+    const allSequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
+    const activityToggle=document.querySelector<HTMLInputElement>("#film-show-activities");
+    let sequence=allSequence.filter(item=>activityToggle?.checked!==false||item.kind!=="activite");
     if(!sequence.length){return;}
     const daySelect=document.querySelector<HTMLSelectElement>("#film-day-select");
-    const days=[...new Set(sequence.map(item=>item.date))];
-    if(daySelect){
-      daySelect.replaceChildren(...days.map(day=>{
-        const option=document.createElement("option");
-        option.value=day;
-        option.textContent=prettyDate(day);
-        return option;
-      }));
-      daySelect.disabled=false;
-    }
+    const updateDays=()=>{
+      const days=[...new Set(sequence.map(item=>item.date))];
+      if(daySelect){
+        const selected=daySelect.value;
+        daySelect.replaceChildren(...days.map(day=>{
+          const option=document.createElement("option");
+          option.value=day;
+          option.textContent=prettyDate(day);
+          return option;
+        }));
+        daySelect.disabled=false;
+        if(days.includes(selected))daySelect.value=selected;
+      }
+    };
+    updateDays();
     const arrivalIndex=sequence.findIndex(item=>item.date.slice(5)==="09-25");
     let index=arrivalIndex>=0?arrivalIndex:0,playing=false,timer:number|undefined,routeRequest=0;
     const clearActivityRoute=()=>{
@@ -269,11 +277,23 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const speedSelect=document.querySelector<HTMLSelectElement>("#film-speed");
     const playbackDelay=()=>5500/Math.max(0.25,Number(speedSelect?.value)||1);
     const scheduleNext=()=>{if(timer!==undefined)window.clearInterval(timer);timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},playbackDelay());};
-    const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="Reprendre le diapo";};
-    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;if(!filmSection.classList.contains("film-browser-fullscreen")){filmSection.classList.add("film-browser-fullscreen");document.body.classList.add("film-browser-fullscreen-open");syncFullscreenButton();}playing=true;playButton.textContent="Pause";map.resize();map.jumpTo({center:[0,20],zoom:0});render();scheduleNext();};
-    playButton.disabled=false;playButton.textContent="Lancer le diapo";
+    const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="▶";playButton.setAttribute("aria-label","Reprendre le diaporama");playButton.title="Reprendre le diaporama";};
+    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;if(!filmSection.classList.contains("film-browser-fullscreen")){filmSection.classList.add("film-browser-fullscreen");document.body.classList.add("film-browser-fullscreen-open");syncFullscreenButton();}playing=true;playButton.textContent="Ⅱ";playButton.setAttribute("aria-label","Mettre en pause");playButton.title="Pause";map.resize();map.jumpTo({center:[0,20],zoom:0});render();scheduleNext();};
+    playButton.disabled=false;playButton.textContent="▶";playButton.setAttribute("aria-label","Lancer le diaporama");playButton.title="Lancer le diaporama";
     playButton.addEventListener("click",()=>playing?stop():start());
     speedSelect?.addEventListener("change",()=>{if(playing)scheduleNext();});
+    activityToggle?.addEventListener("change",()=>{
+      const current=sequence[index];
+      const wasPlaying=playing;
+      stop();
+      sequence=allSequence.filter(item=>activityToggle.checked||item.kind!=="activite");
+      if(!sequence.length)return;
+      const currentIndex=current?sequence.findIndex(item=>item.kind===current.kind&&item.date===current.date&&item.title===current.title): -1;
+      index=currentIndex>=0?currentIndex:Math.min(index,sequence.length-1);
+      updateDays();
+      render(false);
+      if(wasPlaying){start();}
+    });
     prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render(false);});
     nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render(false);});
     daySelect?.addEventListener("change",()=>{
@@ -346,6 +366,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-controls button:disabled{opacity:.35;cursor:default}
   .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
   .film-speed-select{width:76px;height:42px;padding:0 8px;border:1px solid var(--line);border-radius:3px;background:var(--white);color:var(--forest);font:inherit;font-size:.8rem;cursor:pointer}
+  .film-controls .film-play{flex:0 0 42px;width:42px;padding:0;font-size:1.25rem;line-height:1}
+  .film-activities-toggle{display:inline-flex;align-items:center;gap:6px;min-height:42px;color:var(--forest);font-size:.82rem;white-space:nowrap;cursor:pointer}
+  .film-activities-toggle input{width:16px;height:16px;accent-color:var(--forest);cursor:pointer}
   @keyframes filmReveal{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
   @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:0}.film-memory img{height:160px}.film-map-caption{max-width:calc(100% - 170px);bottom:10px;left:10px;padding:8px 10px;font-size:.72rem}.film-map-day{right:8px;bottom:10px;width:max-content;padding:8px 10px}.film-map-day select{max-width:calc(100vw - 80px)}.voyage-film.film-showing-activity .film-memory-content{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.voyage-film.film-showing-activity .film-memory{padding:12px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}.film-speed-select{width:70px}}
   @media(prefers-reduced-motion:reduce){.film-memory img{animation:none}}
