@@ -432,7 +432,7 @@ import { chemin } from "../lib/paths";
         const [library,steps]=await Promise.all([fetch("/api/prive/admin/media",{credentials:"same-origin",cache:"no-store"}),fetch("/api/prive/etapes",{credentials:"same-origin",cache:"no-store"})]);
         if(!library.ok||!steps.ok)return;adminPhotos=(await library.json()).photos||[];
         const allSteps=(await steps.json()).etapes||[];
-        if(editStage){for(const step of allSteps){const option=document.createElement("option");option.value=step.slug;option.textContent=step.ville+" · "+step.pays;editStage.append(option);}}
+        if(editStage){editStage.replaceChildren(new Option("Sans étape","sans-etape"));for(const step of allSteps){const option=document.createElement("option");option.value=step.slug;option.textContent=step.ville+" · "+step.pays;editStage.append(option);}editStage.value="sans-etape";}
         for(const button of document.querySelectorAll<HTMLButtonElement>(".photo-open")){const p=adminPhotos.find(item=>item.src===button.dataset.photo);if(p){button.dataset.key=p.key;button.dataset.visibility=p.visibilite;button.dataset.alt=p.alt||button.dataset.alt||"";}}
         if(editor)editor.hidden=true;
       }catch{}
