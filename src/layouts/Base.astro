@@ -126,7 +126,7 @@ const nav = [
         try {
           const me = await fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" });
           const isAdmin = me.ok && (await me.json()).isAdmin === true;
-          const response = await fetch("/api/prive/admin/textes-site", { credentials: "same-origin", cache: "no-store" });
+          const response = await fetch("/api/public/textes-site", { credentials: "same-origin", cache: "no-store" });
           if (!response.ok) return;
           const textes: Record<string, string> = (await response.json()).textes || {};
           const selector = "main h1, main h2, main h3, main h4, main p, main .eyebrow, main .card-more";
