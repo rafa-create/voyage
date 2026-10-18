@@ -45,40 +45,6 @@ async function readImage(request,bucket,key,priv=false,allowUnclassified=false){
   return new Response(request.method==="HEAD"?null:object.body,{headers});
 }
 async function readBody(request){try{return await request.json();}catch{return null;}}
-function base64url(bytes){let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
-function fromBase64url(value){const padded=value.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-value.length%4)%4);const binary=atob(padded);return Uint8Array.from(binary,c=>c.charCodeAt(0));}
-async function visitorSessionKey(env){
-  const bucket=env.PHOTOS_PRIVEES;if(!bucket)return null;
-  const key="__meta/site-access-session-key.json";
-  let stored=await getJSON(bucket,key,null);
-  if(!stored?.secret){stored={secret:base64url(crypto.getRandomValues(new Uint8Array(32)))};await putJSON(bucket,key,stored);}
-  return await crypto.subtle.importKey("raw",fromBase64url(stored.secret),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
-}
-async function visitorCookie(env,email){
-  const expires=Math.floor(Date.now()/1000)+60*60*24*30;
-  const payload=email.toLowerCase()+"|"+expires;
-  const key=await visitorSessionKey(env);if(!key)throw new Error("Session indisponible");
-  const signature=base64url(new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(payload))));
-  return "voyage_visitor="+base64url(new TextEncoder().encode(email.toLowerCase()))+"."+expires+"."+signature+"; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax";
-}
-async function visitorEmailFromSession(request,env){
-  const raw=request.headers.get("Cookie")||"";
-  const match=/(?:^|;\s*)voyage_visitor=([A-Za-z0-9_-]+)\.(\d{10})\.([A-Za-z0-9_-]+)(?:;|$)/.exec(raw);
-  if(!match||Number(match[2])<=Math.floor(Date.now()/1000))return null;
-  let email;try{email=new TextDecoder().decode(fromBase64url(match[1])).trim().toLowerCase();}catch{return null;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return null;
-  const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
-  if(!approved.includes(email))return null;
-  try{
-    const key=await visitorSessionKey(env);if(!key)return null;
-    const valid=await crypto.subtle.verify("HMAC",key,fromBase64url(match[3]),new TextEncoder().encode(email+"|"+match[2]));
-    return valid?email:null;
-  }catch{return null;}
-}
-function withCookie(response,cookie){
-  const headers=new Headers(response.headers);headers.set("Set-Cookie",cookie);
-  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-}
 async function stageExists(env,slug){return slugOk(slug)&&(await steps(env)).some(x=>x.slug===slug);}
 function makePublicSteps(all){
   return all.map(e=>({slug:e.slug,date:e.date,dateFin:e.dateFin||null,pays:e.pays,ville:e.ville,titre:e.titre,texte:e.texte||"",latitude:e.latitude,longitude:e.longitude,statut:e.statut,videos:[],photos:[]}));
@@ -158,7 +124,7 @@ export default {
       const requests=await getJSON(env.PHOTOS_PRIVEES,key,[]);
       const previous=requests.find(x=>x.email===email);
       if(previous?.status==="pending")return json({ok:true,message:"Ta demande est déjà en attente."},200);
-      if(previous?.status==="approved")return withCookie(json({ok:true,loggedIn:true,message:"Accès accordé. Tu peux maintenant consulter le carnet."},200),await visitorCookie(env,email));
+      if(previous?.status==="approved")return json({ok:true,message:"Cette adresse a déjà été approuvée. Utilise le bouton Connexion pour accéder au site."},200);
       const next=requests.filter(x=>x.email!==email);
       next.push({id:crypto.randomUUID(),email,status:"pending",requestedAt:new Date().toISOString()});
       await putJSON(env.PHOTOS_PRIVEES,key,next.slice(-500));
@@ -167,23 +133,20 @@ export default {
     const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
     const accessRequestPage=path==="/demander-acces"||path==="/demander-acces/";
     if(!privatePath&&!accessRequestPage&&!accessRequestEndpoint){
-      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"restricted"});
-      if(siteAccess?.mode!=="open"){
-        const visitorEmail=await visitorEmailFromSession(request,env);
-        if(!visitorEmail){
-          const access=await requireAccess(request,env,false);
-          if(access.error){
-            if(path.startsWith("/api/")||path.startsWith("/media/"))return access.error;
-            if(/\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
+      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
+      if(siteAccess?.mode==="restricted"){
+        const access=await requireAccess(request,env,false);
+        if(access.error){
+          if(path.startsWith("/api/")||path.startsWith("/media/"))return access.error;
+          if(/\\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
+          return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
+        }
+        if(!access.user.isAdmin){
+          const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
+          if(!approved.includes(access.user.email)){
+            if(path.startsWith("/api/"))return error("Accès non autorisé. Demande l'accès au carnet.",403);
+            if(/\\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
             return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
-          }
-          if(!access.user.isAdmin){
-            const approved=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-approved.json",[]);
-            if(!approved.includes(access.user.email)){
-              if(path.startsWith("/api/"))return error("Accès non autorisé. Demande l'accès au carnet.",403);
-              if(/\.(?:css|js|mjs|svg|png|jpe?g|webp|avif|woff2?|ico)$/i.test(path)||path.startsWith("/_astro/"))return env.ASSETS.fetch(request);
-              return env.ASSETS.fetch(new Request(new URL("/demander-acces/",url.origin),request));
-            }
           }
         }
       }
@@ -288,7 +251,7 @@ export default {
       const input=await readBody(request);
       if(typeof input?.email!=="string"||!["approved","rejected","pending"].includes(input?.status))return error("Demande invalide.");
       const email=input.email.trim().toLowerCase();
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return error("Adresse e-mail invalide.");
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return error("Adresse e-mail invalide.");
       const requests=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access-requests.json",[]);
       const found=requests.find(x=>x.email===email);
       if(!found)return error("Demande introuvable.",404);
@@ -300,7 +263,7 @@ export default {
       return json({ok:true,status:found.status});
     }
     if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
-      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"restricted"});
+      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
       return json({mode:config?.mode==="restricted"?"restricted":"open"});
     }
     if(path==="/api/prive/admin/site-access"&&request.method==="POST"){
