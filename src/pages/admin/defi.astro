@@ -346,6 +346,38 @@ import { chemin } from "../../lib/paths";
       }catch(err){write("strava-message",err instanceof Error?err.message:"Erreur.");}
     });
   </script>
+  <script>
+    // Les rubriques du défi se replient indépendamment, y compris sur mobile.
+    document.querySelectorAll<HTMLElement>("#defi-admin-content .challenge-admin-panel").forEach((panel) => {
+      if (panel.dataset.collapseReady) return;
+      const eyebrow = panel.querySelector<HTMLElement>(":scope > .eyebrow");
+      const title = panel.querySelector<HTMLElement>(":scope > h2");
+      if (!eyebrow || !title) return;
+      panel.dataset.collapseReady = "true";
+      const heading = document.createElement("div");
+      heading.className = "challenge-panel-heading";
+      heading.append(eyebrow, title);
+      const content = document.createElement("div");
+      content.className = "challenge-panel-content";
+      Array.from(panel.children).filter((node) => node !== heading && node !== eyebrow && node !== title).forEach((node) => content.append(node));
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "admin-collapse-toggle";
+      toggle.textContent = "−";
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute("aria-label", "Replier cette rubrique");
+      heading.append(toggle);
+      panel.replaceChildren(heading, content);
+      toggle.addEventListener("click", () => {
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!expanded));
+        toggle.setAttribute("aria-label", expanded ? "Déplier cette rubrique" : "Replier cette rubrique");
+        toggle.textContent = expanded ? "+" : "−";
+        content.hidden = expanded;
+        panel.classList.toggle("is-collapsed", expanded);
+      });
+    });
+  </script>
   <style>
     .challenge-admin{padding:48px 0 100px;max-width:970px}
     .admin-heading{display:flex;justify-content:space-between;align-items:end;gap:25px}
@@ -398,6 +430,13 @@ import { chemin } from "../../lib/paths";
       #activities-sync-list .connected-activity{grid-template-columns:minmax(0,1fr);gap:3px;padding:13px}
       #activities-sync-list .connected-activity a{justify-self:start;padding:3px 0 0}
     }
+    .challenge-panel-heading{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-bottom:18px}
+    .challenge-panel-heading .eyebrow{width:calc(100% - 46px);margin-bottom:0}
+    .challenge-panel-heading h2{margin:0;flex:1}
+    .admin-collapse-toggle{flex:0 0 auto;margin-left:auto;width:34px;height:34px;border:1px solid var(--line,#d8d8d0);border-radius:50%;background:transparent;color:var(--ink,#173f3a);font-size:1.2rem;line-height:1;cursor:pointer}
+    .challenge-panel-content[hidden]{display:none}
+    .challenge-admin-panel.is-collapsed{padding-bottom:12px}
+    .challenge-admin-panel.is-collapsed .challenge-panel-heading{margin-bottom:0}
     .preview-link{margin-top:30px}
     @media(max-width:720px){.defi-admin-grid{grid-template-columns:1fr}.admin-heading{flex-direction:column;align-items:start}.two-col{grid-template-columns:1fr}}
   </style>
