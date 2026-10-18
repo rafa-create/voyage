@@ -689,7 +689,7 @@ import { chemin } from "../../lib/paths";
           // Certaines versions de ffmpeg.wasm sur Safari remontent ExitStatus
           // même pour exit(0). Le fichier de sortie permet de confirmer le succès.
           const status=runError?.status;
-          const exitZero=status===0 || /(?:Program terminated with )?exit\\(0\\)/i.test(String(runError?.message||runError));
+          const exitZero=status===0 || String(runError?.message||runError).includes("exit(0)");
           let outputExists=false;
           try { const candidate=ffmpeg.FS("readFile",outputName); outputExists=Boolean(candidate?.length); } catch {}
           if (!(exitZero && outputExists)) throw runError;
