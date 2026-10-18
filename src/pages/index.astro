@@ -1,13 +1,12 @@
 ---
 import Base from "../layouts/Base.astro";
 import CarteItineraire from "../components/CarteItineraire.astro";
-import FilmVoyage from "../components/FilmVoyage.astro";
 import { etapes } from "../lib/data";
 
 const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
 ---
 
-<Base title="Mon itinéraire" headerTitle="Mon itinéraire" active="accueil">
+<Base title="IR" headerTitle="IR" active="ir">
   <section class="container section daily-view daily-map-controls" aria-label="Carte du voyage">
     <h1 id="home-map-heading">Où j'étais hier</h1>
   </section>
@@ -282,6 +281,5 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       .daily-activity-actions { flex-wrap: wrap; }
     }
   </style>
-  <FilmVoyage etapes={etapes} />
 </Base>
 
