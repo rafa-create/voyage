@@ -613,11 +613,11 @@ const points = etapes
               const marker=document.createElement("button");
               marker.type="button";
               marker.classList.add("memory-map-marker");
-              if((memory.type==="photo" && memory.src)||memory.type==="video") marker.classList.add("memory-map-photo-marker");
+              if((memory.type==="photo" && memory.src)||memory.type==="video"||memory.type==="video-fichier") marker.classList.add("memory-map-photo-marker");
               marker.dataset.date=memory.date;
               marker.dataset.latitude=String(memory.latitude);
               marker.dataset.longitude=String(memory.longitude);
-              marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : memory.type==="video" ? "video:"+String(memory.youtubeId||"") : "";
+              marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : memory.type==="video" ? "video:"+String(memory.youtubeId||"") : memory.type==="video-fichier" ? "video-file:"+String(memory.key||"") : "";
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
               marker.style.cssText=(memory.type==="photo"&&memory.src)||(memory.type==="video"&&memory.youtubeId)||(memory.type==="video-fichier"&&memory.src)
