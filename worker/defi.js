@@ -242,9 +242,9 @@ export async function syncPublicRuns(env,{force=false}={}){
   const result=await syncRecentSports(env,{force});
   return {etat:result.etat};
 }
-export async function publicRoute(env,id){
+export async function publicRoute(env,id,precision="overview"){
   const {publicArchivedRoute}=await import("./parcours-archive.js");
-  return publicArchivedRoute(env,String(id));
+  return publicArchivedRoute(env,String(id),precision);
 }
 export async function cleanupLegacyApiCache(env){
   if(!env.PHOTOS_PRIVEES)return;
