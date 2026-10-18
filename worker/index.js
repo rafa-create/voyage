@@ -143,7 +143,7 @@ export default {
       const slug=url.searchParams.get("etape");
       if(slug!==null&&!slugOk(slug))return error("Étape invalide.");
       const photos=await listedPhotos(env,"public");
-      return json({photos:slug?photos.filter(p=>p.etape===slug):photos.filter(p=>p.etape)});
+      return json({photos:slug?photos.filter(p=>p.etape===slug):photos});
     }
     if(path==="/api/public/videos"&&request.method==="GET"){
       const slug=url.searchParams.get("etape");
@@ -202,7 +202,7 @@ export default {
     }
     if(path==="/api/prive/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/prive/photos"&&request.method==="GET"){
-      return json({photos:(await listedPhotos(env,"prive")).filter(p=>p.etape)});
+      return json({photos:await listedPhotos(env,"prive")});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
     if(path==="/api/prive/admin/photo-modifier"){
@@ -295,7 +295,8 @@ export default {
       const auto=url.searchParams.get("auto")==="1";
       const all=await steps(env);
       if(!["public","prive"].includes(visibilite))return error("Visibilité invalide.");
-      if(!slugOk(slug)||!all.some(e=>e.slug===slug))return error("Étape inconnue.");
+      if(slug==="")slug=null;
+      if(slug!==null&&(!slugOk(slug)||!all.some(e=>e.slug===slug)))return error("Étape inconnue.");
       const type=request.headers.get("Content-Type")?.split(";")[0]?.toLowerCase();
       const extension=type==="image/jpeg"?"jpeg":Object.entries(types).find(([e,t])=>t===type)?.[0];
       if(!extension)return error("Utiliser JPEG, PNG, WebP, AVIF, HEIC ou HEIF.");
@@ -312,8 +313,8 @@ export default {
         if(target)slug=target.slug;
       }
       const bucket=bucketFor(env,visibilite);
-      const key="etapes/"+slug+"/"+crypto.randomUUID()+"."+extension;
-      const alt="Photo de "+all.find(x=>x.slug===slug).ville;
+      const key=(slug?"etapes/"+slug+"/":"souvenirs/")+crypto.randomUUID()+"."+extension;
+      const alt=slug?"Photo de "+all.find(x=>x.slug===slug).ville:"Souvenir du voyage";
       let coords=null;
       try{coords=await exifr.gps(body);}catch{}
       const valid=coords&&Number.isFinite(coords.latitude)&&Number.isFinite(coords.longitude)&&
@@ -333,7 +334,7 @@ export default {
         (!captured||dateHeure.slice(0,10)===captured);
       if(hasTime&&!captured)captured=dateHeure.slice(0,10);
       await bucket.put(key,body,{httpMetadata:{contentType:type},
-        customMetadata:{alt,etape:slug,geoScanned:"1",
+        customMetadata:{alt,...(slug?{etape:slug}:{}),geoScanned:"1",
           ...(captured?{datePrise:captured}:{}),
           ...(hasTime?{dateHeure}:{ }),
           ...(latitude!==null?{latitude:String(latitude),longitude:String(longitude),precision:"exact"}:{})}});
@@ -375,19 +376,21 @@ export default {
         await source.delete(key);return json({ok:true});
       }
       const legacy=legacyPhotos().find(x=>x.key===key&&oldVis==="public");
-      const currentStep=key.startsWith("etapes/")?key.split("/")[1]:legacy?.etape;
-      const slug=path.endsWith("/assigner")?input?.etape:currentStep;
-      if(!await stageExists(env,slug))return error("Choisis d'abord une étape valide.");
+      const currentStep=key.startsWith("etapes/")?key.split("/")[1]:(object.customMetadata?.etape||legacy?.etape||null);
+      const requested=path.endsWith("/assigner")?input?.etape:currentStep;
+      const slug=requested===""||requested===null?null:requested;
+      if(slug!==null&&!await stageExists(env,slug))return error("Choisis une étape valide ou « Sans étape ».");
       const toVis=path.endsWith("/visibilite")?input?.nouvelleVisibilite:oldVis;
       // Ne jamais exposer une photo privée brute : elle peut encore contenir le GPS/EXIF.
       if(oldVis==="prive"&&toVis==="public")return error("La photo privée doit être réencodée côté admin avant publication.",422);
       const to=bucketFor(env,toVis);
       if(!to)return error("Visibilité invalide.");
-      if(toVis===oldVis&&key.startsWith("etapes/"+slug+"/"))return json({ok:true,src:photoPath(key,toVis)});
+      const targetPrefix=slug?"etapes/"+slug+"/":"souvenirs/";
+      if(toVis===oldVis&&key.startsWith(targetPrefix))return json({ok:true,src:photoPath(key,toVis)});
       const suffix=key.split(".").pop().toLowerCase();
-      const newKey="etapes/"+slug+"/"+crypto.randomUUID()+"."+suffix;
-      await movePhoto(source,to,key,newKey,{etape:slug});
-      return json({ok:true,src:photoPath(newKey,toVis),visibilite:toVis});
+      const newKey=targetPrefix+crypto.randomUUID()+"."+suffix;
+      await movePhoto(source,to,key,newKey,{etape:slug||""});
+      return json({ok:true,src:photoPath(newKey,toVis),visibilite:toVis,etape:slug});
     }
     return error("Route inconnue.",404);
   }
