@@ -15,7 +15,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-stage">
     <div class="film-map-wrap">
       <div id="film-map" data-points={JSON.stringify(points)} aria-label="Carte animée du voyage"></div>
-      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><span id="film-date"></span></div>
+      <div class="film-map-caption"><span id="film-place">Préparation du voyage…</span><label class="film-day-picker"><span class="sr-only">Choisir un jour du film</span><select id="film-day-select" aria-label="Choisir un jour du film" disabled><option>Chargement des jours…</option></select></label><span id="film-date"></span></div>
     </div>
     <div class="film-memory" id="film-memory">
       <div class="film-memory-placeholder">Le voyage se raconte ici, une image à la fois.</div>
@@ -111,6 +111,17 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
     const sequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
     if(!sequence.length){progress.textContent="Aucun souvenir disponible pour le moment.";return;}
+    const daySelect=document.querySelector<HTMLSelectElement>("#film-day-select");
+    const days=[...new Set(sequence.map(item=>item.date))];
+    if(daySelect){
+      daySelect.replaceChildren(...days.map(day=>{
+        const option=document.createElement("option");
+        option.value=day;
+        option.textContent=prettyDate(day);
+        return option;
+      }));
+      daySelect.disabled=false;
+    }
     let index=0,playing=false,timer:number|undefined,routeRequest=0;
     const clearActivityRoute=()=>{
       const source=map.getSource("film-activity-route") as maplibregl.GeoJSONSource|undefined;
@@ -174,6 +185,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const item=sequence[index];
       place.textContent=item.title;
       dateLabel.textContent=prettyDate(item.date);
+      if(daySelect)daySelect.value=item.date;
       progress.textContent=(index+1)+" / "+sequence.length;
       memory.replaceChildren();
       if(item.kind!=="activite"){
@@ -216,6 +228,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     playButton.addEventListener("click",()=>playing?stop():start());
     prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
     nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render();});
+    daySelect?.addEventListener("change",()=>{
+      const day=daySelect.value;
+      const target=sequence.findIndex(item=>item.date===day);
+      if(target<0)return;
+      stop();
+      index=target;
+      render();
+    });
     const showInitialFrame=()=>{if(points.length>1){const bounds=new maplibregl.LngLatBounds();points.forEach(p=>bounds.extend([p.longitude,p.latitude]));map.fitBounds(bounds,{padding:45,maxZoom:6,duration:0});}render(false);};
     if(map.loaded()) showInitialFrame(); else map.once("load",showInitialFrame);
   }
