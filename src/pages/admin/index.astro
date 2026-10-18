@@ -84,8 +84,21 @@ import { chemin } from "../../lib/paths";
         <div id="library-list" class="admin-photo-list"></div>
       </section>
 
+      <section class="admin-panel admin-full" id="site-access-panel">
+        <div class="admin-section-title"><div><p class="eyebrow">05 / ACCÈS AU SITE</p><h2>Qui peut consulter Voyages ?</h2></div></div>
+        <form id="site-access-form" class="admin-stack">
+          <label for="site-access-mode">Visibilité du site</label>
+          <select id="site-access-mode" required>
+            <option value="open">Ouvert à tous — aucune connexion demandée</option>
+            <option value="restricted">Restreint — connexion Cloudflare Access requise</option>
+          </select>
+          <p class="admin-note">Ce réglage concerne l’accès au site public. Les photos privées restent protégées séparément et ne sont jamais publiées par ce réglage. Le mode restreint nécessite que Cloudflare Access protège aussi les pages publiques et autorise les personnes souhaitées.</p>
+          <button class="admin-primary" type="submit">Enregistrer les paramètres d’accès</button>
+          <p id="site-access-feedback" role="status" class="admin-feedback"></p>
+        </form>
+      </section>
       <section class="admin-panel admin-full">
-        <div class="admin-section-title"><div><p class="eyebrow">05 / JOURNAL</p><h2>Modifier le récit d’une étape</h2></div></div>
+        <div class="admin-section-title"><div><p class="eyebrow">06 / JOURNAL</p><h2>Modifier le récit d’une étape</h2></div></div>
         <form id="edit-story-form" class="admin-stack">
           <label for="edit-story-step">Étape à modifier</label><select id="edit-story-step" required></select>
           <label for="edit-story-text">Texte du journal</label><textarea id="edit-story-text" rows="6" maxlength="6000" placeholder="Raconter cette étape…"></textarea>
@@ -93,7 +106,7 @@ import { chemin } from "../../lib/paths";
         </form>
       </section>
       <section class="admin-panel admin-full">
-        <div class="admin-section-title"><div><p class="eyebrow">06 / ITINÉRAIRE</p><h2>Créer une nouvelle étape</h2></div></div>
+        <div class="admin-section-title"><div><p class="eyebrow">07 / ITINÉRAIRE</p><h2>Créer une nouvelle étape</h2></div></div>
         <form id="step-form" class="admin-stack">
           <div class="admin-double">
             <div><label for="step-ville">Ville</label><input id="step-ville" required maxlength="150" placeholder="Ex. Tunis"/></div>
@@ -174,6 +187,9 @@ import { chemin } from "../../lib/paths";
       const storySelect=$<HTMLSelectElement>("edit-story-step");
       if(storySelect){storySelect.replaceChildren(...etapes.map(e=>new Option(e.ville+" · "+e.pays,e.slug)));const active=etapes.find(e=>e.slug===storySelect.value)||etapes.find(e=>e.statut==="actuelle")||etapes[0];if(active)storySelect.value=active.slug;const text=$<HTMLTextAreaElement>("edit-story-text");if(text)text.value=(await api("/api/prive/etapes")).etapes.find((e:Etape)=>e.slug===active?.slug)?.texte||"";}
       await renderVideos();
+      const accessConfig=await api("/api/prive/admin/site-access");
+      const accessMode=$<HTMLSelectElement>("site-access-mode");
+      if(accessMode)accessMode.value=accessConfig.mode==="restricted"?"restricted":"open";
       message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
     async function start(){
@@ -188,6 +204,15 @@ import { chemin } from "../../lib/paths";
       }catch(e){message("admin-status",e instanceof Error?e.message:"Connexion impossible.");}
     }
     start();
+    $<HTMLFormElement>("site-access-form")?.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const mode=$<HTMLSelectElement>("site-access-mode")?.value;
+      const feedback=$("site-access-feedback");
+      try{
+        await post("/api/prive/admin/site-access",{mode});
+        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Vérifie que Cloudflare Access protège bien toutes les pages publiques avant de partager le site.":"Le site est maintenant ouvert à tous.");
+      }catch(err){if(feedback)feedback.textContent=err instanceof Error?err.message:"Enregistrement impossible.";}
+    });
     $("refresh-btn")?.addEventListener("click",async()=>{
       try{message("admin-status","Actualisation…");await refresh();}catch(e){message("admin-status",String(e));}
     });
