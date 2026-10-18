@@ -298,7 +298,8 @@ export default {
       const previousDateHeure=metadata.dateHeure;
       for(const field of ["datePrise","lieu","legende","commentaire","etape","latitude","longitude","precision"])delete metadata[field];
       if(date)metadata.datePrise=date;
-      if(typeof input.dateHeure==="string"&&/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(input.dateHeure)&&validDate(input.dateHeure.slice(0,10))&&(!date||input.dateHeure.slice(0,10)===date))metadata.dateHeure=input.dateHeure.length===16?input.dateHeure+":00":input.dateHeure;
+      if(input.dateHeure==="")delete metadata.dateHeure;
+      else if(typeof input.dateHeure==="string"&&/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(input.dateHeure)&&validDate(input.dateHeure.slice(0,10))&&(!date||input.dateHeure.slice(0,10)===date))metadata.dateHeure=input.dateHeure.length===16?input.dateHeure+":00":input.dateHeure;
       else if(date&&typeof previousDateHeure==="string"&&previousDateHeure.slice(0,10)===date)metadata.dateHeure=previousDateHeure;
       else delete metadata.dateHeure;
       if(typeof input.lieu==="string"&&input.lieu.trim())metadata.lieu=input.lieu.trim().slice(0,240);
