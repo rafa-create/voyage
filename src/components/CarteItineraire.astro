@@ -380,7 +380,7 @@ const points = etapes
                 }
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
-                map.fitBounds(bounds,{padding:60,maxZoom:16,duration:650});
+                if(fitMap)map.fitBounds(bounds,{padding:60,maxZoom:16,duration:650});
               }catch{ /* Conserver la carte en cas d'indisponibilité. */ }
             };
             const allTracesButton=document.createElement("button");
