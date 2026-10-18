@@ -65,7 +65,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     document.addEventListener("fullscreenchange",syncFullscreenButton);
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
-    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:undefined,zoom:6}));
+    const stageMarkerElement=document.createElement("div");
+    stageMarkerElement.className="film-stage-marker";
+    stageMarkerElement.setAttribute("role","img");
+    stageMarkerElement.setAttribute("aria-label","Étape du voyage");
+    const stageMarker=new maplibregl.Marker({element:stageMarkerElement,anchor:"bottom"});
+    const items:FilmItem[] = points.map(p=>({kind:"etape",date:p.date,title:p.ville||p.titre,lat:p.latitude,lon:p.longitude,detail:[p.titre,p.pays].filter(Boolean).join(" · "),slug:p.slug,zoom:6}));
     try{
       const [photoResponse,activityResponse]=await Promise.all([fetch("/api/public/photos"),fetch("/api/public/carte-evenements")]);
       const photos=photoResponse.ok?(await photoResponse.json()).photos||[]:[];
@@ -73,11 +78,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       for(const photo of photos){
         if(!photo)continue;
         let lat=photo.latitude,lon=photo.longitude;
-        if(!valid(lat,lon)&&photo.etape){const stage=points.find(p=>p.slug===photo.etape);if(stage){lat=stage.latitude;lon=stage.longitude;}}
+        const linkedStage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
+        if(!valid(lat,lon)&&linkedStage){lat=linkedStage.latitude;lon=linkedStage.longitude;}
         if(!valid(lat,lon))continue;
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
         if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
-        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",lat,lon,detail:photo.commentaire||photo.legende||"",src:photo.src,zoom:12});
+        const datedStage=linkedStage||[...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(p=>p.date===date);
+        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",lat,lon,detail:photo.commentaire||photo.legende||"",src:photo.src,slug:datedStage?.slug,zoom:12});
       }
       for(const activity of activities){
         if(!activity||!valid(activity.latitude,activity.longitude))continue;
@@ -169,6 +176,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       map.stop();
       if(item.kind==="activite") void showActivityRoute(item); else {routeRequest++;clearActivityRoute();}
+      const stage=item.kind==="activite"?undefined:(item.kind==="etape"?points.find(p=>p.slug===item.slug):points.find(p=>p.slug===item.slug));
+      if(stage){
+        stageMarker.setLngLat([stage.longitude,stage.latitude]).addTo(map);
+        stageMarkerElement.style.display="block";
+        stageMarkerElement.title=stage.ville||stage.titre;
+      }else{
+        stageMarker.remove();
+      }
       map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
       prevButton.disabled=index===0;
       nextButton.disabled=index===sequence.length-1;
@@ -202,6 +217,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-memory p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.5}
   .film-memory-icon{display:grid;place-items:center;width:64px;height:64px;border:1px solid var(--line);border-radius:50%;font-size:2rem;color:var(--forest)}
   .film-memory-placeholder{color:var(--muted);font-size:.9rem}
+  .film-stage-marker{width:24px;height:24px;background:#df784a;border:3px solid #fffdf8;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 9px #00000040;position:relative}
+  .film-stage-marker::after{content:"";position:absolute;width:6px;height:6px;top:6px;left:6px;border-radius:50%;background:#fffdf8}
   .film-controls{display:flex;align-items:center;gap:12px;padding-top:16px;flex-wrap:wrap}
   #film-fullscreen{margin-right:auto;font-size:.8rem}
   .voyage-film:fullscreen{box-sizing:border-box;width:100%;height:100%;padding:clamp(14px,2.5vh,28px) clamp(16px,3vw,48px);background:var(--paper,#f8f6f0);display:flex;flex-direction:column;overflow:auto}
