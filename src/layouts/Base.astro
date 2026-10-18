@@ -99,7 +99,7 @@ const nav = [
         fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
           .then(async response => response.ok ? response.json() : null)
           .then(user => {
-            if (!user?.isAdmin || !adminDock || isChallengePage) return;
+            if (!user?.isAdmin || !adminDock || isChallengePage || isHomePage) return;
             adminDock.hidden = false;
             if (contextText) contextText.textContent = isChallengePage ? "Défi quotidien" : isGalleryPage ? "Ajouter des photos" : isJournalPage ? "Ajouter une étape" : "Administration de cette page";
           }).catch(() => {});
