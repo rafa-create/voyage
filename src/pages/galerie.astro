@@ -297,6 +297,7 @@ import { chemin } from "../lib/paths";
         <button type="button" id="edit-photo-close" class="photo-editor-close" aria-label="Fermer la modification" title="Fermer">✕</button>
       </div>
       <label for="edit-photo-date">Date de prise de vue</label><input id="edit-photo-date" type="date"/>
+      <label for="edit-photo-time">Heure de prise de vue</label><input id="edit-photo-time" type="time"/>
       <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
       <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
       <div hidden><label for="edit-photo-stage">Étape</label><select id="edit-photo-stage"><option value="">Sans étape</option></select></div>
@@ -344,6 +345,7 @@ import { chemin } from "../lib/paths";
     let adminPhotos: any[] = [];
     const editor = document.querySelector<HTMLFormElement>("#photo-editor");
     const editDate = document.querySelector<HTMLInputElement>("#edit-photo-date");
+    const editTime = document.querySelector<HTMLInputElement>("#edit-photo-time");
     const editPlace = document.querySelector<HTMLInputElement>("#edit-photo-place");
     const editComment = document.querySelector<HTMLTextAreaElement>("#edit-photo-comment");
     const editStage = document.querySelector<HTMLSelectElement>("#edit-photo-stage");
@@ -422,8 +424,8 @@ import { chemin } from "../lib/paths";
       const deleteButton=dialog?.querySelector<HTMLButtonElement>("#edit-photo-delete");
       if(deleteButton)deleteButton.hidden=!(isAdmin&&item&&!bouton.dataset.video);
       if(editor){editor.hidden=true;
-        if(item){if(editDate)editDate.value=item.datePrise||"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value="";}
-        else if(bouton.dataset.video){if(editDate)editDate.value=bouton.dataset.date||"";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value=bouton.dataset.latitude||"";if(editLon)editLon.value=bouton.dataset.longitude||"";if(editStage)editStage.value=bouton.dataset.etape||"";}
+        if(item){if(editDate)editDate.value=item.datePrise||"";if(editTime)editTime.value=typeof item.dateHeure==="string"?item.dateHeure.slice(11,16):"";if(editPlace)editPlace.value=item.lieu||"";if(editComment)editComment.value=item.commentaire||item.legende||"";if(editLat)editLat.value=item.latitude==null?"":String(item.latitude);if(editLon)editLon.value=item.longitude==null?"":String(item.longitude);if(editStage)editStage.value="";}
+        else if(bouton.dataset.video){if(editDate)editDate.value=bouton.dataset.date||"";if(editTime)editTime.value="";if(editPlace)editPlace.value=bouton.dataset.lieu||"";if(editComment)editComment.value=bouton.dataset.videoTitle||"";if(editLat)editLat.value=bouton.dataset.latitude||"";if(editLon)editLon.value=bouton.dataset.longitude||"";if(editStage)editStage.value=bouton.dataset.etape||"";}
         if(editStatus)editStatus.textContent="";}
     };
     const ouvrirPhoto = (bouton: HTMLButtonElement) => {
@@ -510,7 +512,7 @@ import { chemin } from "../lib/paths";
       }
     });
     editor?.addEventListener("submit",async event=>{
-      event.preventDefault();const p=selectedPhoto();const button=photos[index];if((!p&&!button?.dataset.video)||!editDate||!editPlace||!editComment||!editStage||!editLat||!editLon||!editStatus)return;
+      event.preventDefault();const p=selectedPhoto();const button=photos[index];if((!p&&!button?.dataset.video)||!editDate||!editTime||!editPlace||!editComment||!editStage||!editLat||!editLon||!editStatus)return;
       editStatus.textContent="Enregistrement…";
       try{
         if(button?.dataset.video){
@@ -521,7 +523,7 @@ import { chemin } from "../lib/paths";
           editStatus.textContent="Modifications enregistrées.";return;
         }
         if(!p)return;
-        const response=await fetch("/api/prive/admin/photo-modifier",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify({key:p.key,visibilite:p.visibilite,datePrise:editDate.value,lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value,latitude:editLat.value,longitude:editLon.value})});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Enregistrement impossible.");Object.assign(p,{datePrise:editDate.value||null,lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value||null,latitude:editLat.value?Number(editLat.value):null,longitude:editLon.value?Number(editLon.value):null});editStatus.textContent="Modifications enregistrées.";if(compteur)compteur.textContent=(index+1)+" / "+photos.length;
+        const response=await fetch("/api/prive/admin/photo-modifier",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Voyage-Admin":"1"},body:JSON.stringify({key:p.key,visibilite:p.visibilite,datePrise:editDate.value,dateHeure:editDate.value&&editTime.value?editDate.value+"T"+editTime.value:"",lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value,latitude:editLat.value,longitude:editLon.value})});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Enregistrement impossible.");Object.assign(p,{datePrise:editDate.value||null,dateHeure:editDate.value&&editTime.value?editDate.value+"T"+editTime.value+":00":null,lieu:editPlace.value,commentaire:editComment.value,legende:editComment.value,etape:editStage.value||null,latitude:editLat.value?Number(editLat.value):null,longitude:editLon.value?Number(editLon.value):null});editStatus.textContent="Modifications enregistrées.";if(compteur)compteur.textContent=(index+1)+" / "+photos.length;
       }catch(error){editStatus.textContent=error instanceof Error?error.message:"Erreur de sauvegarde.";}
     });
     initPhotoEditor();
@@ -558,7 +560,7 @@ import { chemin } from "../lib/paths";
     .lightbox-close{position:absolute;top:.65rem;right:.65rem}.lightbox-edit{position:absolute;top:.65rem;right:3.8rem}
     .photo-editor{width:100%;max-width:640px;max-height:none;box-sizing:border-box;overflow:visible;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
     .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:.7rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{box-sizing:border-box;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;padding:.75rem;border:0;border-radius:8px;cursor:pointer}
-    .photo-editor #edit-photo-date{display:block;max-width:100%;min-width:0;width:100%;min-height:44px}
+    .photo-editor #edit-photo-date,.photo-editor #edit-photo-time{display:block;max-width:100%;min-width:0;width:100%;min-height:44px}
     .photo-editor #edit-photo-stage{font-size:.95rem;line-height:1.35;color:var(--text,#222);background:var(--white,#fffdf8)}
     .photo-editor-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.25rem}.photo-editor-head .eyebrow{margin:0}.photo-editor .photo-editor-close{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid var(--line,#ddd);border-radius:50%;background:var(--white,#fffdf8);color:var(--forest,#274c41);font-size:1.25rem;line-height:1}
     .photo-editor #edit-photo-comment{min-height:5.5rem;resize:vertical}.photo-editor #edit-photo-status{margin:.25rem 0;overflow-wrap:anywhere}
@@ -583,8 +585,8 @@ import { chemin } from "../lib/paths";
       .photo-editor textarea{resize:vertical}
       .photo-editor:not([hidden]){position:absolute;inset:3.25rem .5rem .5rem;z-index:6;width:auto;max-width:none;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:0;padding:.85rem .85rem calc(1rem + env(safe-area-inset-bottom));border:1px solid var(--line,#deded6);border-radius:14px;background:var(--paper,#f6f3eb);box-shadow:0 8px 32px #0002;align-content:start;gap:.5rem}
       .photo-editor:not([hidden]) .photo-editor-head{position:sticky;top:-.85rem;z-index:2;margin:-.85rem -.85rem .25rem;padding:.65rem .85rem;background:var(--paper,#f6f3eb);border-bottom:1px solid var(--line,#deded6)}
-      .photo-editor:not([hidden]) #edit-photo-date,.photo-editor:not([hidden]) #edit-photo-place,.photo-editor:not([hidden]) #edit-photo-comment,.photo-editor:not([hidden]) #edit-photo-stage,.photo-editor:not([hidden]) #edit-photo-map-search,.photo-editor:not([hidden]) #edit-photo-map-url,.photo-editor:not([hidden]) #edit-photo-lat,.photo-editor:not([hidden]) #edit-photo-lon{box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px}
-      .photo-editor:not([hidden]) #edit-photo-date{min-width:0;max-width:100%;width:100%;padding:.6rem .35rem;font-size:16px}
+      .photo-editor:not([hidden]) #edit-photo-date,.photo-editor:not([hidden]) #edit-photo-time,.photo-editor:not([hidden]) #edit-photo-place,.photo-editor:not([hidden]) #edit-photo-comment,.photo-editor:not([hidden]) #edit-photo-stage,.photo-editor:not([hidden]) #edit-photo-map-search,.photo-editor:not([hidden]) #edit-photo-map-url,.photo-editor:not([hidden]) #edit-photo-lat,.photo-editor:not([hidden]) #edit-photo-lon{box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px}
+      .photo-editor:not([hidden]) #edit-photo-date,.photo-editor:not([hidden]) #edit-photo-time{min-width:0;max-width:100%;width:100%;padding:.6rem .35rem;font-size:16px}
       .photo-editor:not([hidden]) #edit-photo-stage{font-size:16px;line-height:1.4;padding:.7rem .55rem;white-space:normal}
       .photo-editor:not([hidden]) .photo-map-search{grid-template-columns:minmax(0,1fr);width:100%;min-width:0}
       .photo-editor:not([hidden]) .photo-map-search button{width:100%;min-height:44px}
