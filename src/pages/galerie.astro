@@ -212,8 +212,14 @@ import { chemin } from "../lib/paths";
       <label for="edit-photo-place">Lieu</label><input id="edit-photo-place" maxlength="240" placeholder="Ville, lieu…"/>
       <label for="edit-photo-comment">Commentaire</label><textarea id="edit-photo-comment" rows="3" maxlength="2000" placeholder="Raconter ce souvenir…"></textarea>
       <label for="edit-photo-stage">Étape du journal</label><select id="edit-photo-stage"><option value="">Sans étape</option></select>
-      <label for="edit-photo-lat">Latitude (facultatif)</label><input id="edit-photo-lat" type="number" step="any" min="-85" max="85"/>
-      <label for="edit-photo-lon">Longitude (facultatif)</label><input id="edit-photo-lon" type="number" step="any" min="-180" max="180"/>
+      <label for="edit-photo-map-search">Rechercher sur Google Maps</label>
+      <div class="photo-map-search"><input id="edit-photo-map-search" type="search" maxlength="240" placeholder="Nom du lieu, adresse…"/><button type="button" id="edit-photo-map-open">Rechercher</button></div>
+      <label for="edit-photo-map-url">Lien Google Maps du point choisi</label>
+      <input id="edit-photo-map-url" type="url" placeholder="Colle ici le lien Google Maps complet"/>
+      <button type="button" id="edit-photo-map-use">Récupérer les coordonnées depuis le lien</button>
+      <p class="photo-map-help">Ouvre Maps, choisis le lieu puis copie son lien. Si le lien contient les coordonnées, elles seront ajoutées ci-dessous. Vérifie le point avant d’enregistrer.</p>
+      <label for="edit-photo-lat">Latitude</label><input id="edit-photo-lat" type="number" step="any" min="-85" max="85"/>
+      <label for="edit-photo-lon">Longitude</label><input id="edit-photo-lon" type="number" step="any" min="-180" max="180"/>
       <button type="submit" class="admin-primary">Enregistrer les modifications</button><p id="edit-photo-status" role="status"></p>
     </form>
   </dialog>
@@ -254,6 +260,37 @@ import { chemin } from "../lib/paths";
     const editLat = document.querySelector<HTMLInputElement>("#edit-photo-lat");
     const editLon = document.querySelector<HTMLInputElement>("#edit-photo-lon");
     const editStatus = document.querySelector<HTMLElement>("#edit-photo-status");
+    const editMapSearch = document.querySelector<HTMLInputElement>("#edit-photo-map-search");
+    const editMapUrl = document.querySelector<HTMLInputElement>("#edit-photo-map-url");
+    document.querySelector<HTMLButtonElement>("#edit-photo-map-open")?.addEventListener("click", () => {
+      const query = editMapSearch?.value.trim();
+      if (!query) { if (editStatus) editStatus.textContent = "Saisis d’abord un lieu à rechercher."; return; }
+      if (editPlace && !editPlace.value.trim()) editPlace.value = query;
+      window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
+    });
+    document.querySelector<HTMLButtonElement>("#edit-photo-map-use")?.addEventListener("click", () => {
+      const raw = editMapUrl?.value.trim() || "";
+      let coordinates: RegExpMatchArray | null = raw.match(/@(-?\\d{1,2}(?:\\.\\d+)?),\\s*(-?\\d{1,3}(?:\\.\\d+)?)/);
+      if (!coordinates) coordinates = raw.match(/!3d(-?\\d{1,2}(?:\\.\\d+)?)!4d(-?\\d{1,3}(?:\\.\\d+)?)/);
+      if (!coordinates) {
+        try {
+          const parsed = new URL(raw);
+          const q = parsed.searchParams.get("query") || parsed.searchParams.get("q") || "";
+          const pair = q.match(/^\\s*(-?\\d{1,2}(?:\\.\\d+)?)\\s*,\\s*(-?\\d{1,3}(?:\\.\\d+)?)\\s*$/);
+          if (pair) coordinates = pair;
+        } catch {}
+      }
+      const lat = coordinates ? Number(coordinates[1]) : NaN;
+      const lon = coordinates ? Number(coordinates[2]) : NaN;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85 || Math.abs(lon) > 180) {
+        if (editStatus) editStatus.textContent = "Coordonnées introuvables dans ce lien. Ouvre le point dans Google Maps et copie le lien complet, ou saisis les coordonnées manuellement.";
+        return;
+      }
+      if (editLat) editLat.value = String(lat);
+      if (editLon) editLon.value = String(lon);
+      if (editPlace && editMapSearch?.value.trim()) editPlace.value = editMapSearch.value.trim();
+      if (editStatus) editStatus.textContent = "Coordonnées récupérées. Vérifie le point puis enregistre la photo.";
+    });
     const selectedPhoto = () => { const button=photos[index]; return adminPhotos.find(p=>p.src===button?.dataset.photo) || null; };
     const afficher = (next: number) => {
       if (!agrandissement || !photos.length) return;
@@ -406,6 +443,9 @@ import { chemin } from "../lib/paths";
     .lightbox-close{position:absolute;top:.65rem;right:.65rem}.lightbox-edit{position:absolute;top:.65rem;right:3.8rem}
     .photo-editor{width:100%;max-width:640px;max-height:none;box-sizing:border-box;overflow:visible;background:var(--surface,#fff);color:var(--text,#222);padding:1rem;border-radius:12px;text-align:left;display:grid;gap:.55rem;margin:1rem auto 0}
     .photo-editor[hidden]{display:none}.photo-editor input,.photo-editor textarea,.photo-editor select{box-sizing:border-box;width:100%;min-width:0;padding:.65rem;border:1px solid #bbb;border-radius:8px;font:inherit}.photo-editor label{font-size:.85rem;font-weight:600}.photo-editor button{padding:.75rem;border:0;border-radius:8px;cursor:pointer}
+    .photo-map-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem}
+    .photo-map-search button,.photo-editor #edit-photo-map-use{background:#e9eee8;color:#244b3d;font-size:.9rem}
+    .photo-map-help{margin:0;color:var(--muted,#666);font-size:.82rem;line-height:1.45}
     @media(max-width:600px) and (orientation:portrait){
       .lightbox{position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;border-radius:0;padding:3.7rem 1rem max(1rem,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.65rem}
       .lightbox img,.lightbox-video{flex:0 1 auto;width:100%;max-width:100%;max-height:40dvh;object-fit:contain;margin:auto}.lightbox-video{height:auto;aspect-ratio:16/9}
