@@ -1,0 +1,59 @@
+---
+import Base from "../layouts/Base.astro";
+---
+<Base title="Demander l'accès" description="Demander l'accès au carnet de voyage.">
+  <main class="container access-page">
+    <p class="eyebrow">CARNET DE VOYAGE</p>
+    <h1>Ce carnet est momentanément privé.</h1>
+    <p class="intro">Tu peux demander l'accès en indiquant ton adresse e-mail. La demande sera examinée par l'administrateur.</p>
+    <form id="access-request-form">
+      <label for="access-email">Ton adresse e-mail</label>
+      <input id="access-email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="toi@exemple.fr" />
+      <button type="submit">Demander l'accès</button>
+      <p id="access-feedback" role="status" aria-live="polite"></p>
+    </form>
+    <p class="small">Si ta demande est acceptée, tu pourras te connecter avec l'adresse approuvée.</p>
+    <a class="back-link" href="/cdn-cgi/access/login">J'ai déjà un accès · Se connecter</a>
+  </main>
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#access-request-form");
+    const feedback = document.querySelector<HTMLElement>("#access-feedback");
+    const button = form?.querySelector<HTMLButtonElement>("button");
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = new FormData(form).get("email");
+      if (typeof email !== "string") return;
+      if (button) button.disabled = true;
+      if (feedback) feedback.textContent = "Envoi de la demande…";
+      try {
+        const response = await fetch("/api/access/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+          credentials: "same-origin"
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "La demande n'a pas pu être envoyée.");
+        if (feedback) feedback.textContent = result.message || "Demande envoyée.";
+        form.reset();
+      } catch (error) {
+        if (feedback) feedback.textContent = error instanceof Error ? error.message : "Erreur pendant l'envoi.";
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  </script>
+  <style>
+    .access-page{max-width:720px;min-height:65vh;padding-top:clamp(60px,10vh,110px);padding-bottom:90px}
+    .access-page h1{font-size:clamp(2.3rem,6vw,4.8rem);line-height:1.05;max-width:650px;margin:16px 0 20px}
+    .intro{max-width:570px;color:var(--muted);line-height:1.8}
+    #access-request-form{display:flex;flex-direction:column;gap:10px;max-width:430px;margin:32px 0 18px}
+    #access-request-form label{font-size:.82rem;font-weight:700}
+    #access-request-form input{min-height:48px;border:1px solid var(--line);padding:12px;font:inherit;background:var(--white);color:var(--ink)}
+    #access-request-form button{min-height:48px;border:0;background:var(--forest);color:white;padding:12px 18px;font:700 .9rem inherit;cursor:pointer}
+    #access-request-form button:disabled{opacity:.6}
+    #access-feedback{min-height:1.5em;color:var(--forest);font-size:.9rem}
+    .small{font-size:.78rem;color:var(--muted);line-height:1.7}
+    .back-link{text-decoration:underline;text-underline-offset:4px;font-size:.85rem}
+  </style>
+</Base>
