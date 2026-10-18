@@ -111,6 +111,16 @@ export default {
   },
   async fetch(request,env,ctx){
     const url=new URL(request.url),path=url.pathname;
+    // The public-site mode is stored separately from photo visibility. Default is open
+    // so a missing setting never accidentally locks out visitors.
+    const privatePath=/^(?:\\/espace|\\/admin)(?:\\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
+    if(!privatePath){
+      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
+      if(siteAccess?.mode==="restricted"){
+        const access=await requireAccess(request,env,false);
+        if(access.error)return access.error;
+      }
+    }
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
     if(path==="/api/public/defi"&&request.method==="GET"){
@@ -198,6 +208,17 @@ export default {
       return json({photos:await listedPhotos(env,"prive")});
     }
     if(!auth.user.isAdmin)return error("Accès administrateur requis.",403);
+    if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
+      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
+      return json({mode:config?.mode==="restricted"?"restricted":"open"});
+    }
+    if(path==="/api/prive/admin/site-access"&&request.method==="POST"){
+      if(!mutationOk(request))return error("Action non autorisée.",403);
+      const input=await readBody(request);
+      if(!["open","restricted"].includes(input?.mode))return error("Mode d’accès invalide.");
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:input.mode,updatedAt:new Date().toISOString()});
+      return json({ok:true,mode:input.mode});
+    }
     if(path==="/api/prive/admin/photo-modifier"){
       const input=await readBody(request);const bucket=bucketFor(env,input?.visibilite),key=input?.key;
       if(!bucket||!imageKey(key))return error("Photo invalide.");const file=await bucket.get(key);if(!file)return error("Photo introuvable.",404);
