@@ -112,12 +112,14 @@ import { chemin } from "../lib/paths";
     const videoDate = (video: any, step: any) => String(video.dateHeure || video.datePrise || video.date || step.date || "");
     async function loadUnifiedGallery() {
       if (!unifiedGrid) return;
-      const [stepsResponse, photosResponse] = await Promise.all([
+      const [stepsResponse, photosResponse, fileVideosResponse] = await Promise.all([
         fetch("/api/public/etapes"),
-        fetch("/api/public/photos")
+        fetch("/api/public/photos"),
+        fetch("/api/public/videos-fichiers")
       ]);
       const stepsData = stepsResponse.ok ? await stepsResponse.json() : { etapes: [] };
       const photosData = photosResponse.ok ? await photosResponse.json() : { photos: [] };
+      const fileVideosData = fileVideosResponse.ok ? await fileVideosResponse.json() : { videos: [] };
       const steps = stepsData.etapes || [];
       const videosByStep = await Promise.all(steps.map(async (step: any) => {
         try {
@@ -183,6 +185,43 @@ import { chemin } from "../lib/paths";
           caption.append(document.createElement("br"), mapLink);
         }
         figure.append(caption); unifiedGrid.append(figure);
+      }
+      for (const video of (fileVideosData.videos || [])) {
+        const figure = document.createElement("figure");
+        figure.className = "photo-tile gallery-file-video";
+        const linkedStep = steps.find((step: any) => step.slug === video.etape);
+        const stamp = String(video.date || video.ajouteLe || linkedStep?.date || "");
+        figure.dataset.date = stamp;
+        const player = document.createElement("video");
+        player.src = video.src;
+        player.controls = true;
+        player.preload = "metadata";
+        player.playsInline = true;
+        player.setAttribute("aria-label", video.titre || "Vidéo du voyage");
+        player.style.width = "100%";
+        player.style.aspectRatio = "16/9";
+        player.style.background = "#000";
+        figure.append(player);
+        const caption = document.createElement("figcaption");
+        caption.textContent = (video.titre || "Vidéo du voyage") + (stamp ? " · " + stamp.slice(0, 10) : "");
+        const videoLat = Number(linkedStep?.latitude);
+        const videoLon = Number(linkedStep?.longitude);
+        if (linkedStep && Number.isFinite(videoLat) && Math.abs(videoLat) <= 85 &&
+            Number.isFinite(videoLon) && Math.abs(videoLon) <= 180) {
+          const mapLink = document.createElement("button");
+          mapLink.type = "button";
+          mapLink.className = "gallery-view-on-map";
+          mapLink.textContent = "Voir sur la carte";
+          mapLink.addEventListener("click", () => {
+            window.location.href = "/?videoFileMap=" + encodeURIComponent(String(video.key || video.src)) +
+              "&date=" + encodeURIComponent(stamp.slice(0, 10)) +
+              "&lat=" + encodeURIComponent(String(videoLat)) +
+              "&lon=" + encodeURIComponent(String(videoLon));
+          });
+          caption.append(document.createElement("br"), mapLink);
+        }
+        figure.append(caption);
+        unifiedGrid.append(figure);
       }
       for (const photo of (photosData.photos || [])) {
         const figure = document.createElement("figure");
