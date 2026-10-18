@@ -281,7 +281,7 @@ import Base from "../layouts/Base.astro";
       const chessCount=day.partiesEchecs?.length||Number(Boolean(day.echecs));
       description.append(create("strong",undefined,isChess
         ?done?chessCount+" partie"+(chessCount>1?"s":"")+" jouée"+(chessCount>1?"s":""):"Pas de partie"
-        :done?km(day.activite!.km):"Pas d'activité"));
+        :done?km(runsForDay(day).reduce((total,run)=>total+(Number.isFinite(run.km)?run.km:0),0)):"Pas d'activité"));
       const caret=create("span","goal-caret","⌄");
       summary.append(icon,description,caret);
       const body=create("div","goal-body");
