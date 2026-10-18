@@ -647,13 +647,13 @@ import { chemin } from "../../lib/paths";
           videoEnvironment(),
           "",
           "TENTATIVES CDN",
-          attempts.length?attempts.join("\\n"):"Aucune tentative alternative nécessaire.",
+          attempts.length?attempts.join("\n"):"Aucune tentative alternative nécessaire.",
           "",
           "DERNIÈRES LIGNES FFmpeg",
-          ffmpegLogs.length?ffmpegLogs.join("\\n"):"Aucun log FFmpeg reçu avant l'échec.",
+          ffmpegLogs.length?ffmpegLogs.join("\n"):"Aucun log FFmpeg reçu avant l'échec.",
           "",
           "Pistes : vérifier l'accès réseau aux CDN, les extensions/bloqueurs, la politique CSP et la compatibilité WebAssembly du navigateur."
-        ].join("\\n");
+        ].join("\n");
         showVideoDiagnostic(diagnostic);
         throw new Error("Échec du moteur vidéo à l’étape « "+stage+" » : "+(error instanceof Error?error.message:String(error))+". Ouvre « Diagnostic technique détaillé » pour le rapport complet.");
       }
