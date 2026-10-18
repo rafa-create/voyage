@@ -23,6 +23,9 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--orange); outlin
 .skip-link:focus { top: 12px; }
 .site-header { border-bottom: 1px solid var(--line); background: rgba(246,243,235,.97); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 86px; gap: 24px; }
+.header-branding { display: flex; align-items: baseline; gap: 20px; min-width: 0; }
+.header-page-title { color: var(--forest); font: 500 1.02rem "Playfair Display", Georgia, serif; white-space: nowrap; }
+.header-page-title::before { content: "·"; color: var(--orange); margin-right: 20px; }
 .brand { display: inline-flex; align-items: center; gap: 11px; font-size: 1.18rem; font-weight: 700; white-space: nowrap; letter-spacing: -.04em; }
 .brand-mark { width: 37px; height: 37px; border: 1.5px solid var(--forest); border-radius: 50%; display: grid; place-items: center; color: var(--forest); font-size: 25px; font-weight: 400; }
 .brand-accent, .heading-dot { color: var(--orange); }
@@ -251,6 +254,9 @@ h3 { font-size: 1.7rem; line-height: 1.24; }
 .route-cover-caption strong { font: 500 1.2rem 'Playfair Display',Georgia,serif; }
 @media (max-width:650px) {
   .header-inner { padding: 8px 0 5px; gap: 8px; min-height: auto; }
+  .header-branding { gap: 10px; max-width: 100%; }
+  .header-page-title { font-size: .94rem; overflow: hidden; text-overflow: ellipsis; }
+  .header-page-title::before { margin-right: 10px; }
   .brand { font-size: 1rem; }
   .brand-mark { width: 29px; height: 29px; font-size: 20px; }
   .main-nav { justify-content: center; gap: 5px 16px; }
