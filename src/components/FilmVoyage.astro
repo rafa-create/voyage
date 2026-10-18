@@ -24,8 +24,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   <div class="film-controls">
     <button type="button" id="film-fullscreen" aria-label="Passer le film en plein écran" title="Plein écran">⛶</button>
     <button type="button" id="film-prev" aria-label="Souvenir précédent">←</button>
-    <button type="button" id="film-play" class="film-play" disabled>▶ Lancer le film</button>
+    <button type="button" id="film-play" class="film-play" disabled>Lancer le film</button>
     <button type="button" id="film-next" aria-label="Souvenir suivant">→</button>
+    <label class="film-speed-control" for="film-speed">Vitesse
+      <select id="film-speed" aria-label="Vitesse de déroulement du film">
+        <option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20× (très rapide)</option>
+      </select>
+    </label>
     <span id="film-progress" aria-live="polite">Chargement des souvenirs…</span>
   </div>
 </section>
@@ -224,10 +229,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       prevButton.disabled=index===0;
       nextButton.disabled=index===sequence.length-1;
     };
-    const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="▶ Reprendre le film";};
-    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;playing=true;playButton.textContent="Ⅱ Pause";render();timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},5500);};
-    playButton.disabled=false;playButton.textContent="▶ Lancer le film";
+    const speedSelect=document.querySelector<HTMLSelectElement>("#film-speed");
+    const playbackDelay=()=>5500/Math.max(0.25,Number(speedSelect?.value)||1);
+    const scheduleNext=()=>{if(timer!==undefined)window.clearInterval(timer);timer=window.setInterval(()=>{if(index>=sequence.length-1){stop();return;}index++;render();},playbackDelay());};
+    const stop=()=>{playing=false;if(timer!==undefined)window.clearInterval(timer);timer=undefined;playButton.textContent="Reprendre le film";};
+    const start=()=>{if(playing)return;if(index===sequence.length-1)index=0;playing=true;playButton.textContent="Pause";render();scheduleNext();};
+    playButton.disabled=false;playButton.textContent="Lancer le film";
     playButton.addEventListener("click",()=>playing?stop():start());
+    speedSelect?.addEventListener("change",()=>{if(playing)scheduleNext();});
     prevButton.addEventListener("click",()=>{stop();index=Math.max(0,index-1);render();});
     nextButton.addEventListener("click",()=>{stop();index=Math.min(sequence.length-1,index+1);render();});
     daySelect?.addEventListener("change",()=>{
@@ -287,8 +296,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .film-controls button{min-width:42px;height:42px;padding:0 14px;border:1px solid var(--line);background:transparent;color:var(--forest);cursor:pointer}
   .film-controls button:disabled{opacity:.35;cursor:default}
   .film-controls .film-play{background:var(--forest);border-color:var(--forest);color:white;font-size:.82rem;font-weight:700}
+  .film-speed-control{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.8rem;white-space:nowrap}
+  .film-speed-control select{min-width:174px;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:3px;background:var(--white);color:var(--forest);font:inherit;cursor:pointer}
   #film-progress{margin-left:auto;color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}
   @keyframes filmReveal{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
-  @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:0}.film-memory img{height:160px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}#film-progress{font-size:.7rem}}
+  @media(max-width:700px){.voyage-film{padding-top:52px;padding-bottom:58px}.film-stage{grid-template-columns:1fr}.film-map-wrap{min-height:300px}.film-memory{min-height:0}.film-memory img{height:160px}.film-controls{gap:7px}.film-controls button{padding:0 10px}.film-controls .film-play{flex:1}.film-speed-control{flex:1;justify-content:space-between}.film-speed-control select{min-width:150px;flex:1}#film-progress{font-size:.7rem}}
   @media(prefers-reduced-motion:reduce){.film-memory img{animation:none}}
 </style>
