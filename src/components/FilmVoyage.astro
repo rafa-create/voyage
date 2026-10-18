@@ -140,13 +140,18 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const rawDate=String(video.date||video.ajouteLe||"").slice(0,10);
         const stage=(video.etape?points.find(p=>p.slug===video.etape):undefined)||
           [...points].filter(p=>p.date<=rawDate).sort((a,b)=>b.date.localeCompare(a.date))[0]||
-          points.find(p=>p.date===rawDate)||points[0];
-        if(!stage||!valid(stage.latitude,stage.longitude))continue;
-        const date=/^\d{4}-\d{2}-\d{2}$/.test(rawDate)?rawDate:stage.date;
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+          points.find(p=>p.date===rawDate);
+        const date=/^\d{4}-\d{2}-\d{2}$/.test(rawDate)?rawDate:(stage?.date||"");
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!video.src)continue;
+        const hasVideoGps=valid(video.latitude,video.longitude);
+        const hasStageGps=valid(stage?.latitude,stage?.longitude);
+        // Comme sur la page « Hier », une vidéo importée reste visible même sans étape/GPS.
+        // On ne lui attribue des coordonnées que si elles sont réellement disponibles.
+        const lat=hasVideoGps?Number(video.latitude):(hasStageGps?stage!.latitude:NaN);
+        const lon=hasVideoGps?Number(video.longitude):(hasStageGps?stage!.longitude:NaN);
         items.push({kind:"video-fichier",date,title:video.titre||"Vidéo du voyage",
-          place:[stage.ville,stage.pays].filter(Boolean).join(", "),lat:stage.latitude,lon:stage.longitude,
-          detail:"",fileVideoSrc:video.src,slug:stage.slug,zoom:12});
+          place:stage?[stage.ville,stage.pays].filter(Boolean).join(", "):"",lat,lon,
+          detail:"",fileVideoSrc:video.src,slug:stage?.slug,zoom:12});
       }
       for(const photo of photos){
         if(!photo)continue;
@@ -307,7 +312,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }else{
         photoMarker.remove();
       }
-      map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
+      if(valid(item.lat,item.lon)){
+        map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
+      }
       prevButton.disabled=index===0;
       nextButton.disabled=index===sequence.length-1;
     };
