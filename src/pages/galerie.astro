@@ -288,8 +288,7 @@ import { chemin } from "../lib/paths";
       if (editPlace && !editPlace.value.trim()) editPlace.value = query;
       window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
     });
-    document.querySelector<HTMLButtonElement>("#edit-photo-map-use")?.addEventListener("click", () => {
-      const raw = editMapUrl?.value.trim() || "";
+    const extraireCoordonneesMaps = (raw: string): [number, number] | null => {
       let coordinates: RegExpMatchArray | null = raw.match(/@(-?\d{1,2}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/);
       if (!coordinates) coordinates = raw.match(/!3d(-?\d{1,2}(?:\.\d+)?)!4d(-?\d{1,3}(?:\.\d+)?)/);
       if (!coordinates) {
@@ -300,14 +299,32 @@ import { chemin } from "../lib/paths";
           if (pair) coordinates = pair;
         } catch {}
       }
-      const lat = coordinates ? Number(coordinates[1]) : NaN;
-      const lon = coordinates ? Number(coordinates[2]) : NaN;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85 || Math.abs(lon) > 180) {
-        if (editStatus) editStatus.textContent = "Coordonnées introuvables dans ce lien. Ouvre le point dans Google Maps et copie le lien complet, ou saisis les coordonnées manuellement.";
+      if (!coordinates) return null;
+      const lat = Number(coordinates[1]), lon = Number(coordinates[2]);
+      return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 85 && Math.abs(lon) <= 180 ? [lat, lon] : null;
+    };
+    document.querySelector<HTMLButtonElement>("#edit-photo-map-use")?.addEventListener("click", async () => {
+      const raw = editMapUrl?.value.trim() || "";
+      if (!raw) { if (editStatus) editStatus.textContent = "Colle d’abord un lien Google Maps."; return; }
+      if (editStatus) editStatus.textContent = "Recherche des coordonnées…";
+      let coords = extraireCoordonneesMaps(raw);
+      if (!coords) {
+        try {
+          const response = await fetch("/api/public/resolve-maps-link?url=" + encodeURIComponent(raw), { headers: { "Accept": "application/json" } });
+          const result = await response.json() as { url?: string; error?: string };
+          if (response.ok && result.url) coords = extraireCoordonneesMaps(result.url);
+          if (!coords && editStatus) editStatus.textContent = result.error || "Le lien a été résolu, mais Google Maps n’a pas fourni de coordonnées lisibles. Essaie le lien complet ou saisis-les manuellement.";
+        } catch {
+          if (editStatus) editStatus.textContent = "Impossible de résoudre ce lien maintenant. Essaie le lien complet ou saisis les coordonnées manuellement.";
+          return;
+        }
+      }
+      if (!coords) {
+        if (editStatus && editStatus.textContent === "Recherche des coordonnées…") editStatus.textContent = "Coordonnées introuvables. Ouvre le point dans Google Maps et copie le lien complet, ou saisis-les manuellement.";
         return;
       }
-      if (editLat) editLat.value = String(lat);
-      if (editLon) editLon.value = String(lon);
+      if (editLat) editLat.value = String(coords[0]);
+      if (editLon) editLon.value = String(coords[1]);
       if (editPlace && editMapSearch?.value.trim()) editPlace.value = editMapSearch.value.trim();
       if (editStatus) editStatus.textContent = "Coordonnées récupérées. Vérifie le point puis enregistre la photo.";
     });
