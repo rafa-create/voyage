@@ -41,7 +41,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
 
   <script>
     type DailyPhoto = {src:string;alt?:string;etape?:string;datePrise?:string;dateHeure?:string;ajouteLe?:string;latitude?:number;longitude?:number};
-    const dateLabel = (value:string) => new Intl.DateTimeFormat("fr-FR",{dateStyle:"full",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
+    const dateLabel = (value:string) => "Souvenir du " + new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",timeZone:"Europe/Paris"}).format(new Date(value+"T12:00:00"));
     const dateKey = (p:DailyPhoto) => String(p.dateHeure || p.datePrise || p.ajouteLe || "").slice(0,10);
     const grid = document.querySelector<HTMLElement>("#daily-photos");
     const dateText = document.querySelector<HTMLElement>("#daily-date");
