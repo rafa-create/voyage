@@ -133,8 +133,10 @@ export default {
     }
     const publicGps=/^\/api\/public\/defi\/parcours\/([a-f0-9-]{36})$/.exec(path);
     if(publicGps&&request.method==="GET"){
-      const points=await publicRoute(env,publicGps[1]);
-      return points?json({route:points}):error("Parcours public indisponible.",404);
+      const precision=["overview","detail","full"].includes(url.searchParams.get("precision"))
+        ?url.searchParams.get("precision"):"overview";
+      const points=await publicRoute(env,publicGps[1],precision);
+      return points?json({route:points,precision}):error("Parcours public indisponible.",404);
     }
     if(path==="/api/public/etapes"&&request.method==="GET")return json({etapes:makePublicSteps(await steps(env))});
     if(path==="/api/public/photos"&&request.method==="GET"){
