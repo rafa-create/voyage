@@ -620,12 +620,13 @@ const points = etapes
               marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : memory.type==="video" ? "video:"+String(memory.youtubeId||"") : "";
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
-              marker.style.cssText=(memory.type==="photo"&&memory.src)||(memory.type==="video"&&memory.youtubeId)
+              marker.style.cssText=(memory.type==="photo"&&memory.src)||(memory.type==="video"&&memory.youtubeId)||(memory.type==="video-fichier"&&memory.src)
                 ?"width:44px;height:44px;cursor:pointer;border:2px solid #fff;border-radius:8px;"+
-                  "background:#fff url('"+String(memory.type==="photo"?memory.src:"https://i.ytimg.com/vi/"+memory.youtubeId+"/hqdefault.jpg").replace(/'/g,"%27")+"') center/cover no-repeat;"+
+                  (memory.type==="video-fichier"?"background:#24352f;color:#fff;font-size:20px;":"background:#fff url('"+String(memory.type==="photo"?memory.src:"https://i.ytimg.com/vi/"+memory.youtubeId+"/hqdefault.jpg").replace(/'/g,"%27")+"') center/cover no-repeat;")+
                   "box-shadow:0 2px 8px #0005;"
                 :"width:16px;height:16px;cursor:pointer;border:2px solid #fff;border-radius:50%;"+
                   "background:#c86f4d;box-shadow:0 1px 5px #0005;";
+              if(memory.type==="video-fichier")marker.textContent="▶";
               marker.style.zIndex = marker.classList.contains("memory-map-photo-marker") ? "3" : "2";
               if(selectedDay && memory.date === selectedDay){
                 if(!marker.classList.contains("memory-map-photo-marker")) marker.style.backgroundColor = currentDayColor;
@@ -669,6 +670,11 @@ const points = etapes
                 image.style.cssText="width:100%;max-width:230px;max-height:160px;object-fit:cover;border-radius:6px;margin:6px 0;";
                 panel.append(image);
               }
+              if(memory.type==="video-fichier"&&memory.src){
+                const player=document.createElement("video");player.src=memory.src;player.controls=true;player.preload="metadata";player.playsInline=true;
+                player.style.cssText="width:100%;max-width:230px;max-height:160px;border-radius:6px;margin:6px 0;background:#000;";
+                panel.append(player);
+              }
               if(memory.type==="sport"&&memory.id&&memory.parcours){
                 const action=document.createElement("button");
                 action.type="button";action.textContent="Zoomer sur le parcours";
@@ -680,6 +686,11 @@ const points = etapes
                 link.href="/galerie/?photo="+encodeURIComponent(memory.src);
                 link.textContent="Voir dans la galerie";panel.append(link);
               }else if(memory.type==="video"&&memory.youtubeId){
+                const link=document.createElement("a");
+                link.href="/galerie/";
+                link.textContent="Voir dans la galerie";panel.append(link);
+              }
+              else if(memory.type==="video-fichier"&&memory.src){
                 const link=document.createElement("a");
                 link.href="/galerie/";
                 link.textContent="Voir dans la galerie";panel.append(link);
@@ -772,16 +783,17 @@ const points = etapes
             const mapRequest = new URLSearchParams(window.location.search);
             const requestedPhoto = mapRequest.get("photoMap");
             const requestedVideo = mapRequest.get("videoMap");
+            const requestedFileVideo = mapRequest.get("videoFileMap");
             const requestedDate = mapRequest.get("date");
             const requestedLat = Number(mapRequest.get("lat"));
             const requestedLon = Number(mapRequest.get("lon"));
-            if ((requestedPhoto || requestedVideo) && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+            if ((requestedPhoto || requestedVideo || requestedFileVideo) && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
                 Number.isFinite(requestedLat) && Math.abs(requestedLat) <= 85 &&
                 Number.isFinite(requestedLon) && Math.abs(requestedLon) <= 180) {
               window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte", {detail:{
-                date:requestedDate,kind:requestedVideo?"video":"photo",key:requestedPhoto||undefined,latitude:requestedLat,longitude:requestedLon
+                date:requestedDate,kind:requestedFileVideo?"video-fichier":requestedVideo?"video":"photo",key:requestedFileVideo?"video-file:"+requestedFileVideo:requestedPhoto||undefined,latitude:requestedLat,longitude:requestedLon
               }}));
-              mapRequest.delete("photoMap");mapRequest.delete("videoMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
+              mapRequest.delete("photoMap");mapRequest.delete("videoMap");mapRequest.delete("videoFileMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
               const remaining = mapRequest.toString();
               window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
             }
