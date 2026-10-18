@@ -18,6 +18,15 @@ Site de carnet de voyage en français, déployé sur Cloudflare Workers à https
 - `worker/index.js`: API Cloudflare Worker; `worker/content.js` gère les étapes/photos/vidéos R2; `worker/auth.js` porte les contrôles d'accès.
 - `tests/`: tests Node existants; `scripts/validate-etapes.mjs`: validation des données.
 
+## Accès au site et photos privées
+- Le réglage administrateur « Qui peut consulter Voyages ? » est dans `src/pages/admin/index.astro`; il utilise `GET/POST /api/prive/admin/site-access`.
+- Le Worker stocke ce réglage dans `PHOTOS_PRIVEES`, clé `__meta/site-access.json`. Valeurs admises : `open` et `restricted`. En l'absence de configuration, le mode est `open` afin de ne pas bloquer les visiteurs.
+- En mode `open`, les pages et API publiques restent consultables sans connexion. En mode `restricted`, le Worker exige un JWT Cloudflare Access valide pour les routes qui ne sont pas déjà privées.
+- **Ne jamais confondre la visibilité du site et celle des photos.** Le mode du site ne change pas le bucket utilisé pour les photos, ne publie pas de photo privée et ne remplace pas les contrôles d'accès existants sur `/espace/`, `/admin/`, `/api/prive/` et `/media-prive/`.
+- Avant d'activer le mode restreint en production, vérifier la configuration Cloudflare Access, le comportement des pages statiques et des ressources (images, scripts, styles), et tester les accès en navigation privée. Ne pas considérer le mode restreint comme validé en production sans ces tests.
+- Toute évolution de l'accès doit préserver la séparation des buckets `PHOTOS_PUBLIQUES` et `PHOTOS_PRIVEES`, ainsi que l'authentification côté Worker. Une simple restriction d'interface ne protège pas les données.
+- Ne pas déployer automatiquement après une modification de ces règles; respecter la règle de déploiement séparé et d'accord explicite ci-dessus.
+
 ## API publiques utiles
 - `GET /api/public/etapes`: étapes publiées.
 - `GET /api/public/photos` et `GET /api/public/photos?etape=<slug>`: photos publiques et métadonnées.
