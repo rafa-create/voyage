@@ -49,6 +49,23 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   const filmSection = document.querySelector<HTMLElement>(".voyage-film");
   const valid = (lat:unknown,lon:unknown) => typeof lat==="number" && typeof lon==="number" && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=85 && Math.abs(lon)<=180;
   const prettyDate = (value:string) => { const d=new Date(value+"T12:00:00"); return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Paris"}).format(d); };
+  const activityPlaceCache=new Map<string,string>();
+  async function reverseGeocode(lat:number,lon:number):Promise<string>{
+    const key=lat.toFixed(3)+","+lon.toFixed(3);
+    if(activityPlaceCache.has(key))return activityPlaceCache.get(key)||"";
+    try{
+      const response=await fetch("https://photon.komoot.io/reverse?lon="+encodeURIComponent(String(lon))+"&lat="+encodeURIComponent(String(lat))+"&limit=1",{headers:{"Accept":"application/json"}});
+      if(!response.ok)return "";
+      const data=await response.json();
+      const properties=data?.features?.[0]?.properties;
+      if(!properties)return "";
+      const locality=properties.city||properties.town||properties.village||properties.municipality||properties.county||properties.state;
+      const country=properties.country;
+      const result=[locality,country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
+      activityPlaceCache.set(key,result);
+      return result;
+    }catch{return "";}
+  }
   async function initFilm(){
     if(!mapElement||!memory||!place||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection)return;
     if(!points.length){place.textContent="Aucune étape disponible pour ce voyage.";return;}
@@ -196,7 +213,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const render=(animate=true)=>{
       const item=sequence[index];
       activeFilmItem=item;
-      place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":item.kind==="activite"?"Lieu de l’activité":"Localisation de l’étape");
+      place.textContent=item.place||(item.kind==="photo"?"Localisation de la photo":"");
+      if(item.kind==="activite"&&!item.place&&valid(item.lat,item.lon)){
+        const currentItem=item;
+        void reverseGeocode(item.lat,item.lon).then(location=>{
+          if(location&&activeFilmItem===currentItem&&!currentItem.place)place.textContent=location;
+        });
+      }
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
       if(item.kind!=="activite"){
