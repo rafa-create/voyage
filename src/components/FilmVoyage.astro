@@ -411,6 +411,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   .voyage-film.film-browser-fullscreen .film-memory{overflow:auto}
   .voyage-film.film-browser-fullscreen .film-memory img{height:auto;max-height:48vh;object-fit:contain}
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-stage{grid-template-rows:minmax(0,1fr) auto;align-items:stretch}
+  .voyage-film.film-browser-fullscreen.film-showing-activity .film-map-wrap{grid-row:1;order:0;min-height:0}
+  .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory{grid-row:2;order:1}
   /* Sans image, le panneau d'activité reste compact en bas pour laisser un maximum d'espace à la carte. */
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory{height:auto;max-height:14vh;min-height:0;overflow:auto;align-self:end;justify-content:center;padding:5px 12px;gap:3px}
   .voyage-film.film-browser-fullscreen.film-showing-activity .film-memory-content{display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:4px 12px}
