@@ -174,6 +174,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     for(const item of items)unique.set([item.kind,item.date,item.title,item.src||item.id||""].join("|"),item);
     const allSequence=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==="etape"?-1:b.kind==="etape"?1:0));
     const activityToggle=document.querySelector<HTMLInputElement>("#film-show-activities");
+    const activityPreferenceKey="voyage-film-show-activities";
+    if(activityToggle){
+      try{
+        const savedPreference=window.localStorage.getItem(activityPreferenceKey);
+        if(savedPreference==="true"||savedPreference==="false")activityToggle.checked=savedPreference==="true";
+      }catch{/* Le stockage peut être indisponible : le réglage reste utilisable pour cette session. */}
+    }
     let sequence=allSequence.filter(item=>activityToggle?.checked!==false||item.kind!=="activite");
     if(!sequence.length){return;}
     const daySelect=document.querySelector<HTMLSelectElement>("#film-day-select");
@@ -340,6 +347,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     playButton.addEventListener("click",()=>playing?stop():start());
     speedSelect?.addEventListener("change",()=>{if(playing)scheduleNext();});
     activityToggle?.addEventListener("change",()=>{
+      try{window.localStorage.setItem(activityPreferenceKey,String(activityToggle.checked));}catch{/* Le film continue si le stockage est indisponible. */}
       const current=sequence[index];
       const wasPlaying=playing;
       stop();
