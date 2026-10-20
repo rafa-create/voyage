@@ -201,7 +201,13 @@ export async function publicArchivedRoute(env,id,precision="overview"){
     }
   }
   // Les archives anciennes sans GPX source restent accessibles à leur résolution disponible.
-  const points=requested==="routeFull"?decodePolyline(record?.routeFullEncoded):\n    Array.isArray(record?.[requested])?record[requested]:record?.route;
+  if(requested==="routeFull"&&Array.isArray(record?.routeFull)&&typeof record?.routeFullEncoded!=="string"){
+    record={...record,routeFullEncoded:encodePolyline(record.routeFull)};
+    await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",record);
+  }
+  const points=requested==="routeFull"
+    ?decodePolyline(record?.routeFullEncoded)
+    :Array.isArray(record?.[requested])?record[requested]:record?.route;
   if(!Array.isArray(points)||points.length<2)return null;
   // La résolution maximale restitue tous les points de l’original.
   // Les résolutions overview/detail gardent une petite marge aux extrémités.
