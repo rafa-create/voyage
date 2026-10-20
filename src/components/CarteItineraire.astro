@@ -76,18 +76,8 @@ const points = etapes
         pitchWithRotate: false,
       });
       map.doubleClickZoom.disable();
-      // Ne jamais laisser la carte bloquée sur la vue monde (zoom 0) si aucun
-      // souvenir daté ne peut déclencher le cadrage quotidien : cadrer d'abord
-      // l'itinéraire connu. Le focus du jour, s'il existe, prendra ensuite le relais.
-      if (!initialBounds.isEmpty()) {
-        map.once("load", () => {
-          map.fitBounds(initialBounds, {
-            padding: { top: 70, right: 70, bottom: 90, left: 70 },
-            maxZoom: 6,
-            duration: 0,
-          });
-        });
-      }
+      // Règle d’architecture : la caméra est pilotée exclusivement par requestDayCamera.
+      // Le chargement de la carte et celui des traces ne doivent jamais cadrer eux-mêmes.
       // Les marqueurs d'étapes ne doivent jamais apparaître sur cette carte.
       element.querySelectorAll<HTMLElement>(".map-marker").forEach((marker) => {
         marker.style.display = "none";
@@ -190,6 +180,9 @@ const points = etapes
           // La couleur sauge s'applique au symbole, mais son contour reste blanc.
           map.setPaintProperty(layerId, "text-halo-color", "#fffdf8");
         };
+        // Le point d’entrée unique de toute décision de cadrage. Il est initialisé
+        // après fetchRoute ; les appels précoces sont rejoués après création des marqueurs.
+        let requestDayCamera: (date:string, initialFocus?:boolean) => void = () => {};
         const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
           const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
@@ -255,29 +248,7 @@ const points = etapes
             dateLabel.style.borderRadius = selectedDay ? "3px" : "";
             dateLabel.style.display = selectedDay ? "inline-block" : "";
           }
-          // Si la journée comporte une activité GPS, cadrer son tracé complet plutôt
-          // que les seuls marqueurs : cela vaut aussi pour le jour sélectionné à l’arrivée.
-          const dailyActivity = memories
-            .filter((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id && memory.parcours)
-            .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
-          if (dailyActivity?.id) {
-            // Le cadrage sur les souvenirs doit continuer même si le chargement
-            // du tracé GPS échoue ou prend du temps.
-            void showTrace(dailyActivity.id, dailyActivity.date, true);
-          }
-          if (!dailyMarkers.length) return;
-          const bounds = new maplibregl.LngLatBounds();
-          for (const marker of dailyMarkers) {
-            const lat = Number(marker.dataset.latitude);
-            const lon = Number(marker.dataset.longitude);
-            if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
-          }
-          if (bounds.isEmpty() || !fitMap) return;
-          if (dailyMarkers.length === 1) {
-            map.easeTo({center: bounds.getCenter(), zoom: initialFocus ? 15 : 13, duration: initialFocus ? 3000 : 1800});
-          } else {
-            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: initialFocus ? 16 : 15, duration: initialFocus ? 3000 : 1800});
-          }
+          if (fitMap) requestDayCamera(date, initialFocus);
         };
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
@@ -469,14 +440,9 @@ const points = etapes
               : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
             const targetEvents = datedMemories.filter(e => e.date === targetDay);
             if (targetEvents.length) {
-              // Démarrer sur la vue générale, puis cadrer la carte sur hier
-              // (ou le dernier jour documenté si hier n'a pas de données).
+              // La sélection initiale est mémorisée ici ; le cadrage sera demandé
+              // après la création des marqueurs, par la fonction caméra unique.
               document.documentElement.dataset.voyageDay = targetDay;
-              const selectInitialDay = () => window.dispatchEvent(new CustomEvent("voyage:jour", {
-                detail: { date: targetDay, fitMap: true, initialFocus: true }
-              }));
-              if (map.loaded()) selectInitialDay();
-              else map.once("load", selectInitialDay);
             }
             if(timeline.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{
@@ -506,6 +472,49 @@ const points = etapes
               if(route.length<2)return null;
               routeCache.set(key,route);
               return route;
+            };
+            let cameraRequest = 0;
+            requestDayCamera = (date:string, initialFocus=false) => {
+              const request = ++cameraRequest;
+              void (async () => {
+                const bounds = new maplibregl.LngLatBounds();
+                const dailyActivity = memories
+                  .filter((memory) => memory.type === "sport" && memory.date === date && memory.id && memory.parcours)
+                  .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
+                let usedRoute = false;
+                if (dailyActivity?.id) {
+                  try {
+                    const route = await fetchRoute(dailyActivity.id, routePrecisionForZoom(map.getZoom()));
+                    if (route?.length) {
+                      for (const [lat, lon] of route) bounds.extend([lon, lat]);
+                      usedRoute = !bounds.isEmpty();
+                    }
+                  } catch { /* Repli sur les positions des souvenirs du jour. */ }
+                }
+                if (!usedRoute) {
+                  for (const marker of Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))) {
+                    if (marker.dataset.date !== date) continue;
+                    const lat = Number(marker.dataset.latitude);
+                    const lon = Number(marker.dataset.longitude);
+                    if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
+                  }
+                }
+                // Sans coordonnées ce jour-là, privilégier l'étape de cette date,
+                // puis l'itinéraire complet : ne jamais conserver le cadrage d'un autre jour.
+                if (bounds.isEmpty()) {
+                  const stage = points.find((point) => point.date === date);
+                  if (stage) bounds.extend([stage.longitude, stage.latitude]);
+                  else bounds.extend(initialBounds);
+                }
+                if (request !== cameraRequest || !map.loaded() || bounds.isEmpty()) return;
+                map.stop();
+                const singlePoint = bounds.getSouthWest().distanceTo(bounds.getNorthEast()) < 100;
+                map.fitBounds(bounds, {
+                  padding: { top: 58, right: 58, bottom: 100, left: 58 },
+                  maxZoom: usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14)),
+                  duration: initialFocus ? 1500 : 850,
+                });
+              })();
             };
             let selectedTraceId:string|null=null;
             let selectedTraceDate="";
@@ -539,16 +548,8 @@ const points = etapes
                 }
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
-                if(fitMap){
-                  const size=map.getContainer().getBoundingClientRect();
-                  const horizontal=Math.max(28,Math.min(56,size.width*0.055));
-                  const vertical=Math.max(32,Math.min(62,size.height*0.07));
-                  map.fitBounds(bounds,{
-                    padding:{top:vertical+8,right:horizontal,bottom:vertical+28,left:horizontal},
-                    maxZoom:17,
-                    duration:1100
-                  });
-                }
+                // Le tracé est dessiné ici ; seul requestDayCamera peut déplacer la caméra.
+                if (fitMap) requestDayCamera(date, false);
               }catch{ /* Conserver la carte en cas d'indisponibilité. */ }
             };
             const allTracesButton=document.createElement("button");
@@ -605,7 +606,7 @@ const points = etapes
               for(const feature of features){
                 for(const coordinate of feature.geometry.coordinates)bounds.extend(coordinate);
               }
-              if(fitMap&&!bounds.isEmpty())map.fitBounds(bounds,{padding:60,maxZoom:12,duration:650});
+              // Les traces globales ne pilotent jamais la caméra.
             };
             allTracesButton.addEventListener("click",()=>{
               voyageLinksHidden = !voyageLinksHidden;
@@ -837,9 +838,8 @@ const points = etapes
               const remaining = mapRequest.toString();
               window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
             }
-            // Recentrer après la création des marqueurs : la sélection initiale peut arriver trop tôt.
-            // On reprend le même cadrage rapproché que le focus initial, sans changer le zoom des jours suivants.
-            if (selectedDay) updateSelectedDay(selectedDay, true, true);
+            // Toutes les données et tous les marqueurs sont prêts : cadrage initial unique.
+            if (selectedDay) requestDayCamera(selectedDay, true);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
       });
