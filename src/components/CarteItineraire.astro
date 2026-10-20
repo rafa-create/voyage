@@ -251,8 +251,8 @@ const points = etapes
           }
         };
         window.addEventListener("voyage:jour", (event) => {
-          const detail = (event as CustomEvent<{date?:string}>).detail;
-          updateSelectedDay(detail?.date || "");
+          const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
+          updateSelectedDay(detail?.date || "", detail?.fitMap !== false);
         });
         // En bas à gauche, afficher uniquement le lieu correspondant au jour sélectionné.
         const placeControl = document.createElement("div");
@@ -440,25 +440,13 @@ const points = etapes
               : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
             const targetEvents = datedMemories.filter(e => e.date === targetDay);
             if (targetEvents.length) {
+              // Sélectionner la journée au chargement sans zoomer automatiquement sur une activité.
               document.documentElement.dataset.voyageDay = targetDay;
-              const targetBounds = new maplibregl.LngLatBounds();
-              for (const event of targetEvents) targetBounds.extend([event.longitude, event.latitude]);
-              const targetCenter = targetBounds.getCenter();
-              const animateToYesterday = () => {
-                map.jumpTo({ center: [0, 20], zoom: 0 });
-                map.flyTo({
-                  center: [targetCenter.lng, targetCenter.lat],
-                  zoom: targetEvents.length === 1 ? 11 : 10,
-                  duration: 2400,
-                  essential: true
-                });
-                window.dispatchEvent(new CustomEvent("voyage:jour", { detail: { date: targetDay } }));
-                if (targetDay === yesterdayKey) {
-                  yesterdayButton.click();
-                }
-              };
-              if (map.loaded()) animateToYesterday();
-              else map.once("load", animateToYesterday);
+              const selectInitialDay = () => window.dispatchEvent(new CustomEvent("voyage:jour", {
+                detail: { date: targetDay, fitMap: false }
+              }));
+              if (map.loaded()) selectInitialDay();
+              else map.once("load", selectInitialDay);
             }
             if(timeline.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{
