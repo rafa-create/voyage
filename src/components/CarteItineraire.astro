@@ -243,29 +243,33 @@ const points = etapes
             dateLabel.style.borderRadius = selectedDay ? "3px" : "";
             dateLabel.style.display = selectedDay ? "inline-block" : "";
           }
-          // Si la journée comporte une activité GPS, cadrer son tracé complet plutôt
-          // que les seuls marqueurs : cela vaut aussi pour le jour sélectionné à l’arrivée.
+          // Cadrer sur les souvenirs du jour ; si la journée n'en a pas,
+          // utiliser les coordonnées de l'étape correspondante comme solution de repli.
           const dailyActivity = memories
-            .filter((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id && memory.parcours)
+            .filter((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id)
             .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
-          if (dailyActivity?.id) {
-            // Le zoom sur les marqueurs de la journée doit fonctionner même si
-            // le chargement du tracé GPS échoue ; le tracé recadrera ensuite la carte.
-            void showTrace(dailyActivity.id, dailyActivity.date, true);
-          }
-          if (!dailyMarkers.length) return;
           const bounds = new maplibregl.LngLatBounds();
           for (const marker of dailyMarkers) {
             const lat = Number(marker.dataset.latitude);
             const lon = Number(marker.dataset.longitude);
             if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
           }
-          if (bounds.isEmpty() || !fitMap) return;
-          if (dailyMarkers.length === 1) {
-            map.easeTo({center: bounds.getCenter(), zoom: initialFocus ? 15 : 13, duration: initialFocus ? 3000 : 1800});
-          } else {
-            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: initialFocus ? 16 : 15, duration: initialFocus ? 3000 : 1800});
+          if (bounds.isEmpty()) {
+            for (const point of points.filter((point) => point.date === selectedDay)) {
+              const lat = Number(point.latitude);
+              const lon = Number(point.longitude);
+              if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
+            }
           }
+          if (fitMap && !bounds.isEmpty()) {
+            if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 25) {
+              map.easeTo({center: bounds.getCenter(), zoom: initialFocus ? 15 : 13, duration: initialFocus ? 3000 : 1800});
+            } else {
+              map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: initialFocus ? 16 : 15, duration: initialFocus ? 3000 : 1800});
+            }
+          }
+          // Le tracé GPS affine ensuite le cadrage pour montrer tout le parcours.
+          if (dailyActivity?.id) void showTrace(dailyActivity.id, dailyActivity.date, fitMap);
         };
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
