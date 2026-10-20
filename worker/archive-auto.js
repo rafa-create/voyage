@@ -3,7 +3,7 @@
 // par cette API : ne pas présenter ces copies comme des fichiers originaux.
 // Les copies restent privées tant que le propriétaire ne les publie pas.
 import {getJSON,putJSON} from "./content.js";
-import {archiveIndex} from "./parcours-archive.js";
+import {archiveIndex,encodePolyline} from "./parcours-archive.js";
 import {privateStravaFetch} from "./strava-bridge.js";
 
 const INDEX="__meta/parcours/index.json";
@@ -165,7 +165,7 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
       const stored=await getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null);
       await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
         ...(stored||item),...checked,
-        ...(route.length>=2?{routeDetail:sampleRoute(route,5000),routeFull:route}:{}),
+        ...(route.length>=2?{routeDetail:sampleRoute(route,5000),routeFullEncoded:encodePolyline(route)}:{}),
         route:route.length>=2?sampleRoute(route,120):[]});
       Object.assign(item,checked);
     }
