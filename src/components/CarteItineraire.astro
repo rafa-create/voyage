@@ -94,6 +94,36 @@ const points = etapes
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.addControl(new maplibregl.FullscreenControl(), "top-right");
 
+      // Fond satellite optionnel : on conserve les marqueurs HTML et les couches du voyage.
+      let satelliteEnabled = false;
+      let baseLayerVisibility = new Map<string, string>();
+      let satelliteControl: HTMLButtonElement;
+      const satelliteSourceId = "voyage-satellite-source";
+      const satelliteLayerId = "voyage-satellite-raster";
+      const syncSatelliteControl = () => {
+        satelliteControl.textContent = satelliteEnabled ? "Vue plan" : "Vue satellite";
+        satelliteControl.setAttribute("aria-pressed", String(satelliteEnabled));
+        satelliteControl.setAttribute("aria-label", satelliteEnabled ? "Revenir à la vue plan" : "Afficher la vue satellite");
+      };
+      satelliteControl = document.createElement("button");
+      satelliteControl.type = "button";
+      satelliteControl.className = "maplibregl-ctrl";
+      satelliteControl.style.cssText = "background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
+      satelliteControl.addEventListener("click", () => {
+        satelliteEnabled = !satelliteEnabled;
+        if (map.getLayer(satelliteLayerId)) {
+          map.setLayoutProperty(satelliteLayerId, "visibility", satelliteEnabled ? "visible" : "none");
+        }
+        for (const [id, visibility] of baseLayerVisibility) {
+          if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", satelliteEnabled ? "none" : visibility);
+        }
+        syncSatelliteControl();
+      });
+      map.addControl({
+        onAdd: () => satelliteControl,
+        onRemove: () => satelliteControl.remove()
+      } as maplibregl.IControl, "top-right");
+
       for (const p of points) {
         const marker = document.createElement("button");
         marker.type = "button";
@@ -138,6 +168,31 @@ const points = etapes
       const parcours = points.filter((p) => p.statut !== "future");
       const futur = points.filter((p) => p.statut === "future");
       map.on("load", () => {
+        // Les tuiles Esri sont un fond raster public ; l'attribution reste visible.
+        map.addSource(satelliteSourceId, {
+          type: "raster",
+          tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+          tileSize: 256,
+          attribution: "Imagerie © Esri, Maxar, Earthstar Geographics et contributeurs",
+        });
+        const firstBaseLayerId = map.getStyle().layers?.[0]?.id;
+        map.addLayer({
+          id: satelliteLayerId,
+          type: "raster",
+          source: satelliteSourceId,
+          layout: { visibility: "none" },
+          paint: { "raster-opacity": 1 },
+        }, firstBaseLayerId);
+        // Mémoriser uniquement les couches du fond Liberty : les couches du voyage
+        // ajoutées plus tard restent visibles au-dessus de l'imagerie satellite.
+        baseLayerVisibility = new Map(
+          (map.getStyle().layers || [])
+            .filter((layer) => layer.id !== satelliteLayerId &&
+              !["trajet-parcouru", "trajet-prevu", "fil-des-souvenirs", "fil-des-souvenirs-fleches",
+                "tous-les-traces", "tous-les-traces-fleches", "trace-sportive", "trace-sportive-fleches"].includes(layer.id))
+            .map((layer) => [layer.id, String(layer.layout?.visibility || "visible")])
+        );
+        syncSatelliteControl();
         const traces: { id: string; points: Point[]; couleur: string; tirets?: number[] }[] = [
           { id: "trajet-parcouru", points: parcours, couleur: "#bb714c" },
           { id: "trajet-prevu", points: [...parcours.slice(-1), ...futur], couleur: "#52746a", tirets: [2, 2] },
