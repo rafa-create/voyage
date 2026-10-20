@@ -43,6 +43,7 @@ import { chemin } from "../lib/paths";
     <p id="galerie-vide" class="empty-state" hidden>Les souvenirs apparaîtront ici dès qu'ils seront ajoutés au carnet.</p>
   </section>
   <script>
+    import { zipSync } from "fflate";
     const galleryAdminActions = document.querySelector<HTMLElement>("#gallery-admin-actions");
     const galleryAdminDialog = document.querySelector<HTMLElement>("#gallery-admin-dialog");
     const galleryAdminFrame = document.querySelector<HTMLIFrameElement>("#gallery-admin-frame");
@@ -70,9 +71,88 @@ import { chemin } from "../lib/paths";
     document.addEventListener("keydown", event => { if (event.key === "Escape" && galleryAdminDialog && !galleryAdminDialog.hidden) closeGalleryAdmin(); });
 
     const unifiedGrid = document.querySelector<HTMLElement>("#galerie-unifiee-grid");
+    const safeFileName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "souvenir";
+    const mediaForTile = (tile: HTMLElement) => {
+      const opener = tile.querySelector<HTMLButtonElement>(".photo-open");
+      const url = opener?.dataset.photo || opener?.dataset.videoFile || "";
+      if (!url || opener?.dataset.video) return null;
+      let parsed: URL;
+      try { parsed = new URL(url, location.href); } catch { return null; }
+      if (parsed.origin !== location.origin) return null;
+      const lastPart = decodeURIComponent(parsed.pathname.split("/").pop() || "");
+      const title = opener?.dataset.videoTitle || opener?.dataset.alt || lastPart || "souvenir";
+      const extension = /\.[a-z0-9]{2,5}$/i.exec(lastPart)?.[0] || "";
+      return { url: parsed.href, name: safeFileName(title.replace(/\.[^.]+$/, "")) + extension };
+    };
+    const addTileDownload = (tile: HTMLElement) => {
+      if (tile.querySelector(".gallery-download-button")) return;
+      const media = mediaForTile(tile);
+      if (!media) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "gallery-download-button";
+      button.title = "Télécharger ce média";
+      button.setAttribute("aria-label", "Télécharger " + media.name);
+      button.textContent = "↓";
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const link = document.createElement("a");
+        link.href = media.url;
+        link.download = media.name;
+        link.rel = "noopener";
+        document.body.append(link);
+        link.click();
+        link.remove();
+      });
+      tile.append(button);
+    };
+    const downloadMonthArchive = async (button: HTMLButtonElement, monthItems: HTMLElement[], monthName: string) => {
+      const media = monthItems.map(tile => ({ tile, media: mediaForTile(tile) })).filter((item): item is { tile: HTMLElement; media: { url: string; name: string } } => !!item.media);
+      if (!media.length) return;
+      button.disabled = true;
+      button.textContent = "…";
+      button.title = "Préparation de l’archive ZIP…";
+      try {
+        const entries: Record<string, Uint8Array> = {};
+        const names = new Set<string>();
+        for (let i = 0; i < media.length; i++) {
+          const item = media[i];
+          const response = await fetch(item.media.url, { credentials: "same-origin" });
+          if (!response.ok) throw new Error("Un média n’a pas pu être téléchargé.");
+          const originalName = item.media.name;
+          let name = originalName;
+          let suffix = 2;
+          while (names.has(name)) {
+            const dot = originalName.lastIndexOf(".");
+            name = dot > 0 ? originalName.slice(0, dot) + "-" + suffix++ + originalName.slice(dot) : originalName + "-" + suffix++;
+          }
+          names.add(name);
+          entries[name] = new Uint8Array(await response.arrayBuffer());
+          button.title = "Préparation de l’archive : " + (i + 1) + " / " + media.length;
+        }
+        const archive = zipSync(entries, { level: 0 });
+        const blob = new Blob([archive], { type: "application/zip" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = safeFileName(monthName.toLocaleLowerCase("fr-FR")) + ".zip";
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+        button.title = "Télécharger à nouveau l’archive du mois";
+      } catch (error) {
+        button.title = error instanceof Error ? error.message : "Création de l’archive impossible.";
+        window.alert(button.title);
+      } finally {
+        button.disabled = false;
+        button.textContent = "↓";
+      }
+    };
     const sortUnified = () => {
       if (!unifiedGrid) return;
       const items = Array.from(unifiedGrid.querySelectorAll<HTMLElement>("figure.photo-tile"));
+      items.forEach(addTileDownload);
       items.sort((a, b) => String(b.dataset.date || "").localeCompare(String(a.dataset.date || "")));
       const groups = new Map<string, HTMLElement[]>();
       for (const item of items) {
@@ -100,6 +180,18 @@ import { chemin } from "../lib/paths";
         count.className = "gallery-month-count";
         count.textContent = monthItems.length + (monthItems.length > 1 ? " souvenirs" : " souvenir");
         summary.append(title, count);
+        const monthDownload = document.createElement("button");
+        monthDownload.type = "button";
+        monthDownload.className = "gallery-month-download";
+        monthDownload.textContent = "↓";
+        monthDownload.title = "Télécharger les médias de ce mois (ZIP)";
+        monthDownload.setAttribute("aria-label", "Télécharger tous les médias de " + title.textContent);
+        monthDownload.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          void downloadMonthArchive(monthDownload, monthItems, title.textContent || "galerie");
+        });
+        summary.append(monthDownload);
         const grid = document.createElement("div");
         grid.className = "photo-grid gallery-grid";
         monthItems.forEach(item => grid.append(item));
@@ -588,7 +680,14 @@ import { chemin } from "../lib/paths";
     :global(.gallery-month[open]>summary::before){content:"−"}
     :global(.gallery-month>summary>span:first-of-type){flex:1;min-width:0}
     :global(.gallery-month-count){font:.75rem 'DM Sans',sans-serif;color:var(--muted,#777);white-space:nowrap;text-align:right;flex-shrink:0}
+    :global(.gallery-month-download){display:inline-grid;place-items:center;flex:0 0 auto;width:28px;height:28px;margin-left:.2rem;padding:0;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--muted,#777);font:400 1rem/1 'DM Sans',sans-serif;cursor:pointer;opacity:.7;transition:background .18s ease,color .18s ease,border-color .18s ease}
+    :global(.gallery-month-download:hover,:global(.gallery-month-download:focus-visible)){background:var(--white,#fffdf8);border-color:var(--line,#deded6);color:var(--forest,#274c41);opacity:1}
+    :global(.gallery-month-download:disabled){cursor:wait;opacity:.65}
     :global(.gallery-month .gallery-grid){padding:0 0 1.1rem}
+    :global(.gallery-grid .photo-tile){position:relative}
+    :global(.gallery-download-button){position:absolute;z-index:4;top:.45rem;right:.45rem;display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid rgba(255,255,255,.6);border-radius:50%;background:rgba(25,35,30,.58);color:#fff;font:400 1rem/1 'DM Sans',sans-serif;cursor:pointer;opacity:.72;backdrop-filter:blur(5px);transition:opacity .18s ease,background .18s ease}
+    :global(.gallery-download-button:hover,:global(.gallery-download-button:focus-visible)){opacity:1;background:rgba(25,35,30,.9);outline:2px solid rgba(255,255,255,.8);outline-offset:2px}
+    :global(.gallery-download-button:focus-visible,:global(.gallery-month-download:focus-visible)){outline:2px solid var(--forest,#274c41);outline-offset:2px}
     :global(.gallery-view-on-map){display:inline-block;margin-top:.35rem;padding:.35rem .65rem;border:1px solid var(--line,#d8d8d0);border-radius:3px;background:var(--white,#fffdf8);color:var(--forest,#274c41);font:600 .78rem 'DM Sans',sans-serif;cursor:pointer}
     :global(.gallery-view-on-map:hover){background:var(--forest,#274c41);color:#fff}
     @media(max-width:600px){:global(.gallery-month>summary){padding:.95rem 0;font-size:1.1rem;gap:.65rem}:global(.gallery-month .gallery-grid){padding:0 0 .8rem}}
