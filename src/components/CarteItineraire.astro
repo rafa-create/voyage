@@ -543,7 +543,9 @@ const points = etapes
                   .filter((memory) => memory.type === "sport" && memory.date === date && memory.id && memory.parcours)
                   .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
                 let usedRoute = false;
-                if (bounds.isEmpty() && dailyActivity?.id) {
+                // Si la journée comporte une activité GPS, cadrer son parcours en priorité,
+                // même si des photos ou d'autres souvenirs possèdent déjà des coordonnées.
+                if (!target && dailyActivity?.id) {
                   try {
                     const route = await fetchRoute(dailyActivity.id, routePrecisionForZoom(map.getZoom()));
                     if (route?.length) {
