@@ -170,7 +170,7 @@ export async function importGpx(env,form){
   await env.PHOTOS_PRIVEES.put(SOURCE+id+".gpx",xml,{
     httpMetadata:{contentType:"application/gpx+xml"}});
   await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",{...item,
-    route:parsed.route,routeDetail:parsed.routeDetail,routeFull:parsed.routeFull});
+    route:parsed.route,routeDetail:parsed.routeDetail,routeFullEncoded:encodePolyline(parsed.routeFull)});
   await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:[...duplicates,item]});
   return publicItem(item);
 }
@@ -195,7 +195,7 @@ export async function publicArchivedRoute(env,id,precision="overview"){
       const parsed=parseGpx(await original.text());
       if(parsed&&record){
         record={...record,route:parsed.route,routeDetail:parsed.routeDetail,
-          routeFull:parsed.routeFull,pointCount:parsed.pointCount};
+          routeFullEncoded:encodePolyline(parsed.routeFull),pointCount:parsed.pointCount};
         await putJSON(env.PHOTOS_PRIVEES,PREFIX+id+".json",record);
       }
     }
