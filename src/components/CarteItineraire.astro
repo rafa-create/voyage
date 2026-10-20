@@ -592,6 +592,7 @@ const points = etapes
             };
             let selectedTraceId:string|null=null;
             let selectedTraceDate="";
+            let selectedTraceAnimationToken=0;
             const showTrace=async(id:string,date:string,fitMap=true)=>{
               selectedTraceId=id;
               selectedTraceDate=date;
@@ -601,8 +602,9 @@ const points = etapes
                 if(route.length<2)return;
                 const line={type:"Feature" as const,properties:{date},
                   geometry:{type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
-                if(map.getSource("trace-sportive")){
-                  (map.getSource("trace-sportive") as maplibregl.GeoJSONSource).setData(line);
+                const traceSource = map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined;
+                if(traceSource){
+                  traceSource.setData(line);
                 }else{
                   map.addSource("trace-sportive",{type:"geojson",data:line});
                   map.addLayer({id:"trace-sportive",type:"line",source:"trace-sportive",
@@ -620,6 +622,24 @@ const points = etapes
                   syncCurrentDayArrowStyle("trace-sportive-fleches");
                   syncVoyageLinkVisibility();
                 }
+                // Dessiner progressivement le parcours sélectionné au-dessus des autres.
+                const animationToken = ++selectedTraceAnimationToken;
+                const animationCoordinates = line.geometry.coordinates;
+                if (animationCoordinates.length > 2) {
+                  const startedAt = performance.now();
+                  const duration = Math.min(2200, Math.max(700, animationCoordinates.length * 2));
+                  const drawFrame = (now:number) => {
+                    if (animationToken !== selectedTraceAnimationToken || selectedTraceId !== id || selectedTraceDate !== date) return;
+                    const progress = Math.min(1, (now - startedAt) / duration);
+                    const count = Math.min(animationCoordinates.length, Math.max(2, Math.ceil(progress * animationCoordinates.length)));
+                    traceSource?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,count)}});
+                    if (progress < 1) requestAnimationFrame(drawFrame);
+                  };
+                  traceSource?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,2)}});
+                  requestAnimationFrame(drawFrame);
+                }
+                if(map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
+                if(map.getLayer("trace-sportive-fleches")) map.moveLayer("trace-sportive-fleches");
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
                 // Le tracé est dessiné ici ; seul requestDayCamera peut déplacer la caméra.
@@ -722,8 +742,16 @@ const points = etapes
               if(map.getSource("tous-les-traces"))void loadAllTraces(false);
               if(selectedTraceId)void showTrace(selectedTraceId,selectedTraceDate,false);
             });
-            // Les tracés GPS sont chargés et affichés automatiquement à l'ouverture.
-            void loadAllTraces();
+            // Tous les tracés restent visibles ; le tracé du jour est ensuite animé au premier plan.
+            void loadAllTraces().then(() => {
+              const activity = memories.find((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id);
+              if (activity?.id) void showTrace(activity.id, activity.date, false);
+            });
+            window.addEventListener("voyage:jour", (event) => {
+              const date = (event as CustomEvent<{date?:string}>).detail?.date || "";
+              const activity = memories.find((memory) => memory.type === "sport" && memory.date === date && memory.id);
+              if (activity?.id) void showTrace(activity.id, date, false);
+            });
             for(const memory of memories.slice(-1500)){
               const marker=document.createElement("button");
               marker.type="button";
