@@ -507,7 +507,10 @@ const points = etapes
                 if (bounds.isEmpty()) {
                   const stage = points.find((point) => point.date === date);
                   if (stage) bounds.extend([stage.longitude, stage.latitude]);
-                  else bounds.extend(initialBounds);
+                  else {
+                    bounds.extend(initialBounds.getSouthWest());
+                    bounds.extend(initialBounds.getNorthEast());
+                  }
                 }
                 if (request !== cameraRequest || !map.loaded() || bounds.isEmpty()) return;
                 map.stop();
