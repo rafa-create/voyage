@@ -144,7 +144,7 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   // Compléter les tracés sans aperçu. Une indisponibilité temporaire de
   // l'un ne doit pas bloquer les autres activités.
   const pending=history.filter(a=>a.source==="import_automatique"&&
-    ["en_attente","resume"].includes(a.routeState)&&
+    (["en_attente","resume"].includes(a.routeState)||(a.routeState==="disponible"&&a.routeResolution!=="full"))&&
     (!a.routeRetryAt||Date.parse(a.routeRetryAt)<=Date.now()))
     .sort((a,b)=>b.fin-a.fin).slice(0,Math.max(0,maxRoutes));
   if(pending.length){
@@ -156,7 +156,8 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
       const checked={...item,
         routeState:failed?"en_attente":route.length>=2?"disponible":"absent",
         routeRetryAt:failed?new Date(Date.now()+6*3600000).toISOString():null,
-        routeAttempts:Number(item.routeAttempts||0)+1};
+        routeAttempts:Number(item.routeAttempts||0)+1,
+        routeResolution:route.length>=2?"full":item.routeResolution||"overview"};
       if(route.length>=2){
         checked.latitude=route[Math.floor(route.length/2)][0];
         checked.longitude=route[Math.floor(route.length/2)][1];
