@@ -245,9 +245,9 @@ const points = etapes
           }
           if (bounds.isEmpty() || !fitMap) return;
           if (dailyMarkers.length === 1) {
-            map.easeTo({center: bounds.getCenter(), zoom: 10, duration: 650});
+            map.easeTo({center: bounds.getCenter(), zoom: 13, duration: 1800});
           } else {
-            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: 13, duration: 650});
+            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: 15, duration: 1800});
           }
         };
         window.addEventListener("voyage:jour", (event) => {
