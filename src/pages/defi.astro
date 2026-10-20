@@ -262,7 +262,7 @@ import Base from "../layouts/Base.astro";
           for(const position of coordinates)bounds.extend(position);
           map.fitBounds(bounds,{padding:35,maxZoom:16,duration:0});
           map.resize();
-          hint.textContent="Carte interactive · données © OpenStreetMap / OpenMapTiles.";
+          hint.textContent="";
         });
       }catch(error){
         if(serial!==routeSerial)return;
