@@ -63,9 +63,14 @@ function details(item){
 }
 
 function validRoute(data){
-  const route=Array.isArray(data?.geoRoute)?data.geoRoute:[];
-  return route.filter(point=>Array.isArray(point)&&point.length===2&&
+  const route=Array.isArray(data?.geoRoute)&&data.geoRoute.length<=100000?data.geoRoute:[];
+  const points=route.filter(point=>Array.isArray(point)&&point.length===2&&
     point.every(Number.isFinite)&&Math.abs(point[0])<=85&&Math.abs(point[1])<=180);
+  return points.length>=2?points:[];
+}
+function sampleRoute(points,max){
+  if(points.length<=max)return points;
+  return Array.from({length:max},(_,i)=>points[Math.round(i*(points.length-1)/(max-1))]);
 }
 export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   if(!env.PHOTOS_PRIVEES||!Array.isArray(items)||!items.length)
@@ -139,7 +144,7 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
   // Compléter les tracés sans aperçu. Une indisponibilité temporaire de
   // l'un ne doit pas bloquer les autres activités.
   const pending=history.filter(a=>a.source==="import_automatique"&&
-    a.routeState==="en_attente"&&
+    ["en_attente","resume"].includes(a.routeState)&&
     (!a.routeRetryAt||Date.parse(a.routeRetryAt)<=Date.now()))
     .sort((a,b)=>b.fin-a.fin).slice(0,Math.max(0,maxRoutes));
   if(pending.length){
@@ -159,7 +164,9 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
       }
       const stored=await getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null);
       await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
-        ...(stored||item),...checked,route});
+        ...(stored||item),...checked,
+        ...(route.length>=2?{route:sampleRoute(route,120),routeDetail:sampleRoute(route,5000),routeFull:route}:{}),
+        route:route.length>=2?sampleRoute(route,120):[]});
       Object.assign(item,checked);
     }
     await putJSON(env.PHOTOS_PRIVEES,INDEX,{items:history});
