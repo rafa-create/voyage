@@ -76,6 +76,12 @@ const points = etapes
         pitchWithRotate: false,
       });
       map.doubleClickZoom.disable();
+      map.on("zoom", () => {
+        const visible = map.getZoom() >= 3;
+        element.querySelectorAll<HTMLElement>(".map-marker").forEach((marker) => {
+          marker.style.visibility = visible ? "visible" : "hidden";
+        });
+      });
       // Ne contrôler que les lignes du voyage, sans toucher aux routes de fond de carte.
       // Masquer les liens entre les étapes dès l'ouverture de la carte.
       let voyageLinksHidden = true;
@@ -92,6 +98,9 @@ const points = etapes
         const marker = document.createElement("button");
         marker.type = "button";
         marker.className = "map-marker map-marker-" + p.statut;
+        // Éviter les points d’étape parasites visuellement sur la vue monde initiale.
+        // Ils réapparaissent dès que la carte est suffisamment rapprochée.
+        marker.style.visibility = map.getZoom() < 3 ? "hidden" : "visible";
         marker.style.zIndex = "1";
         marker.setAttribute("aria-label", "Ouvrir l'étape " + p.ville);
         marker.title = p.ville;
