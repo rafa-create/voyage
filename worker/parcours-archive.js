@@ -16,6 +16,44 @@ function haversine(a,b){
   const v=Math.sin(dLat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dLon/2)**2;
   return 12742*Math.asin(Math.min(1,Math.sqrt(v)));
 }
+export function encodePolyline(points){
+  let previousLat=0,previousLon=0,result="";
+  const append=value=>{
+    let v=value<0?~(value<<1):value<<1;
+    while(v>=0x20){result+=String.fromCharCode((0x20|(v&0x1f))+63);v>>=5;}
+    result+=String.fromCharCode(v+63);
+  };
+  for(const point of points){
+    const lat=Math.round(point[0]*1e5),lon=Math.round(point[1]*1e5);
+    append(lat-previousLat);append(lon-previousLon);
+    previousLat=lat;previousLon=lon;
+  }
+  return result;
+}
+function decodePolyline(encoded){
+  if(typeof encoded!=="string"||!encoded||encoded.length>6000000)return [];
+  let cursor=0,lat=0,lon=0;
+  const read=()=>{
+    let result=0,shift=0,byte;
+    do{
+      if(cursor>=encoded.length||shift>30)throw Error("Tracé encodé invalide");
+      byte=encoded.charCodeAt(cursor++)-63;
+      if(byte<0||byte>63)throw Error("Tracé encodé invalide");
+      result|=(byte&0x1f)<<shift;shift+=5;
+    }while(byte>=0x20);
+    return result&1?~(result>>1):result>>1;
+  };
+  const points=[];
+  try{
+    while(cursor<encoded.length){
+      lat+=read();lon+=read();
+      const point=[lat/1e5,lon/1e5];
+      if(Math.abs(point[0])>85||Math.abs(point[1])>180||points.length>=MAX_POINTS)return [];
+      points.push(point);
+    }
+  }catch{return [];}
+  return points.length>=2?points:[];
+}
 function sample(points,max=MAX_STORED_POINTS){
   if(points.length<=max)return points;
   const result=[];
@@ -163,7 +201,7 @@ export async function publicArchivedRoute(env,id,precision="overview"){
     }
   }
   // Les archives anciennes sans GPX source restent accessibles à leur résolution disponible.
-  const points=Array.isArray(record?.[requested])?record[requested]:record?.route;
+  const points=requested==="routeFull"?decodePolyline(record?.routeFullEncoded):\n    Array.isArray(record?.[requested])?record[requested]:record?.route;
   if(!Array.isArray(points)||points.length<2)return null;
   // La résolution maximale restitue tous les points de l’original.
   // Les résolutions overview/detail gardent une petite marge aux extrémités.
