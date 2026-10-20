@@ -43,6 +43,7 @@ test("seules les archives expressément publiées apparaissent au public",async(
   assert.equal(visible.length,1);
   assert.equal(visible[0].id,publicRun.id);
   assert.ok((await publicArchivedRoute(env,publicRun.id)).length<30);
+  assert.equal((await publicArchivedRoute(env,publicRun.id,"full")).length,30);
   assert.equal(await publicArchivedRoute(env,privateRun.id),null);
   assert.equal(await publicRoute(env,privateRun.id),null);
   const summary=await publicChallenge(env);
