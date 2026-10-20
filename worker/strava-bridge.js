@@ -32,7 +32,7 @@ export async function privateStravaFetch(env,action){
       })):[]
     }};
     return {status:200,body:{
-      geoRoute:Array.isArray(body?.geoRoute)?body.geoRoute.slice(0,120):null,
+      geoRoute:Array.isArray(body?.geoRoute)&&body.geoRoute.length<=100000?body.geoRoute:null,
       elevationGainMeters:Number.isFinite(body?.elevationGainMeters)?body.elevationGainMeters:null,
       routeUnavailableReason:body?.routeUnavailableReason||null
     }};
