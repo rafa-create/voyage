@@ -390,7 +390,8 @@ import Base from "../layouts/Base.astro";
       }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
       finally{if(button)button.disabled=false;}
     }
-    void load();
+    // Actualiser les données dès l’ouverture de la page Défi.
+    void load(true);
   </script>
 
   <style is:global>
