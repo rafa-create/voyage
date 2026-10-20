@@ -93,6 +93,7 @@ const points = etapes
       };
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.addControl(new maplibregl.FullscreenControl(), "top-right");
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
       // Fond satellite optionnel : on conserve les marqueurs HTML et les couches du voyage.
       let satelliteEnabled = false;
