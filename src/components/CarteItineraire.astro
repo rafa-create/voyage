@@ -440,10 +440,11 @@ const points = etapes
               : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
             const targetEvents = datedMemories.filter(e => e.date === targetDay);
             if (targetEvents.length) {
-              // Sélectionner la journée au chargement sans zoomer automatiquement sur une activité.
+              // Démarrer sur la vue générale, puis cadrer la carte sur hier
+              // (ou le dernier jour documenté si hier n'a pas de données).
               document.documentElement.dataset.voyageDay = targetDay;
               const selectInitialDay = () => window.dispatchEvent(new CustomEvent("voyage:jour", {
-                detail: { date: targetDay, fitMap: false }
+                detail: { date: targetDay, fitMap: true }
               }));
               if (map.loaded()) selectInitialDay();
               else map.once("load", selectInitialDay);
