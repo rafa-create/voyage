@@ -399,7 +399,10 @@ import { chemin } from "../../lib/paths";
         for(const item of selected){
           message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
           const publicPhoto=!item.prive;
-          const body=await optimizedPublic(item.file);
+          // Importer l'original octet pour octet : le canvas réencode en JPEG et
+          // détruit notamment l'EXIF/GPS. La suppression EXIF reste réservée à
+          // l'action explicite de publication d'une photo privée.
+          const body=item.file;
           if(body.size>30*1024*1024)throw Error(item.file.name+" dépasse 30 Mo.");
           const params=new URLSearchParams({
             visibilite:publicPhoto?"public":"prive",
@@ -413,7 +416,7 @@ import { chemin } from "../../lib/paths";
             params.set("latitude",String(item.latitude));params.set("longitude",String(item.longitude));
           }
           const res=await api("/api/prive/admin/upload?"+params.toString(),{
-            method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":"image/jpeg"},body
+            method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":item.file.type||"application/octet-stream","X-Original-Filename":encodeURIComponent(item.file.name)},body
           });
           done++;
         }
