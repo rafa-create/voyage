@@ -632,10 +632,10 @@ const points = etapes
                     if (animationToken !== selectedTraceAnimationToken || selectedTraceId !== id || selectedTraceDate !== date) return;
                     const progress = Math.min(1, (now - startedAt) / duration);
                     const count = Math.min(animationCoordinates.length, Math.max(2, Math.ceil(progress * animationCoordinates.length)));
-                    traceSource?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,count)}});
+                    (map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined)?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,count)}});
                     if (progress < 1) requestAnimationFrame(drawFrame);
                   };
-                  traceSource?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,2)}});
+                  (map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined)?.setData({...line, geometry:{...line.geometry, coordinates:animationCoordinates.slice(0,2)}});
                   requestAnimationFrame(drawFrame);
                 }
                 if(map.getLayer("trace-sportive")) map.moveLayer("trace-sportive");
