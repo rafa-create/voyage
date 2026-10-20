@@ -799,7 +799,9 @@ const points = etapes
               const remaining = mapRequest.toString();
               window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
             }
-            if (selectedDay) updateSelectedDay(selectedDay, false);
+            // Recentrer après la création des marqueurs : la sélection initiale peut arriver trop tôt.
+            // On reprend le même cadrage rapproché que le focus initial, sans changer le zoom des jours suivants.
+            if (selectedDay) updateSelectedDay(selectedDay, true, true);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
         })();
       });
