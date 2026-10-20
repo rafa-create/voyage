@@ -247,7 +247,7 @@ import Base from "../layouts/Base.astro";
         if(serial!==routeSerial||!details.open||!container.isConnected)return;
         const coordinates=points.map(p=>[p[1],p[0]]);
         const map=new mapModule.Map({container,style:"https://tiles.openfreemap.org/styles/liberty",
-          center:coordinates[0],zoom:11,attributionControl:true});
+          center:coordinates[0],zoom:11,attributionControl:false});
         activeMap=map;
         map.addControl(new mapModule.NavigationControl({showCompass:false}),"top-right");
         map.addControl(new mapModule.FullscreenControl({container}),"top-right");
@@ -262,7 +262,7 @@ import Base from "../layouts/Base.astro";
           for(const position of coordinates)bounds.extend(position);
           map.fitBounds(bounds,{padding:35,maxZoom:16,duration:0});
           map.resize();
-          hint.textContent="Carte interactive · bouton plein écran en haut à droite.";
+          hint.textContent="Carte interactive · données © OpenStreetMap / OpenMapTiles.";
         });
       }catch(error){
         if(serial!==routeSerial)return;
