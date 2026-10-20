@@ -171,7 +171,7 @@ const points = etapes
           // La couleur sauge s'applique au symbole, mais son contour reste blanc.
           map.setPaintProperty(layerId, "text-halo-color", "#fffdf8");
         };
-        const updateSelectedDay = (date:string, fitMap = true) => {
+        const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
           const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
             .filter((marker) => marker.dataset.date === selectedDay);
@@ -245,14 +245,14 @@ const points = etapes
           }
           if (bounds.isEmpty() || !fitMap) return;
           if (dailyMarkers.length === 1) {
-            map.easeTo({center: bounds.getCenter(), zoom: 13, duration: 1800});
+            map.easeTo({center: bounds.getCenter(), zoom: initialFocus ? 15 : 13, duration: initialFocus ? 3000 : 1800});
           } else {
-            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: 15, duration: 1800});
+            map.fitBounds(bounds, {padding: {top: 55, right: 55, bottom: 100, left: 55}, maxZoom: initialFocus ? 16 : 15, duration: initialFocus ? 3000 : 1800});
           }
         };
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
-          updateSelectedDay(detail?.date || "", detail?.fitMap !== false);
+          updateSelectedDay(detail?.date || "", detail?.fitMap !== false, detail?.initialFocus === true);
         });
         // En bas à gauche, afficher uniquement le lieu correspondant au jour sélectionné.
         const placeControl = document.createElement("div");
@@ -444,7 +444,7 @@ const points = etapes
               // (ou le dernier jour documenté si hier n'a pas de données).
               document.documentElement.dataset.voyageDay = targetDay;
               const selectInitialDay = () => window.dispatchEvent(new CustomEvent("voyage:jour", {
-                detail: { date: targetDay, fitMap: true }
+                detail: { date: targetDay, fitMap: true, initialFocus: true }
               }));
               if (map.loaded()) selectInitialDay();
               else map.once("load", selectInitialDay);
