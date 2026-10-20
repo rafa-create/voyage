@@ -76,6 +76,18 @@ const points = etapes
         pitchWithRotate: false,
       });
       map.doubleClickZoom.disable();
+      // Ne jamais laisser la carte bloquée sur la vue monde (zoom 0) si aucun
+      // souvenir daté ne peut déclencher le cadrage quotidien : cadrer d'abord
+      // l'itinéraire connu. Le focus du jour, s'il existe, prendra ensuite le relais.
+      if (!initialBounds.isEmpty()) {
+        map.once("load", () => {
+          map.fitBounds(initialBounds, {
+            padding: { top: 70, right: 70, bottom: 90, left: 70 },
+            maxZoom: 6,
+            duration: 0,
+          });
+        });
+      }
       // Les marqueurs d'étapes ne doivent jamais apparaître sur cette carte.
       element.querySelectorAll<HTMLElement>(".map-marker").forEach((marker) => {
         marker.style.display = "none";
