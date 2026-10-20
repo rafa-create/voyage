@@ -249,8 +249,9 @@ const points = etapes
             .filter((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id && memory.parcours)
             .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
           if (dailyActivity?.id) {
+            // Le zoom sur les marqueurs de la journée doit fonctionner même si
+            // le chargement du tracé GPS échoue ; le tracé recadrera ensuite la carte.
             void showTrace(dailyActivity.id, dailyActivity.date, true);
-            return;
           }
           if (!dailyMarkers.length) return;
           const bounds = new maplibregl.LngLatBounds();
