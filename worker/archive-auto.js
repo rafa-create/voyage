@@ -165,7 +165,7 @@ export async function archiveNewSports(env,items,{maxImports=8,maxRoutes=2}={}){
       const stored=await getJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",null);
       await putJSON(env.PHOTOS_PRIVEES,PREFIX+item.id+".json",{
         ...(stored||item),...checked,
-        ...(route.length>=2?{route:sampleRoute(route,120),routeDetail:sampleRoute(route,5000),routeFull:route}:{}),
+        ...(route.length>=2?{routeDetail:sampleRoute(route,5000),routeFull:route}:{}),
         route:route.length>=2?sampleRoute(route,120):[]});
       Object.assign(item,checked);
     }
