@@ -187,7 +187,7 @@ export async function publicArchivedRoute(env,id,precision="overview"){
   const needsRefresh=requested==="routeDetail"
     ?!Array.isArray(record?.routeDetail)||record.routeDetail.length!==expectedDetailCount
     :requested==="routeFull"
-      ?!Array.isArray(record?.routeFull)||record.routeFull.length!==expectedFullCount
+      ?(!Array.isArray(record?.routeFull)||record.routeFull.length!==expectedFullCount)&&typeof record?.routeFullEncoded!=="string"
       :false;
   if(requested!=="route"&&needsRefresh){
     const original=await env.PHOTOS_PRIVEES.get(SOURCE+id+".gpx");
