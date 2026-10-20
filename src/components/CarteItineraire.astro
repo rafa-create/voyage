@@ -182,7 +182,7 @@ const points = etapes
         };
         // Le point d’entrée unique de toute décision de cadrage. Il est initialisé
         // après fetchRoute ; les appels précoces sont rejoués après création des marqueurs.
-        let requestDayCamera: (date:string, initialFocus?:boolean) => void = () => {};
+        let requestDayCamera: (date:string, initialFocus?:boolean, target?:[number,number]) => void = () => {};
         const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
           const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
@@ -474,15 +474,18 @@ const points = etapes
               return route;
             };
             let cameraRequest = 0;
-            requestDayCamera = (date:string, initialFocus=false) => {
+            requestDayCamera = (date:string, initialFocus=false, target?:[number,number]) => {
               const request = ++cameraRequest;
               void (async () => {
                 const bounds = new maplibregl.LngLatBounds();
+                if (target && Number.isFinite(target[0]) && Number.isFinite(target[1])) {
+                  bounds.extend(target);
+                }
                 const dailyActivity = memories
                   .filter((memory) => memory.type === "sport" && memory.date === date && memory.id && memory.parcours)
                   .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
                 let usedRoute = false;
-                if (dailyActivity?.id) {
+                if (bounds.isEmpty() && dailyActivity?.id) {
                   try {
                     const route = await fetchRoute(dailyActivity.id, routePrecisionForZoom(map.getZoom()));
                     if (route?.length) {
@@ -491,7 +494,7 @@ const points = etapes
                     }
                   } catch { /* Repli sur les positions des souvenirs du jour. */ }
                 }
-                if (!usedRoute) {
+                if (!target && !usedRoute) {
                   for (const marker of Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))) {
                     if (marker.dataset.date !== date) continue;
                     const lat = Number(marker.dataset.latitude);
@@ -511,7 +514,7 @@ const points = etapes
                 const singlePoint = bounds.getSouthWest().distanceTo(bounds.getNorthEast()) < 100;
                 map.fitBounds(bounds, {
                   padding: { top: 58, right: 58, bottom: 100, left: 58 },
-                  maxZoom: usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14)),
+                  maxZoom: target ? Math.max(map.getZoom(), 11) : usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14)),
                   duration: initialFocus ? 1500 : 850,
                 });
               })();
@@ -802,22 +805,14 @@ const points = etapes
                   if(Number.isFinite(lat)&&Number.isFinite(lon)){
                     // Centrer d'abord la carte, puis ouvrir la popup une fois le déplacement terminé :
                     // MapLibre peut ainsi calculer son placement à partir de la position finale.
-                    const destination = new maplibregl.LngLat(lon,lat);
-                    const alreadyCentered = map.getCenter().distanceTo(destination) < 8 && map.getZoom() >= 11;
-                    map.stop();
-                    if(alreadyCentered){
-                      target.click();
-                    }else{
-                      map.once("moveend",()=>target.click());
-                      map.easeTo({center:[lon,lat],zoom:Math.max(map.getZoom(),11),duration:450});
-                    }
+                    map.once("moveend",()=>target.click());
+                    requestDayCamera(detail.date, false, [lon,lat]);
                   }else{
                     target.click();
                   }
                 } else if (Number.isFinite(detail.latitude) && Number.isFinite(detail.longitude) &&
                     Math.abs(Number(detail.latitude)) <= 85 && Math.abs(Number(detail.longitude)) <= 180) {
-                  map.stop();
-                  map.easeTo({center:[Number(detail.longitude),Number(detail.latitude)],zoom:Math.max(map.getZoom(),11),duration:450});
+                  requestDayCamera(detail.date, false, [Number(detail.longitude),Number(detail.latitude)]);
                 }
               }
             });
