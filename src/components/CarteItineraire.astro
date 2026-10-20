@@ -249,8 +249,9 @@ const points = etapes
             .filter((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id && memory.parcours)
             .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
           if (dailyActivity?.id) {
+            // Le cadrage sur les souvenirs doit continuer même si le chargement
+            // du tracé GPS échoue ou prend du temps.
             void showTrace(dailyActivity.id, dailyActivity.date, true);
-            return;
           }
           if (!dailyMarkers.length) return;
           const bounds = new maplibregl.LngLatBounds();
