@@ -7,7 +7,7 @@ const PREFIX="__meta/parcours/archive/";
 const SOURCE="__meta/parcours/originaux/";
 const POLICY_KEY="__meta/parcours/publication-auto.json";
 const MAX_BYTES=5*1024*1024;
-const MAX_POINTS=50000;
+const MAX_POINTS=100000;
 const MAX_STORED_POINTS=1500;
 const rad=Math.PI/180;
 
