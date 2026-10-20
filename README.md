@@ -2,6 +2,10 @@
 
 Site personnel de voyage réalisé avec Astro : journal chronologique, pages par pays, galerie photo et vidéos YouTube. Le dépôt est public : **ne jamais y ajouter de photo privée**.
 
+## Règles d'architecture pour les modifications assistées par IA
+
+Lire [docs/AI-CONTEXT.md](docs/AI-CONTEXT.md) avant de modifier la caméra de la page « IR » ou le traitement des photos. Ces règles imposent un point d'entrée unique pour le cadrage de la carte et la conservation des fichiers photo originaux à l'import.
+
 ## Utilisation locale
 
 Prérequis : Node.js 22.12 ou plus récent.
