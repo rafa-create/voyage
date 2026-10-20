@@ -114,6 +114,31 @@ import { chemin } from "../lib/paths";
       button.textContent = "…";
       button.title = "Préparation de l’archive ZIP…";
       try {
+        // Sur iPhone/iPad, partager directement les fichiers permet à la personne
+        // de choisir « Enregistrer la vidéo » / « Enregistrer les images » dans Photos.
+        // Le site ne peut pas écrire silencieusement dans la photothèque.
+        if (typeof navigator.share === "function" && typeof File !== "undefined") {
+          try {
+            const files: File[] = [];
+            for (let i = 0; i < media.length; i++) {
+              const item = media[i];
+              const response = await fetch(item.media.url, { credentials: "same-origin" });
+              if (!response.ok) throw new Error("Un média n’a pas pu être téléchargé.");
+              const blob = await response.blob();
+              const type = blob.type || (item.media.name.toLowerCase().endsWith(".mp4") ? "video/mp4" : "application/octet-stream");
+              files.push(new File([blob], item.media.name, { type }));
+              button.title = "Préparation du partage : " + (i + 1) + " / " + media.length;
+            }
+            if (files.length && (!navigator.canShare || navigator.canShare({ files }))) {
+              await navigator.share({ files, title: "Souvenirs — " + monthName });
+              button.title = "Exporter à nouveau les médias de ce mois";
+              return;
+            }
+          } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") return;
+            // Si le partage natif échoue ou n'est pas pris en charge, proposer le ZIP classique.
+          }
+        }
         const archiveChunks: Uint8Array[] = [];
         let resolveArchive: (() => void) | undefined;
         let rejectArchive: ((error: Error) => void) | undefined;
@@ -195,8 +220,8 @@ import { chemin } from "../lib/paths";
         monthDownload.type = "button";
         monthDownload.className = "gallery-month-download";
         monthDownload.textContent = "↓";
-        monthDownload.title = "Télécharger les médias de ce mois (ZIP)";
-        monthDownload.setAttribute("aria-label", "Télécharger tous les médias de " + title.textContent);
+        monthDownload.title = "Exporter les photos et vidéos de ce mois vers le téléphone (YouTube exclu)";
+        monthDownload.setAttribute("aria-label", "Exporter les photos et vidéos de " + title.textContent + " vers le téléphone");
         monthDownload.addEventListener("click", event => {
           event.preventDefault();
           event.stopPropagation();
