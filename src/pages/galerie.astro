@@ -43,7 +43,7 @@ import { chemin } from "../lib/paths";
     <p id="galerie-vide" class="empty-state" hidden>Les souvenirs apparaîtront ici dès qu'ils seront ajoutés au carnet.</p>
   </section>
   <script>
-    import { zipSync } from "fflate";
+    import { Zip, ZipPassThrough } from "fflate";
     const galleryAdminActions = document.querySelector<HTMLElement>("#gallery-admin-actions");
     const galleryAdminDialog = document.querySelector<HTMLElement>("#gallery-admin-dialog");
     const galleryAdminFrame = document.querySelector<HTMLIFrameElement>("#gallery-admin-frame");
@@ -114,7 +114,15 @@ import { chemin } from "../lib/paths";
       button.textContent = "…";
       button.title = "Préparation de l’archive ZIP…";
       try {
-        const entries: Record<string, Uint8Array> = {};
+        const archiveChunks: Uint8Array[] = [];
+        let resolveArchive: (() => void) | undefined;
+        let rejectArchive: ((error: Error) => void) | undefined;
+        const archiveFinished = new Promise<void>((resolve, reject) => { resolveArchive = resolve; rejectArchive = reject; });
+        const archive = new Zip((error, chunk, final) => {
+          if (error) { rejectArchive?.(error); return; }
+          archiveChunks.push(chunk);
+          if (final) resolveArchive?.();
+        });
         const names = new Set<string>();
         for (let i = 0; i < media.length; i++) {
           const item = media[i];
@@ -128,11 +136,14 @@ import { chemin } from "../lib/paths";
             name = dot > 0 ? originalName.slice(0, dot) + "-" + suffix++ + originalName.slice(dot) : originalName + "-" + suffix++;
           }
           names.add(name);
-          entries[name] = new Uint8Array(await response.arrayBuffer());
+          const entry = new ZipPassThrough(name);
+          archive.add(entry);
+          entry.push(new Uint8Array(await response.arrayBuffer()), true);
           button.title = "Préparation de l’archive : " + (i + 1) + " / " + media.length;
         }
-        const archive = zipSync(entries, { level: 0 });
-        const blob = new Blob([archive], { type: "application/zip" });
+        archive.end();
+        await archiveFinished;
+        const blob = new Blob(archiveChunks as BlobPart[], { type: "application/zip" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = safeFileName(monthName.toLocaleLowerCase("fr-FR")) + ".zip";
