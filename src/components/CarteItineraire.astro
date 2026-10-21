@@ -375,8 +375,8 @@ const points = etapes
         let placeLookupToken = 0;
         const updatePlaceLabel = (date:string) => {
           currentActivityTime = dailyActivityTimes.get(date) || "";
-          placeControl.textContent = [viewportPlace, currentActivityTime].filter(Boolean).join(" · ");
-          placeControl.style.display = placeControl.textContent ? "" : "none";
+          placeControl.textContent = viewportPlace ? [viewportPlace, currentActivityTime].filter(Boolean).join(" · ") : "";
+          placeControl.style.display = viewportPlace ? "" : "none";
         };
         updatePlaceLabel(selectedDay);
         window.addEventListener("voyage:jour", (event) => {
@@ -522,7 +522,9 @@ const points = etapes
                 if(!response.ok)return "";
                 const properties=(await response.json())?.features?.[0]?.properties;
                 if(!properties)return "";
-                const locality=properties.city||properties.town||properties.village||properties.municipality||properties.county||properties.state;
+                // Ne pas présenter un comté ou une région comme une ville si la résolution est imprécise.
+                const locality=properties.city||properties.town||properties.village||properties.municipality;
+                if(typeof locality!=="string"||!locality.trim())return "";
                 return [locality,properties.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
               }catch{return "";}
             };
@@ -533,8 +535,8 @@ const points = etapes
               // Une réponse lente d'un ancien cadrage ne doit jamais écraser le lieu actuel.
               if(token!==placeLookupToken)return;
               viewportPlace=location;
-              placeControl.textContent=[viewportPlace,currentActivityTime].filter(Boolean).join(" · ");
-              placeControl.style.display=placeControl.textContent ? "" : "none";
+              placeControl.textContent=viewportPlace?[viewportPlace,currentActivityTime].filter(Boolean).join(" · "):"";
+              placeControl.style.display=viewportPlace?"":"none";
             };
             map.on("moveend",()=>{void updateViewportPlace();});
             void updateViewportPlace();
