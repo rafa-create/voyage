@@ -243,6 +243,7 @@ const points = etapes
         let selectedTraceId:string|null=null;
         let selectedTraceDate="";
         let selectedTraceAnimationToken=0;
+        let selectedTraceRequestToken=0;
         const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
           document.documentElement.dataset.voyageDay = date;
@@ -528,19 +529,75 @@ const points = etapes
             }
             type RoutePrecision = "overview" | "detail" | "full";
             const routePrecisionForZoom=(zoom:number):RoutePrecision=>zoom<8?"overview":zoom<12?"detail":"full";
+            // Gestion centralisée des résolutions : les coordonnées API sont [latitude, longitude].
+            // overview sert de référence globale ; detail/full ne sont demandés que pour les
+            // parcours dont un segment intersecte la fenêtre courante.
             const routeCache=new Map<string,[number,number][]>();
+            const routeRequests=new Map<string,Promise<[number,number][]|null>>();
             const fetchRoute=async(id:string,precision:RoutePrecision):Promise<[number,number][]|null>=>{
               const key=id+":"+precision;
               const cached=routeCache.get(key);
               if(cached)return cached;
-              const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(id)+"?precision="+precision,{cache:"no-store"});
-              if(!response.ok)return null;
-              const result=await response.json();
-              const route=(Array.isArray(result.route)?result.route:[]).filter(
-                (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
-              if(route.length<2)return null;
-              routeCache.set(key,route);
-              return route;
+              const pending=routeRequests.get(key);
+              if(pending)return pending;
+              const request=(async()=>{
+                const response=await fetch("/api/public/defi/parcours/"+encodeURIComponent(id)+"?precision="+precision,{cache:"no-store"});
+                if(!response.ok)return null;
+                const result=await response.json();
+                const route=(Array.isArray(result.route)?result.route:[]).filter(
+                  (p:unknown):p is [number,number]=>Array.isArray(p)&&p.length===2&&valid(p[0],p[1]));
+                if(route.length<2)return null;
+                routeCache.set(key,route);
+                return route;
+              })();
+              routeRequests.set(key,request);
+              try{return await request;}
+              finally{if(routeRequests.get(key)===request)routeRequests.delete(key);}
+            };
+            const routeIntersectsViewport=(route:[number,number][])=>{
+              if(!route.length)return false;
+              const bounds=map.getBounds();
+              const west=bounds.getWest(),east=bounds.getEast();
+              const south=bounds.getSouth(),north=bounds.getNorth();
+              for(let i=0;i<route.length;i++){
+                const [lat,lon]=route[i];
+                if(lon>=west&&lon<=east&&lat>=south&&lat<=north)return true;
+                if(i===0)continue;
+                const [previousLat,previousLon]=route[i-1];
+                // Tester chaque segment évite les faux positifs du rectangle englobant
+                // d'un parcours très long qui ne passe pas réellement près de la fenêtre.
+                if(Math.max(lon,previousLon)>=west&&Math.min(lon,previousLon)<=east&&
+                   Math.max(lat,previousLat)>=south&&Math.min(lat,previousLat)<=north)return true;
+              }
+              return false;
+            };
+            const displayedRoutes=new Map<string,{precision:RoutePrecision;route:[number,number][]}>();
+            let traceResolutionRequest=0;
+            const resolveRouteForViewport=async(id:string,precision:RoutePrecision,request:number)=>{
+              if(precision==="overview"){
+                const route=await fetchRoute(id,"overview");
+                if(request!==traceResolutionRequest)return null;
+                if(route){displayedRoutes.set(id,{precision:"overview",route});return route;}
+                return displayedRoutes.get(id)?.route||null;
+              }
+              const overview=routeCache.get(id+":overview")||await fetchRoute(id,"overview");
+              if(request!==traceResolutionRequest)return null;
+              if(!overview)return displayedRoutes.get(id)?.route||null;
+              if(!routeIntersectsViewport(overview)){
+                displayedRoutes.set(id,{precision:"overview",route:overview});
+                return overview;
+              }
+              const detailed=await fetchRoute(id,precision);
+              if(request!==traceResolutionRequest)return null;
+              if(detailed){
+                displayedRoutes.set(id,{precision,route:detailed});
+                return detailed;
+              }
+              // Une réponse manquante ne remplace jamais le dernier tracé valide.
+              const lastValid=displayedRoutes.get(id);
+              if(lastValid)return lastValid.route;
+              displayedRoutes.set(id,{precision:"overview",route:overview});
+              return overview;
             };
             let cameraRequest = 0;
             requestDayCamera = (date:string, initialFocus=false, target?:[number,number]) => {
@@ -632,10 +689,27 @@ const points = etapes
             const showTrace=async(id:string,date:string,fitMap=true,animate=true)=>{
               selectedTraceId=id;
               selectedTraceDate=date;
+              const requestToken=++selectedTraceRequestToken;
               try{
-                const route=await fetchRoute(id,routePrecisionForZoom(map.getZoom()));
-                if(!route)return;
-                if(route.length<2)return;
+                const precision=routePrecisionForZoom(map.getZoom());
+                let route:[number,number][]|null=null;
+                if(precision==="overview"){
+                  route=await fetchRoute(id,"overview");
+                }else{
+                  const overview=routeCache.get(id+":overview")||await fetchRoute(id,"overview");
+                  if(requestToken!==selectedTraceRequestToken)return;
+                  if(overview&&routeIntersectsViewport(overview)){
+                    route=await fetchRoute(id,precision);
+                    if(!route)route=displayedRoutes.get(id)?.route||overview;
+                  }else{
+                    // Hors fenêtre : rester sur une résolution légère, sans demander le tracé complet.
+                    route=overview||displayedRoutes.get(id)?.route||null;
+                  }
+                }
+                if(requestToken!==selectedTraceRequestToken||selectedTraceId!==id||selectedTraceDate!==date)return;
+                if(!route)route=displayedRoutes.get(id)?.route||null;
+                if(!route||route.length<2)return;
+                displayedRoutes.set(id,{precision:precision==="overview"||!routeIntersectsViewport(route)?"overview":precision,route});
                 const line={type:"Feature" as const,properties:{date},
                   geometry:{type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
                 const traceSource = map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined;
@@ -704,25 +778,23 @@ const points = etapes
             allTracesButton.setAttribute("aria-label","Afficher les liens");
             allTracesButton.setAttribute("aria-pressed","false");
             allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
-            const loadAllTraces=async(fitMap=true)=>{
+            // Point d'entrée unique pour charger, sélectionner la résolution et afficher les traces.
+            const loadAllTraces=async()=>{
+              const request=++traceResolutionRequest;
               const activities=memories.filter(e=>e.type==="sport"&&e.id);
               const precision=routePrecisionForZoom(map.getZoom());
-              const routes=await Promise.all(activities.map(async activity=>{
-                try{
-                  const route=await fetchRoute(activity.id!,precision);
-                  return route?route.map(p=>[p[1],p[0]] as [number,number]):null;
-                }catch{return null;}
+              await Promise.all(activities.map(async activity=>{
+                try{await resolveRouteForViewport(activity.id!,precision,request);}
+                catch{/* La dernière géométrie valide reste affichée. */}
               }));
-              const features=routes.map((route,index)=>({route,activity:activities[index]}))
-                .filter((item):item is {route:[number,number][];activity:Event}=>item.route!==null)
-                .map(({route,activity},index)=>({
-                  type:"Feature" as const,properties:{index,date:activity.date},
-                  geometry:{type:"LineString" as const,coordinates:route}
-                }));
+              if(request!==traceResolutionRequest)return;
+              const features=activities.map((activity,index)=>{
+                const displayed=displayedRoutes.get(activity.id!);
+                return displayed?{type:"Feature" as const,properties:{index,date:activity.date},
+                  geometry:{type:"LineString" as const,coordinates:displayed.route.map(p=>[p[1],p[0]] as [number,number])}}:null;
+              }).filter((feature):feature is NonNullable<typeof feature>=>feature!==null);
               if(!features.length)return;
               const data={type:"FeatureCollection" as const,features};
-              // La journée sélectionnée est rendue par trace-sportive, qui s'anime
-              // de zéro à 100 %. Éviter de la dessiner aussi dans la couche globale.
               if(map.getSource("tous-les-traces")){
                 (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(data);
               }else{
@@ -743,15 +815,10 @@ const points = etapes
                 syncCurrentDayArrowStyle("tous-les-traces-fleches");
                 syncVoyageLinkVisibility();
               }
-              const selectedActivity = memories.some((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id);
-              const backgroundFilter = selectedActivity ? ["!=", ["get", "date"], selectedDay] as any : null;
-              if (map.getLayer("tous-les-traces")) map.setFilter("tous-les-traces", backgroundFilter);
-              if (map.getLayer("tous-les-traces-fleches")) map.setFilter("tous-les-traces-fleches", backgroundFilter);
-              const bounds=new maplibregl.LngLatBounds();
-              for(const feature of features){
-                for(const coordinate of feature.geometry.coordinates)bounds.extend(coordinate);
-              }
-              // Les traces globales ne pilotent jamais la caméra.
+              const selectedActivity=activities.some(memory=>memory.date===selectedDay);
+              const backgroundFilter=selectedActivity?["!=",["get","date"],selectedDay] as any:null;
+              if(map.getLayer("tous-les-traces"))map.setFilter("tous-les-traces",backgroundFilter);
+              if(map.getLayer("tous-les-traces-fleches"))map.setFilter("tous-les-traces-fleches",backgroundFilter);
             };
             allTracesButton.addEventListener("click",()=>{
               voyageLinksHidden = !voyageLinksHidden;
@@ -783,15 +850,20 @@ const points = etapes
                 mapVisibilityToggle.setAttribute("aria-expanded", "false");
               }
             });
-            // Les tracés changent de résolution aux seuils de zoom, sans recharger
-            // une résolution déjà reçue pour une activité.
-            let appliedPrecision=routePrecisionForZoom(map.getZoom());
-            map.on("zoomend",()=>{
+            // Réévaluer la fenêtre après chaque déplacement. Ne recharger le tracé
+            // sélectionné que si le niveau de zoom ou son appartenance à la fenêtre change.
+            let appliedTracePrecision=routePrecisionForZoom(map.getZoom());
+            let selectedTraceWasVisible=false;
+            map.on("moveend",()=>{
               const precision=routePrecisionForZoom(map.getZoom());
-              if(precision===appliedPrecision)return;
-              appliedPrecision=precision;
-              if(map.getSource("tous-les-traces"))void loadAllTraces(false);
-              if(selectedTraceId)void showTrace(selectedTraceId,selectedTraceDate,false,false);
+              const selectedActivity=memories.find(memory=>memory.type==="sport"&&memory.id===selectedTraceId);
+              const overview=selectedActivity?.id?routeCache.get(selectedActivity.id+":overview"):undefined;
+              const selectedIsVisible=!!overview&&routeIntersectsViewport(overview);
+              const refreshSelected=precision!==appliedTracePrecision||selectedIsVisible!==selectedTraceWasVisible;
+              appliedTracePrecision=precision;
+              selectedTraceWasVisible=selectedIsVisible;
+              void loadAllTraces();
+              if(selectedTraceId&&refreshSelected)void showTrace(selectedTraceId,selectedTraceDate,false,false);
             });
             // Tous les tracés restent visibles ; le tracé du jour est ensuite animé au premier plan.
             void loadAllTraces().then(() => {
