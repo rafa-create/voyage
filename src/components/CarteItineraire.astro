@@ -694,14 +694,10 @@ const points = etapes
               const data={type:"FeatureCollection" as const,features};
               // La journée sélectionnée est rendue par trace-sportive, qui s'anime
               // de zéro à 100 %. Éviter de la dessiner aussi dans la couche globale.
-              const selectedActivity = memories.some((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id);
-              const visibleFeatures = selectedActivity
-                ? {...data, features: data.features.filter((feature) => feature.properties.date !== selectedDay)}
-                : data;
               if(map.getSource("tous-les-traces")){
-                (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(visibleFeatures);
+                (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(data);
               }else{
-                map.addSource("tous-les-traces",{type:"geojson",data:visibleFeatures});
+                map.addSource("tous-les-traces",{type:"geojson",data});
                 map.addLayer({id:"tous-les-traces",type:"line",source:"tous-les-traces",
                   layout:{"line-cap":"round","line-join":"round"},
                   paint:{"line-color":selectedDay
@@ -718,6 +714,10 @@ const points = etapes
                 syncCurrentDayArrowStyle("tous-les-traces-fleches");
                 syncVoyageLinkVisibility();
               }
+              const selectedActivity = memories.some((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id);
+              const backgroundFilter = selectedActivity ? ["!=", ["get", "date"], selectedDay] as any : null;
+              if (map.getLayer("tous-les-traces")) map.setFilter("tous-les-traces", backgroundFilter);
+              if (map.getLayer("tous-les-traces-fleches")) map.setFilter("tous-les-traces-fleches", backgroundFilter);
               const bounds=new maplibregl.LngLatBounds();
               for(const feature of features){
                 for(const coordinate of feature.geometry.coordinates)bounds.extend(coordinate);
