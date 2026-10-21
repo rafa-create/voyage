@@ -539,22 +539,6 @@ const points = etapes
               dailyPlaceLabels.set(event.date,[location,timeMatch?.[1]].filter(Boolean).join(" · "));
             })).then(() => updatePlaceLabel(selectedDay));
             updatePlaceLabel(selectedDay);
-            const stages:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
-              type:"etape",date:p.date,order:p.date+"T00:00",
-              latitude:p.latitude,longitude:p.longitude,titre:p.ville,precision:"Étape du voyage"}));
-            const timeline=[...stages,...memories].filter(e=>e.order)
-              .sort((a,b)=>String(a.order).localeCompare(String(b.order)));
-            // Utiliser hier si des données existent, sinon le dernier jour passé documenté.
-            const datedMemories = [...memories, ...stages].filter(e => e.date && e.date < parisToday);
-            const targetDay = datedMemories.some(e => e.date === yesterdayKey)
-              ? yesterdayKey
-              : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
-            const targetEvents = datedMemories.filter(e => e.date === targetDay);
-            if (targetEvents.length) {
-              // La sélection initiale est mémorisée ici ; le cadrage sera demandé
-              // après la création des marqueurs, par la fonction caméra unique.
-              document.documentElement.dataset.voyageDay = targetDay;
-            }
             if(timeline.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{
                 type:"Feature",properties:{},
