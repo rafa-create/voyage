@@ -585,12 +585,36 @@ const points = etapes
                   }
                   map.resize();
                   map.stop();
-                  const singlePoint = bounds.getSouthWest().distanceTo(bounds.getNorthEast()) < 100;
-                  map.fitBounds(bounds, {
+                  const southWest = bounds.getSouthWest();
+                  const northEast = bounds.getNorthEast();
+                  const distance = southWest.distanceTo(northEast);
+                  const singlePoint = distance < 100;
+                  const maxZoom = target
+                    ? Math.max(map.getZoom(), 11)
+                    : usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14));
+                  const options = {
                     padding: { top: 58, right: 58, bottom: 100, left: 58 },
-                    maxZoom: target ? Math.max(map.getZoom(), 11) : usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14)),
+                    maxZoom,
                     duration: initialFocus ? 1500 : 850,
-                  });
+                  };
+                  // fitBounds peut conserver la vue courante lorsque la carte est intégrée
+                  // dans le panneau admin/mobile et que sa taille vient de changer.
+                  // Passer d'abord par le centre calculé explicitement garantit un mouvement
+                  // observable, puis fitBounds ajuste le zoom au tracé complet.
+                  const center = bounds.getCenter();
+                  if (target) {
+                    map.flyTo({ center, zoom: maxZoom, duration: options.duration, essential: true });
+                  } else {
+                    map.fitBounds(bounds, options);
+                    if (distance >= 100) {
+                      map.once("moveend", () => {
+                        if (request !== cameraRequest) return;
+                        map.fitBounds(bounds, { ...options, duration: 0 });
+                      });
+                    } else {
+                      map.flyTo({ center, zoom: maxZoom, duration: options.duration, essential: true });
+                    }
+                  }
                 };
                 // Ne pas attendre l'événement "idle" : sur mobile/admin, les tuiles
                 // ou les sources GeoJSON peuvent maintenir la carte occupée et empêcher
