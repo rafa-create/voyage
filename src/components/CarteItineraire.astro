@@ -501,8 +501,32 @@ const points = etapes
               }catch{return "";}
             };
             const dayEvents=[...memories].filter(event=>event.date).sort((a,b)=>String(a.order).localeCompare(String(b.order)));
-            for(const event of dayEvents){
-              if(dailyPlaceLabels.has(event.date))continue;
+            const stages:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
+              type:"etape",date:p.date,order:p.date+"T00:00",
+              latitude:p.latitude,longitude:p.longitude,titre:p.ville,precision:"Étape du voyage"}));
+            const timeline=[...stages,...memories].filter(e=>e.order)
+              .sort((a,b)=>String(a.order).localeCompare(String(b.order)));
+            // Déterminer et appliquer l'état initial AVANT toute géolocalisation de libellés.
+            // Écrire seulement dans dataset.voyageDay ne met pas à jour selectedDay,
+            // qui a été initialisé plus haut et reste sinon vide.
+            const datedMemories = [...memories, ...stages].filter(e => e.date && e.date < parisToday);
+            const targetDay = datedMemories.some(e => e.date === yesterdayKey)
+              ? yesterdayKey
+              : datedMemories.reduce((latest, e) => e.date > latest ? e.date : latest, "");
+            const targetEvents = datedMemories.filter(e => e.date === targetDay);
+            if (targetEvents.length) {
+              selectedDay = targetDay;
+              document.documentElement.dataset.voyageDay = targetDay;
+            }
+            // Les libellés sont secondaires : les résoudre en parallèle évite de bloquer
+            // les marqueurs, les tracés et les boutons sur une requête réseau par journée.
+            const labeledDates = new Set<string>();
+            const firstEvents = dayEvents.filter(event => {
+              if (labeledDates.has(event.date)) return false;
+              labeledDates.add(event.date);
+              return true;
+            });
+            await Promise.all(firstEvents.map(async event => {
               const timeValue=event.dateHeure||event.order||"";
               const timeMatch=String(timeValue).match(/T(\d{2}:\d{2})/);
               let location="";
@@ -513,7 +537,7 @@ const points = etapes
                 location=await reversePlace(event.latitude,event.longitude);
               }
               dailyPlaceLabels.set(event.date,[location,timeMatch?.[1]].filter(Boolean).join(" · "));
-            }
+            }));
             updatePlaceLabel(selectedDay);
             const stages:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
               type:"etape",date:p.date,order:p.date+"T00:00",
