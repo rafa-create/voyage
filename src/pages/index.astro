@@ -135,7 +135,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       let index = yesterdayIndex >= 0 ? yesterdayIndex : todayIndex;
       const initialDay = ordered[index] || yesterdayKey;
       let navigationIndex = -1;
-      for (let i=navigationItems.length-1;i>=0;i--) { if (navigationItems[i].date === initialDay) { navigationIndex=i; break; } }
+      for (let i=0;i<navigationItems.length;i++) { if (navigationItems[i].date === initialDay) { navigationIndex=i; break; } }
       if (navigationIndex < 0) for (let i=navigationItems.length-1;i>=0;i--) { if (navigationItems[i].date <= initialDay) { navigationIndex=i; break; } }
       if (navigationIndex < 0 && navigationItems.length) navigationIndex=0;
       if (navigationIndex >= 0 && navigationItems[navigationIndex].date !== initialDay) {
@@ -263,7 +263,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       window.addEventListener("voyage:jour",(event)=>{
         const detail=(event as CustomEvent<{date?:string}>).detail;
         const target=detail?.date ? ordered.indexOf(detail.date) : -1;
-        if(target>=0 && target!==index){index=target;render();}
+        if(target>=0 && target!==index){
+          index=target;
+          const first=navigationItems.findIndex(item=>item.date===detail.date);
+          if(first>=0) navigationIndex=first;
+          render();
+        }
       });
       const selectNavigationItem = (targetIndex:number) => {
         if (targetIndex < 0 || targetIndex >= navigationItems.length) return;
@@ -281,14 +286,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
         if(!ordered.includes(day)) ordered=[...ordered,day].sort((a,b)=>b.localeCompare(a));
         index=ordered.indexOf(day);
-        const matching=navigationItems.map((item,i)=>({item,i})).filter(entry=>entry.item.date===day);
-        if(matching.length) navigationIndex=matching[matching.length-1].i;
+        const matchingIndex=navigationItems.findIndex(item=>item.date===day);
+        if(matchingIndex>=0) navigationIndex=matchingIndex;
         render();
       });
       previous.addEventListener("click",goPrevious);
       next.addEventListener("click",goNext);
-      window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
-      window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;render();}});
+      window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;const first=navigationItems.findIndex(item=>item.date===todayKey);if(first>=0)navigationIndex=first;render();});
+      window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;const first=navigationItems.findIndex(item=>item.date===yesterdayKey);if(first>=0)navigationIndex=first;render();}});
       render();
     }
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
