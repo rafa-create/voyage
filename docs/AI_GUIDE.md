@@ -84,3 +84,12 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - **Correctif validé en production par l'utilisateur :** le commit [`c19d7b2e`](https://github.com/rafa-create/voyage/commit/c19d7b2eea9e73748f05d644c9c293a0d3e073bd) corrige l'expression régulière et l'interprétation des bornes de plage. Le Worker renvoie alors une réponse partielle `206` correcte avec `Content-Range`, `Content-Length` et le type MIME, permettant au lecteur de lire la vidéo.
 - **À retenir pour tout futur diagnostic vidéo :** vérifier d'abord les requêtes `Range` et les réponses `206 Partial Content` avant d'accuser l'encodage du fichier. Le correctif a été confirmé comme ayant résolu le problème.
 - **Affichage dans le diaporama :** les vidéos utilisent la classe CSS `.film-video-frame` dans `src/components/FilmVoyage.astro`; régler leur hauteur maximale et leur adaptation responsive ici plutôt que de modifier le lecteur ou le Worker.
+
+## Carte — gestion centralisée des tracés sportifs
+- Dans `src/components/CarteItineraire.astro`, `routePrecisionForZoom` définit les seuils de résolution (`overview`, `detail`, `full`). Garder cette décision à un seul endroit.
+- `fetchRoute` est l'unique accès réseau aux géométries; son cache et les requêtes en cours sont indexés par activité et résolution.
+- `routeIntersectsViewport` décide si une activité intersecte la fenêtre courante. À partir de `detail`, ne demander une géométrie plus lourde que pour les parcours visibles; les autres restent en `overview`.
+- `resolveRouteForViewport` décide quelle géométrie est admissible à l'écran et conserve la dernière géométrie valide si la requête détaillée échoue. `loadAllTraces` est le point d'entrée unique pour mettre à jour la couche globale.
+- `showTrace` gère le tracé de la journée sélectionnée séparément, avec un jeton de requête pour ignorer les réponses obsolètes. Ne pas effacer ou remplacer un tracé affiché avant d'avoir reçu une géométrie valide.
+- `moveend` réévalue le niveau de zoom et la fenêtre après un zoom ou un déplacement. Les couches de tracés ne doivent jamais piloter la caméra; conserver `requestDayCamera` comme seul point d'entrée du cadrage.
+- Après toute modification de cette logique, vérifier les changements de zoom, le panoramique à zoom constant, les parcours longs qui traversent la fenêtre, les erreurs réseau et les boutons de journée précédente/suivante. Ne jamais lancer GitHub Actions ni déployer sans accord explicite.
