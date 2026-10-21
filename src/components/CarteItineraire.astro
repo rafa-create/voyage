@@ -630,7 +630,7 @@ const points = etapes
                 })();
               }
             };
-            const showTrace=async(id:string,date:string,fitMap=true)=>{
+            const showTrace=async(id:string,date:string,fitMap=true,animate=true)=>{
               selectedTraceId=id;
               selectedTraceDate=date;
               try{
@@ -641,7 +641,7 @@ const points = etapes
                   geometry:{type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
                 const traceSource = map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined;
                 if(traceSource){
-                  traceSource.setData(line.geometry.coordinates.length > 2
+                  traceSource.setData(animate && line.geometry.coordinates.length > 2
                     ? {...line, geometry:{...line.geometry, coordinates:line.geometry.coordinates.slice(0,2)}}
                     : line);
                 }else{
@@ -671,7 +671,7 @@ const points = etapes
                   map.setFilter("tous-les-traces-fleches", ["!=", ["get", "date"], date]);
                 }
                 const animationCoordinates = line.geometry.coordinates;
-                if (animationCoordinates.length > 2) {
+                if (animate && animationCoordinates.length > 2) {
                   const startedAt = performance.now();
                   const duration = Math.min(2200, Math.max(700, animationCoordinates.length * 2));
                   const drawFrame = (now:number) => {
@@ -792,7 +792,7 @@ const points = etapes
               if(precision===appliedPrecision)return;
               appliedPrecision=precision;
               if(map.getSource("tous-les-traces"))void loadAllTraces(false);
-              if(selectedTraceId)void showTrace(selectedTraceId,selectedTraceDate,false);
+              if(selectedTraceId)void showTrace(selectedTraceId,selectedTraceDate,false,false);
             });
             // Tous les tracés restent visibles ; le tracé du jour est ensuite animé au premier plan.
             void loadAllTraces().then(() => {
