@@ -1148,6 +1148,15 @@ const points = etapes
 
 <style is:global>
   /* Masquer le contrôle d’attribution cartographique dans l’interface. */
+  /* Garder la légende et les commandes du jour au-dessus des photos, traces et popups. */
+  #carte-voyage .maplibregl-ctrl-top-left {
+    z-index: 1000 !important;
+  }
+  #carte-voyage .map-day-navigation-control {
+    position: relative;
+    z-index: 1001 !important;
+    pointer-events: auto;
+  }
   #carte-voyage .maplibregl-ctrl-attrib { display: none !important; }
   #carte-voyage .map-day-navigation-control .daily-heading-title {
     display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; white-space: nowrap;
