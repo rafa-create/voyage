@@ -592,10 +592,10 @@ const points = etapes
                     duration: initialFocus ? 1500 : 850,
                   });
                 };
-                if (!map.loaded()) {
-                  map.once("idle", applyCamera);
-                  return;
-                }
+                // Ne pas attendre l'événement "idle" : sur mobile/admin, les tuiles
+                // ou les sources GeoJSON peuvent maintenir la carte occupée et empêcher
+                // le recentrage de la journée. MapLibre accepte fitBounds avant idle ;
+                // applyCamera vérifie déjà les dimensions et redimensionne le conteneur.
                 applyCamera();
               })();
             };
