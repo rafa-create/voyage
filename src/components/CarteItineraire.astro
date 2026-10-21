@@ -93,7 +93,6 @@ const points = etapes
       };
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.addControl(new maplibregl.FullscreenControl(), "top-right");
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
       // Fond satellite optionnel : on conserve les marqueurs HTML et les couches du voyage.
       let satelliteEnabled = false;
@@ -1007,7 +1006,6 @@ const points = etapes
 </script>
 
 <style is:global>
-  /* Conserver le texte d’attribution légal, sans le bouton « About » d’OpenStreetMap. */
-  #carte-voyage .maplibregl-ctrl-attrib-button { display: none !important; }
-  #carte-voyage .maplibregl-ctrl-attrib { padding-right: 5px; }
+  /* Masquer le contrôle d’attribution cartographique dans l’interface. */
+  #carte-voyage .maplibregl-ctrl-attrib { display: none !important; }
 </style>
