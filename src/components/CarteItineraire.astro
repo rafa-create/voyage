@@ -316,15 +316,19 @@ const points = etapes
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
           updateSelectedDay(detail?.date || "", detail?.fitMap !== false, detail?.initialFocus === true);
         });
-        // En bas à gauche, afficher uniquement le lieu correspondant au jour sélectionné.
+        // La légende décrit la zone actuellement visible, indépendamment du jour sélectionné.
+        // L'heure, elle, vient uniquement de l'activité GPS de la journée sélectionnée.
         const placeControl = document.createElement("div");
         placeControl.className = "map-day-control maplibregl-ctrl";
         placeControl.setAttribute("aria-live", "polite");
         placeControl.style.cssText = "padding:8px 11px;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;font:600 12px 'DM Sans',sans-serif;box-shadow:0 1px 5px #0002;max-width:220px;";
-        const dailyPlaceLabels = new Map<string,string>();
+        const dailyActivityTimes = new Map<string,string>();
+        let viewportPlace = "";
+        let currentActivityTime = "";
+        let placeLookupToken = 0;
         const updatePlaceLabel = (date:string) => {
-          const stage = points.find((point) => point.date === date);
-          placeControl.textContent = dailyPlaceLabels.get(date) || (stage ? [stage.ville, stage.pays].filter(Boolean).join(", ") : "");
+          currentActivityTime = dailyActivityTimes.get(date) || "";
+          placeControl.textContent = [viewportPlace, currentActivityTime].filter(Boolean).join(" · ");
           placeControl.style.display = placeControl.textContent ? "" : "none";
         };
         updatePlaceLabel(selectedDay);
@@ -475,6 +479,18 @@ const points = etapes
                 return [locality,properties.country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
               }catch{return "";}
             };
+            const updateViewportPlace=async()=>{
+              const token=++placeLookupToken;
+              const center=map.getCenter();
+              const location=await reversePlace(center.lat,center.lng);
+              // Une réponse lente d'un ancien cadrage ne doit jamais écraser le lieu actuel.
+              if(token!==placeLookupToken)return;
+              viewportPlace=location;
+              placeControl.textContent=[viewportPlace,currentActivityTime].filter(Boolean).join(" · ");
+              placeControl.style.display=placeControl.textContent ? "" : "none";
+            };
+            map.on("moveend",()=>{void updateViewportPlace();});
+            void updateViewportPlace();
             const dayEvents=[...memories].filter(event=>event.date).sort((a,b)=>String(a.order).localeCompare(String(b.order)));
             const stages:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
               type:"etape",date:p.date,order:p.date+"T00:00",
@@ -493,32 +509,19 @@ const points = etapes
               selectedDay = targetDay;
               document.documentElement.dataset.voyageDay = targetDay;
             }
-            // Les libellés sont secondaires : les résoudre en parallèle évite de bloquer
-            // les marqueurs, les tracés et les boutons sur une requête réseau par journée.
+            // Seule l'heure dépend de l'activité de la journée. Le lieu est calculé
+            // séparément à partir du centre de la fenêtre visible, après chaque moveend.
             const datesToLabel=[...new Set(dayEvents.map(event=>event.date))];
-            void Promise.all(datesToLabel.map(async date=>{
-              const eventsOfDay=dayEvents.filter(event=>event.date===date);
-              // Le cadrage de la carte privilégie le parcours GPS de l'activité du jour.
-              // La légende doit donc décrire cette activité plutôt que la ville de l'étape
-              // éventuellement associée à la photo affichée ce même jour.
-              const activity=eventsOfDay
-                .filter(event=>event.type==="sport"&&event.id&&event.parcours)
+            for(const date of datesToLabel){
+              const activity=dayEvents
+                .filter(event=>event.date===date&&event.type==="sport"&&event.id&&event.parcours)
                 .sort((a,b)=>String(b.order||"").localeCompare(String(a.order||"")))[0];
-              const event=activity||eventsOfDay[0];
-              if(!event)return;
-              const timeValue=event.dateHeure||event.order||"";
+              const timeValue=activity?.dateHeure||activity?.order||"";
               const timeMatch=String(timeValue).match(/T(\d{2}:\d{2})/);
-              let location="";
-              if(event.type==="photo"){
-                const stage=(event.etape?points.find(point=>point.slug===event.etape):undefined)||[...points].filter(point=>point.date<=event.date).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(point=>point.date===event.date);
-                location=[stage?.ville,stage?.pays].filter(Boolean).join(", ")||"Localisation de la photo";
-              }else{
-                location=await reversePlace(event.latitude,event.longitude);
-              }
-              const labelLocation=event.type==="sport"?"Activité · "+(location||"tracé GPS"):location;
-              dailyPlaceLabels.set(date,[labelLocation,timeMatch?.[1]].filter(Boolean).join(" · "));
-            })).then(() => updatePlaceLabel(selectedDay));
+              if(activity&&timeMatch)dailyActivityTimes.set(date,timeMatch[1]);
+            }
             updatePlaceLabel(selectedDay);
+            void updateViewportPlace();
             if(timeline.length>=2){
               map.addSource("fil-des-souvenirs",{type:"geojson",data:{
                 type:"Feature",properties:{},
