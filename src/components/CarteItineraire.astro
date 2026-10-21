@@ -487,13 +487,15 @@ const points = etapes
             yesterdayKeyForControl = yesterdayKey;
             for(const photo of (Array.isArray(photos)?photos:[])){
               if(!photo)continue;
-              // Les coordonnées GPS suffisent à afficher une photo sur la carte :
-              // aucune étape n'est nécessaire. L'étape ne sert que de repli indicatif.
-              const stage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
+              // Le GPS est prioritaire. Sans GPS, utiliser l'étape liée ou, à défaut,
+              // l'étape la plus récente à la date de la photo pour garder son propre marqueur.
               const gps=valid(photo.latitude,photo.longitude);
-              if(!gps&&!stage)continue;
               const dateHeure=typeof photo.dateHeure==="string"?photo.dateHeure:null;
-              const date=String(dateHeure?.slice(0,10)||photo.datePrise||photo.ajouteLe?.slice(0,10)||stage?.date||"");
+              const photoDate=String(dateHeure?.slice(0,10)||String(photo.datePrise||"").slice(0,10)||String(photo.ajouteLe||"").slice(0,10));
+              const linkedStage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
+              const stage=linkedStage||[...points].filter(p=>p.date<=photoDate).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(p=>p.date===photoDate);
+              if(!gps&&!stage)continue;
+              const date=photoDate||stage?.date||"";
               memories.push({type:"photo",date,dateHeure,
                 order:dateHeure||(date?date+"T23:59":null),
                 latitude:gps?photo.latitude:stage!.latitude,
