@@ -57,10 +57,13 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const data=await response.json();
       const properties=data?.features?.[0]?.properties;
       if(!properties)return "";
-      const locality=properties.city||properties.town||properties.village||properties.municipality||properties.county||properties.state;
+      // N'afficher que si le géocodeur identifie une localité, jamais un comté ou une région comme ville.
+      const locality=properties.city||properties.town||properties.village||properties.municipality;
       const country=properties.country;
-      const result=[locality,country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
-      activityPlaceCache.set(key,result);
+      const result=typeof locality==="string"&&locality.trim()
+        ? [locality,country].filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ")
+        : "";
+      if(result)activityPlaceCache.set(key,result);
       return result;
     }catch{return "";}
   }
@@ -93,6 +96,20 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     });
     let activeFilmItem:FilmItem|undefined;
     const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
+    let viewportPlace="";
+    let placeLookupToken=0;
+    const updateViewportPlace=async()=>{
+      const token=++placeLookupToken;
+      const center=map.getCenter();
+      const location=await reverseGeocode(center.lat,center.lng);
+      // Ignorer les réponses d'un ancien cadrage si l'utilisateur a bougé entre-temps.
+      if(token!==placeLookupToken)return;
+      viewportPlace=location;
+      const current=activeFilmItem;
+      place.textContent=viewportPlace?[viewportPlace,current?.time].filter(Boolean).join(" · "):"";
+      if(placeCaption)placeCaption.hidden=!viewportPlace;
+    };
+    map.on("moveend",()=>{void updateViewportPlace();});
     map.doubleClickZoom.disable();
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
     const photoMarkerElement=document.createElement("div");
@@ -277,14 +294,9 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const render=(animate=true)=>{
       const item=sequence[index];
       activeFilmItem=item;
-      place.textContent=[item.place||(item.kind==="photo"?"Localisation de la photo":""),item.time].filter(Boolean).join(" · ");
-      if(placeCaption)placeCaption.hidden=!place.textContent.trim();
-      if(item.kind==="activite"&&!item.place&&valid(item.lat,item.lon)){
-        const currentItem=item;
-        void reverseGeocode(item.lat,item.lon).then(location=>{
-          if(location&&activeFilmItem===currentItem&&!currentItem.place){place.textContent=[location,currentItem.time].filter(Boolean).join(" · ");if(placeCaption)placeCaption.hidden=false;}
-        });
-      }
+      // La localisation vient exclusivement du cadrage actuel, pas de l'étape liée au souvenir.
+      place.textContent="";
+      if(placeCaption)placeCaption.hidden=true;
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
       // Pour une photo, afficher sa description une seule fois, discrètement au-dessus de l'image.
@@ -350,6 +362,8 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       if(valid(item.lat,item.lon)){
         map.flyTo({center:[item.lon,item.lat],zoom:item.zoom,duration:animate&&!reduced?1400:0,essential:true});
       }
+      // Résoudre aussi la vue courante si le souvenir n'a pas de coordonnées GPS.
+      void updateViewportPlace();
       prevButton.disabled=index===0;
       nextButton.disabled=index===sequence.length-1;
     };
