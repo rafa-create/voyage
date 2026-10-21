@@ -830,7 +830,7 @@ const points = etapes
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
                 // Le tracé est dessiné ici ; seul requestDayCamera peut déplacer la caméra.
-                if (fitMap) requestDayCamera(date, false);
+                if (fitMap) requestDayCamera(date, false, [bounds.getCenter().lng, bounds.getCenter().lat]);
               }catch{ /* Conserver la carte en cas d'indisponibilité. */ }
             };
             const allTracesButton=document.createElement("button");
@@ -1087,6 +1087,7 @@ const points = etapes
               if(element.style.display==="none") mapVisibilityToggle?.click();
               element.scrollIntoView({behavior:"smooth",block:"start"});
               updateSelectedDay(detail.date,true);
+              if(detail.kind==="sport" && detail.key) void showTrace(detail.key,detail.date,true);
               if(detail.key || (Number.isFinite(detail.latitude) && Number.isFinite(detail.longitude))){
                 const target=Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
                   .find(marker=>marker.dataset.memoryKey===detail.key);

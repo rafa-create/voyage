@@ -96,6 +96,30 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const d=activityDate(course);
         if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
       }
+      // Chronologie partagée par les commandes de la carte : photos, vidéos et activités.
+      type NavigationItem = {date:string;kind:"photo"|"sport"|"video-fichier";key:string;time:number|null;sequence:number};
+      const navigationItems:NavigationItem[] = [];
+      let navigationSequence = 0;
+      const eventTime = (value:unknown):number|null => {
+        if (value === null || value === undefined || value === "") return null;
+        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return null;
+        const parsed = typeof value === "number" ? new Date(value < 1e12 ? value * 1000 : value).getTime() : new Date(String(value)).getTime();
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+      for (const photo of photos) {
+        const date = dateKey(photo);
+        if (photo.src && /^\d{4}-\d{2}-\d{2}$/.test(date)) navigationItems.push({date,kind:"photo",key:String(photo.src),time:eventTime(photo.dateHeure||photo.datePrise),sequence:navigationSequence++});
+      }
+      for (const video of fileVideos) {
+        const date = videoDateKey(video);
+        if (video.key && /^\d{4}-\d{2}-\d{2}$/.test(date)) navigationItems.push({date,kind:"video-fichier",key:"video-file:"+String(video.key),time:eventTime(video.date||video.ajouteLe),sequence:navigationSequence++});
+      }
+      for (const activity of courses) {
+        const date = activityDate(activity);
+        const timestamp = activity.debut||activity.start_time||activity.start||activity.dateDebut||activity.fin||activity.end_time||activity.end;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date) && activity.id !== undefined && activity.id !== null) navigationItems.push({date,kind:"sport",key:String(activity.id),time:eventTime(timestamp),sequence:navigationSequence++});
+      }
+      navigationItems.sort((a,b) => a.date.localeCompare(b.date) || (a.time !== null && b.time !== null ? a.time-b.time : a.time !== null ? -1 : b.time !== null ? 1 : a.sequence-b.sequence) || a.sequence-b.sequence);
       const todayParts = new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
       const part = (type:string) => todayParts.find(p=>p.type===type)?.value || "";
       const todayKey = part("year")+"-"+part("month")+"-"+part("day");
@@ -109,6 +133,15 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       const yesterdayIndex = ordered.indexOf(yesterdayKey);
       // À l’arrivée, afficher les souvenirs d’hier, comme le bouton « Hier » de la carte.
       let index = yesterdayIndex >= 0 ? yesterdayIndex : todayIndex;
+      const initialDay = ordered[index] || yesterdayKey;
+      let navigationIndex = -1;
+      for (let i=0;i<navigationItems.length;i++) { if (navigationItems[i].date === initialDay) { navigationIndex=i; break; } }
+      if (navigationIndex < 0) for (let i=navigationItems.length-1;i>=0;i--) { if (navigationItems[i].date <= initialDay) { navigationIndex=i; break; } }
+      if (navigationIndex < 0 && navigationItems.length) navigationIndex=0;
+      if (navigationIndex >= 0 && navigationItems[navigationIndex].date !== initialDay) {
+        const alignedDayIndex = ordered.indexOf(navigationItems[navigationIndex].date);
+        if (alignedDayIndex >= 0) index = alignedDayIndex;
+      }
       const render = () => {
         const day = ordered[index];
         if (dailyDatePicker) dailyDatePicker.value = day || "";
@@ -217,8 +250,12 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           }
           activitiesWrap.hidden = dayActivities.length === 0;
         }
-        previous.disabled = index>=ordered.length-1;
-        next.disabled = index<=0;
+        previous.disabled = navigationIndex <= 0 || navigationItems.length === 0;
+        next.disabled = navigationIndex < 0 || navigationIndex >= navigationItems.length-1;
+        previous.title = "Souvenir précédent";
+        previous.setAttribute("aria-label","Souvenir précédent");
+        next.title = "Souvenir suivant";
+        next.setAttribute("aria-label","Souvenir suivant");
         document.documentElement.dataset.voyageDay = day;
         window.dispatchEvent(new CustomEvent("voyage:jour",{detail:{date:day}}));
       };
@@ -226,21 +263,37 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       window.addEventListener("voyage:jour",(event)=>{
         const detail=(event as CustomEvent<{date?:string}>).detail;
         const target=detail?.date ? ordered.indexOf(detail.date) : -1;
-        if(target>=0 && target!==index){index=target;render();}
+        if(target>=0 && target!==index){
+          index=target;
+          const first=navigationItems.findIndex(item=>item.date===detail.date);
+          if(first>=0) navigationIndex=first;
+          render();
+        }
       });
-      const goPrevious = () => { if(index < ordered.length - 1){ index++; render(); } };
-      const goNext = () => { if(index > 0){ index--; render(); } };
+      const selectNavigationItem = (targetIndex:number) => {
+        if (targetIndex < 0 || targetIndex >= navigationItems.length) return;
+        navigationIndex = targetIndex;
+        const selected = navigationItems[navigationIndex];
+        const dayIndex = ordered.indexOf(selected.date);
+        if (dayIndex >= 0) index = dayIndex;
+        render();
+        window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte",{detail:{date:selected.date,kind:selected.kind,key:selected.key}}));
+      };
+      const goPrevious = () => selectNavigationItem(navigationIndex-1);
+      const goNext = () => selectNavigationItem(navigationIndex+1);
       dailyDatePicker?.addEventListener("change",()=>{
         const day=dailyDatePicker.value;
         if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
         if(!ordered.includes(day)) ordered=[...ordered,day].sort((a,b)=>b.localeCompare(a));
         index=ordered.indexOf(day);
+        const matchingIndex=navigationItems.findIndex(item=>item.date===day);
+        if(matchingIndex>=0) navigationIndex=matchingIndex;
         render();
       });
       previous.addEventListener("click",goPrevious);
       next.addEventListener("click",goNext);
-      window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;render();});
-      window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;render();}});
+      window.addEventListener("voyage:aujourdhui",()=>{index=todayIndex;const first=navigationItems.findIndex(item=>item.date===todayKey);if(first>=0)navigationIndex=first;render();});
+      window.addEventListener("voyage:hier",()=>{if(yesterdayIndex>=0){index=yesterdayIndex;const first=navigationItems.findIndex(item=>item.date===yesterdayKey);if(first>=0)navigationIndex=first;render();}});
       render();
     }
     initDailyView().catch(()=>{ if(dateText) dateText.textContent="Impossible de charger les souvenirs pour le moment."; });
