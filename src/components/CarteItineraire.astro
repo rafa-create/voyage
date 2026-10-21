@@ -306,41 +306,10 @@ const points = etapes
             dateLabel.style.borderRadius = selectedDay ? "3px" : "";
             dateLabel.style.display = selectedDay ? "inline-block" : "";
           }
-          // Le cadrage de la navigation quotidienne reste synchrone et autonome :
-          // c'est la version qui fonctionnait avant la refonte de requestDayCamera.
-          // Les marqueurs sont déjà présents à ce stade, contrairement au chargement GPS asynchrone.
-          if (fitMap) {
-            const dayBounds = new maplibregl.LngLatBounds();
-            for (const marker of dailyMarkers) {
-              const lat = Number(marker.dataset.latitude);
-              const lon = Number(marker.dataset.longitude);
-              if (Number.isFinite(lat) && Number.isFinite(lon)) dayBounds.extend([lon, lat]);
-            }
-            if (dayBounds.isEmpty()) {
-              for (const point of points.filter((point) => point.date === date)) {
-                if (Number.isFinite(point.latitude) && Number.isFinite(point.longitude)) {
-                  dayBounds.extend([point.longitude, point.latitude]);
-                }
-              }
-            }
-            if (dayBounds.isEmpty()) {
-              const stage = points.find((point) => point.date === date);
-              if (stage) dayBounds.extend([stage.longitude, stage.latitude]);
-            }
-            if (!dayBounds.isEmpty()) {
-              map.resize();
-              map.stop();
-              if (dayBounds.getNorthEast().distanceTo(dayBounds.getSouthWest()) < 25) {
-                map.easeTo({ center: dayBounds.getCenter(), zoom: initialFocus ? 15 : 13, duration: initialFocus ? 1500 : 850 });
-              } else {
-                map.fitBounds(dayBounds, {
-                  padding: { top: 55, right: 55, bottom: 100, left: 55 },
-                  maxZoom: initialFocus ? 16 : 15,
-                  duration: initialFocus ? 1500 : 850,
-                });
-              }
-            }
-          }
+          // Le cadrage doit utiliser les coordonnées des souvenirs et du parcours GPS,
+          // qui peuvent arriver après l'événement voyage:jour. requestDayCamera sait
+          // attendre les données et vérifier les dimensions réelles du conteneur.
+          if (fitMap) requestDayCamera(date, initialFocus);
         };
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
