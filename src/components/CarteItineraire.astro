@@ -94,6 +94,49 @@ const points = etapes
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.addControl(new maplibregl.FullscreenControl(), "top-right");
 
+      // Les commandes de journée restent dans la carte en mode normal et plein écran.
+      // Lorsque la carte est masquée, on les replace dans leur emplacement d'origine.
+      const dayNavigation = document.querySelector<HTMLElement>(".daily-heading-title");
+      const dayNavigationHome = dayNavigation?.parentElement;
+      const dayNavigationPlaceholder = document.createComment("Emplacement des commandes du jour");
+      if (dayNavigation && dayNavigationHome) {
+        dayNavigationHome.insertBefore(dayNavigationPlaceholder, dayNavigation);
+      }
+      const dayControl = document.createElement("div");
+      dayControl.className = "map-day-navigation-control maplibregl-ctrl";
+      dayControl.style.cssText = "display:flex;flex-direction:column;gap:7px;padding:9px 10px;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;box-shadow:0 1px 5px #0002;max-width:min(100%,360px);";
+      const dayLegend = document.createElement("div");
+      dayLegend.style.cssText = "display:flex;align-items:center;gap:7px;font:600 11px 'DM Sans',sans-serif;color:#36534c;";
+      const dayLegendLine = document.createElement("span");
+      dayLegendLine.style.cssText = "display:inline-block;width:24px;height:0;border-top:4px solid #397A70;border-radius:3px;flex:none;";
+      const dayLegendText = document.createElement("span");
+      dayLegendText.textContent = "Tracé vert sauge : parcours du jour sélectionné";
+      dayLegend.append(dayLegendLine, dayLegendText);
+      dayControl.append(dayLegend);
+      if (dayNavigation) dayControl.append(dayNavigation);
+      const syncDayNavigationLocation = () => {
+        if (!dayNavigation || !dayNavigationHome || !dayNavigationPlaceholder.parentNode) return;
+        const mapIsHidden = element.style.display === "none";
+        if (mapIsHidden) {
+          if (dayNavigation.parentElement !== dayNavigationHome) {
+            dayNavigationHome.insertBefore(dayNavigation, dayNavigationPlaceholder.nextSibling);
+          }
+          dayControl.style.display = "none";
+        } else {
+          if (dayNavigation.parentElement !== dayControl) dayControl.append(dayNavigation);
+          dayControl.style.display = "";
+        }
+      };
+      map.addControl({
+        onAdd: () => dayControl,
+        onRemove: () => dayControl.remove()
+      } as maplibregl.IControl, "top-left");
+      syncDayNavigationLocation();
+      document.getElementById("map-visibility-toggle")?.addEventListener("click", () => {
+        requestAnimationFrame(syncDayNavigationLocation);
+      });
+      document.addEventListener("fullscreenchange", syncDayNavigationLocation);
+
       // Fond satellite optionnel : on conserve les marqueurs HTML et les couches du voyage.
       let satelliteEnabled = false;
       let baseLayerVisibility = new Map<string, string>();
