@@ -526,7 +526,7 @@ const points = etapes
               labeledDates.add(event.date);
               return true;
             });
-            await Promise.all(firstEvents.map(async event => {
+            void Promise.all(firstEvents.map(async event => {
               const timeValue=event.dateHeure||event.order||"";
               const timeMatch=String(timeValue).match(/T(\d{2}:\d{2})/);
               let location="";
@@ -537,7 +537,7 @@ const points = etapes
                 location=await reversePlace(event.latitude,event.longitude);
               }
               dailyPlaceLabels.set(event.date,[location,timeMatch?.[1]].filter(Boolean).join(" · "));
-            }));
+            })).then(() => updatePlaceLabel(selectedDay));
             updatePlaceLabel(selectedDay);
             const stages:Event[]=points.filter(p=>p.statut!=="future").map(p=>({
               type:"etape",date:p.date,order:p.date+"T00:00",
