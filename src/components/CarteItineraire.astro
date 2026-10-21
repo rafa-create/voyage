@@ -672,7 +672,8 @@ const points = etapes
               if (!target && dailyActivity?.id) {
                 void (async () => {
                   try {
-                    const route = await fetchRoute(dailyActivity.id!, routePrecisionForZoom(map.getZoom()));
+                    // Le cadrage n’a besoin que de la géométrie légère ; le gestionnaire de traces affinera après le déplacement.
+                    const route = await fetchRoute(dailyActivity.id!, "overview");
                     if (request !== cameraRequest || !route?.length) return;
                     const routeBounds = new maplibregl.LngLatBounds();
                     for (const [lat, lon] of route) {
