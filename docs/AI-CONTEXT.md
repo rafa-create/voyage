@@ -13,6 +13,15 @@
 - Toute nouvelle interaction qui nécessite un zoom doit appeler la fonction centralisée plutôt que manipuler directement la caméra.
 - Après toute modification, vérifier l'arrivée sur la page IR, précédent/suivant, « Hier », sélection directe d'une date, lien « Voir sur la carte », jour avec parcours GPS, jour avec plusieurs photos et jour sans coordonnées. Vérifier également que les animations précédentes ne reprennent pas le contrôle après un changement de date.
 
+## Carte interactive — sélection de journée et caméra (correctif validé)
+
+- Le correctif a été validé manuellement par l'utilisateur : le zoom initial fonctionne, et après la correction les commandes précédent/suivant et la sélection d'une date refonctionnent.
+- Dans `src/components/CarteItineraire.astro`, `updateSelectedDay` est le point d'entrée de la sélection : il doit mettre à jour `selectedDay` et `document.documentElement.dataset.voyageDay`, actualiser le style des marqueurs/tracés puis demander le cadrage via `requestDayCamera`.
+- Ne pas lancer une seconde animation de caméra depuis le même gestionnaire de sélection : cela crée des animations concurrentes et peut annuler le cadrage attendu.
+- Les états utilisés par les événements de sélection (notamment l'état des tracés) doivent être déclarés avant l'enregistrement/traitement des événements, pour éviter une sélection précoce pendant le chargement.
+- Lors de toute modification de la navigation par jour, tester le zoom initial, précédent/suivant, le sélecteur de date et les événements `voyage:jour`, puis vérifier que les tracés restent corrects.
+- Correctif implémenté sur `main` dans le commit `c0a3f811fb78695c2566fbb7742d8eea46ff5ae8`. La validation utilisateur confirme le comportement fonctionnel ; ne pas prétendre qu'un build ou un déploiement Cloudflare a été vérifié sans contrôle distinct.
+
 ## Photos originales et métadonnées
 
 - L'import admin doit envoyer le fichier d'origine sans réencodage ni redimensionnement, afin de conserver les dimensions, la qualité et les métadonnées EXIF/GPS.
