@@ -613,7 +613,9 @@ const points = etapes
                   geometry:{type:"LineString" as const,coordinates:route.map(p=>[p[1],p[0]])}};
                 const traceSource = map.getSource("trace-sportive") as maplibregl.GeoJSONSource | undefined;
                 if(traceSource){
-                  traceSource.setData(line);
+                  traceSource.setData(line.geometry.coordinates.length > 2
+                    ? {...line, geometry:{...line.geometry, coordinates:line.geometry.coordinates.slice(0,2)}}
+                    : line);
                 }else{
                   map.addSource("trace-sportive",{type:"geojson",data:line});
                   map.addLayer({id:"trace-sportive",type:"line",source:"trace-sportive",
