@@ -575,8 +575,15 @@ const points = etapes
                 if (request !== cameraRequest || bounds.isEmpty()) return;
                 // La carte peut être encore en chargement après l'arrivée des souvenirs.
                 // Ne pas abandonner le cadrage initial : l'appliquer dès que MapLibre est prête.
-                const applyCamera = () => {
+                const applyCamera = (attempt = 0) => {
                   if (request !== cameraRequest || bounds.isEmpty()) return;
+                  // En admin, le conteneur peut finir sa mise en page après le chargement
+                  // de MapLibre. Ne pas lancer fitBounds tant qu'il n'a pas de dimensions.
+                  if (element.clientWidth < 2 || element.clientHeight < 2) {
+                    if (attempt < 30) requestAnimationFrame(() => applyCamera(attempt + 1));
+                    return;
+                  }
+                  map.resize();
                   map.stop();
                   const singlePoint = bounds.getSouthWest().distanceTo(bounds.getNorthEast()) < 100;
                   map.fitBounds(bounds, {
@@ -624,8 +631,15 @@ const points = etapes
                   syncCurrentDayArrowStyle("trace-sportive-fleches");
                   syncVoyageLinkVisibility();
                 }
-                // Dessiner progressivement le parcours sélectionné au-dessus des autres.
+                // Invalider toute animation précédente puis masquer la même journée dans
+                // la couche globale : sinon le tracé complet reste visible sous l'animation.
                 const animationToken = ++selectedTraceAnimationToken;
+                if (map.getLayer("tous-les-traces")) {
+                  map.setFilter("tous-les-traces", ["!=", ["get", "date"], date]);
+                }
+                if (map.getLayer("tous-les-traces-fleches")) {
+                  map.setFilter("tous-les-traces-fleches", ["!=", ["get", "date"], date]);
+                }
                 const animationCoordinates = line.geometry.coordinates;
                 if (animationCoordinates.length > 2) {
                   const startedAt = performance.now();
@@ -678,10 +692,16 @@ const points = etapes
                 }));
               if(!features.length)return;
               const data={type:"FeatureCollection" as const,features};
+              // La journée sélectionnée est rendue par trace-sportive, qui s'anime
+              // de zéro à 100 %. Éviter de la dessiner aussi dans la couche globale.
+              const selectedActivity = memories.some((memory) => memory.type === "sport" && memory.date === selectedDay && memory.id);
+              const visibleFeatures = selectedActivity
+                ? {...data, features: data.features.filter((feature) => feature.properties.date !== selectedDay)}
+                : data;
               if(map.getSource("tous-les-traces")){
-                (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(data);
+                (map.getSource("tous-les-traces") as maplibregl.GeoJSONSource).setData(visibleFeatures);
               }else{
-                map.addSource("tous-les-traces",{type:"geojson",data});
+                map.addSource("tous-les-traces",{type:"geojson",data:visibleFeatures});
                 map.addLayer({id:"tous-les-traces",type:"line",source:"tous-les-traces",
                   layout:{"line-cap":"round","line-join":"round"},
                   paint:{"line-color":selectedDay
