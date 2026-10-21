@@ -830,7 +830,7 @@ const points = etapes
                 const bounds=new maplibregl.LngLatBounds();
                 for(const pt of route)bounds.extend([pt[1],pt[0]]);
                 // Le tracé est dessiné ici ; seul requestDayCamera peut déplacer la caméra.
-                if (fitMap) requestDayCamera(date, false);
+                if (fitMap) requestDayCamera(date, false, [bounds.getCenter().lng, bounds.getCenter().lat]);
               }catch{ /* Conserver la carte en cas d'indisponibilité. */ }
             };
             const allTracesButton=document.createElement("button");
