@@ -495,13 +495,17 @@ const points = etapes
             }
             // Les libellés sont secondaires : les résoudre en parallèle évite de bloquer
             // les marqueurs, les tracés et les boutons sur une requête réseau par journée.
-            const labeledDates = new Set<string>();
-            const firstEvents = dayEvents.filter(event => {
-              if (labeledDates.has(event.date)) return false;
-              labeledDates.add(event.date);
-              return true;
-            });
-            void Promise.all(firstEvents.map(async event => {
+            const datesToLabel=[...new Set(dayEvents.map(event=>event.date))];
+            void Promise.all(datesToLabel.map(async date=>{
+              const eventsOfDay=dayEvents.filter(event=>event.date===date);
+              // Le cadrage de la carte privilégie le parcours GPS de l'activité du jour.
+              // La légende doit donc décrire cette activité plutôt que la ville de l'étape
+              // éventuellement associée à la photo affichée ce même jour.
+              const activity=eventsOfDay
+                .filter(event=>event.type==="sport"&&event.id&&event.parcours)
+                .sort((a,b)=>String(b.order||"").localeCompare(String(a.order||"")))[0];
+              const event=activity||eventsOfDay[0];
+              if(!event)return;
               const timeValue=event.dateHeure||event.order||"";
               const timeMatch=String(timeValue).match(/T(\d{2}:\d{2})/);
               let location="";
@@ -511,7 +515,8 @@ const points = etapes
               }else{
                 location=await reversePlace(event.latitude,event.longitude);
               }
-              dailyPlaceLabels.set(event.date,[location,timeMatch?.[1]].filter(Boolean).join(" · "));
+              const labelLocation=event.type==="sport"?"Activité · "+(location||"tracé GPS"):location;
+              dailyPlaceLabels.set(date,[labelLocation,timeMatch?.[1]].filter(Boolean).join(" · "));
             })).then(() => updatePlaceLabel(selectedDay));
             updatePlaceLabel(selectedDay);
             if(timeline.length>=2){
