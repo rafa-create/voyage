@@ -953,6 +953,7 @@ const points = etapes
               marker.dataset.date=memory.date;
               marker.dataset.latitude=String(memory.latitude);
               marker.dataset.longitude=String(memory.longitude);
+              marker.dataset.memoryType=memory.type;
               marker.dataset.memoryKey=memory.type==="photo" ? String(memory.src||"") : memory.type==="sport" ? String(memory.id||"") : memory.type==="video" ? "video:"+String(memory.youtubeId||"") : memory.type==="video-fichier" ? "video-file:"+String(memory.key||"") : "";
               marker.title=memory.titre+" · "+memory.date;
               marker.setAttribute("aria-label",memory.titre+" du "+memory.date);
@@ -1088,25 +1089,43 @@ const points = etapes
               if(!detail?.date)return;
               if(element.style.display==="none") mapVisibilityToggle?.click();
               element.scrollIntoView({behavior:"smooth",block:"start"});
-              updateSelectedDay(detail.date,true);
+              // Sélectionner le jour sans lancer d'abord son cadrage général :
+              // celui-ci pourrait laisser la caméra sur une autre activité de la journée.
+              updateSelectedDay(detail.date,false);
               if(detail.kind==="sport" && detail.key) void showTrace(detail.key,detail.date,true);
-              if(detail.key || (Number.isFinite(detail.latitude) && Number.isFinite(detail.longitude))){
-                const target=Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
-                  .find(marker=>marker.dataset.memoryKey===detail.key);
-                if(target){
-                  const lat=Number(target.dataset.latitude),lon=Number(target.dataset.longitude);
-                  if(Number.isFinite(lat)&&Number.isFinite(lon)){
-                    // Centrer d'abord la carte, puis ouvrir la popup une fois le déplacement terminé :
-                    // MapLibre peut ainsi calculer son placement à partir de la position finale.
-                    map.once("moveend",()=>target.click());
-                    requestDayCamera(detail.date, false, [lon,lat]);
-                  }else{
+              const markers=Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"));
+              const expectedType=detail.kind;
+              let target=detail.key ? markers.find(marker=>
+                marker.dataset.memoryKey===detail.key&&(!expectedType||marker.dataset.memoryType===expectedType)
+              ) : undefined;
+              const hasCoordinates=Number.isFinite(detail.latitude)&&Number.isFinite(detail.longitude)&&
+                Math.abs(Number(detail.latitude))<=85&&Math.abs(Number(detail.longitude))<=180;
+              // Si le chemin de la photo diffère légèrement de celui de l'API, retrouver
+              // uniquement un marqueur photo à ses coordonnées, jamais une activité voisine.
+              if(!target&&detail.kind==="photo"&&hasCoordinates){
+                target=markers.find(marker=>marker.dataset.memoryType==="photo"&&
+                  Math.abs(Number(marker.dataset.latitude)-Number(detail.latitude))<0.0001&&
+                  Math.abs(Number(marker.dataset.longitude)-Number(detail.longitude))<0.0001);
+              }
+              if(target){
+                const lat=Number(target.dataset.latitude),lon=Number(target.dataset.longitude);
+                if(Number.isFinite(lat)&&Number.isFinite(lon)){
+                  const center=map.getCenter();
+                  const alreadyCentered=Math.abs(center.lat-lat)<0.0001&&Math.abs(center.lng-lon)<0.0001&&map.getZoom()>=12;
+                  if(alreadyCentered){
                     target.click();
+                  }else{
+                    // N'ouvrir que la popup de l'objet exact après le cadrage ciblé.
+                    map.once("moveend",()=>target?.click());
+                    requestDayCamera(detail.date,false,[lon,lat]);
                   }
-                } else if (Number.isFinite(detail.latitude) && Number.isFinite(detail.longitude) &&
-                    Math.abs(Number(detail.latitude)) <= 85 && Math.abs(Number(detail.longitude)) <= 180) {
-                  requestDayCamera(detail.date, false, [Number(detail.longitude),Number(detail.latitude)]);
+                }else{
+                  target.click();
                 }
+              }else if(hasCoordinates){
+                // Si aucun marqueur exploitable n'existe, au moins cadrer la position
+                // de la photo fournie par la galerie plutôt que le parcours de la journée.
+                requestDayCamera(detail.date,false,[Number(detail.longitude),Number(detail.latitude)]);
               }
             });
             const mapRequest = new URLSearchParams(window.location.search);
