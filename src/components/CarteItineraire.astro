@@ -121,9 +121,13 @@ const points = etapes
           if (dayNavigation.parentElement !== dayNavigationHome) {
             dayNavigationHome.insertBefore(dayNavigation, dayNavigationPlaceholder.nextSibling);
           }
+          if (dayLegend.parentElement !== dayNavigationHome) dayNavigationHome.append(dayLegend);
+          dayLegend.style.marginTop = "8px";
           dayControl.style.display = "none";
         } else {
           if (dayNavigation.parentElement !== dayControl) dayControl.append(dayNavigation);
+          if (dayLegend.parentElement !== dayControl) dayControl.insertBefore(dayLegend, dayNavigation);
+          dayLegend.style.marginTop = "0";
           dayControl.style.display = "";
         }
       };
