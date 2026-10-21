@@ -1103,7 +1103,7 @@ const points = etapes
               const hasCoordinates=Number.isFinite(detail.latitude)&&Number.isFinite(detail.longitude)&&
                 Math.abs(Number(detail.latitude))<=85&&Math.abs(Number(detail.longitude))<=180;
               const normalizePhotoKey=(value:string)=>{
-                try{return new URL(value,window.location.origin).pathname.replace(/\\/+/g,"/");}
+                try{return new URL(value,window.location.origin).pathname;}
                 catch{return value.split("?")[0];}
               };
               // Comparer aussi les chemins normalisés (URL relative/absolue, caractères encodés)
