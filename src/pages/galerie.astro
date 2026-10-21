@@ -394,7 +394,9 @@ import { chemin } from "../lib/paths";
         const longitude = Number(photo.longitude);
         const photoDate = stamp.slice(0, 10);
         const hasPhotoGps = photo.latitude !== null && photo.latitude !== undefined && photo.latitude !== "" &&
-          photo.longitude !== null && photo.longitude !== undefined && photo.longitude !== "";
+          photo.longitude !== null && photo.longitude !== undefined && photo.longitude !== "" &&
+          Number.isFinite(latitude) && Math.abs(latitude) <= 85 &&
+          Number.isFinite(longitude) && Math.abs(longitude) <= 180;
         const fallbackStep = photoStep ||
           [...steps].filter((step: any) => String(step.date || "") <= photoDate)
             .sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)))[0] ||
