@@ -241,11 +241,12 @@ const points = etapes
         // Le point d’entrée unique de toute décision de cadrage. Il est initialisé
         // après fetchRoute ; les appels précoces sont rejoués après création des marqueurs.
         let requestDayCamera: (date:string, initialFocus?:boolean, target?:[number,number]) => void = () => {};
+        let selectedTraceId:string|null=null;
+        let selectedTraceDate="";
+        let selectedTraceAnimationToken=0;
         const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
           document.documentElement.dataset.voyageDay = date;
-          const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
-            .filter((marker) => marker.dataset.date === selectedDay);
           element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
             const active = !selectedDay || marker.dataset.date === selectedDay;
             marker.style.opacity = active ? "1" : ".38";
@@ -629,9 +630,6 @@ const points = etapes
                 })();
               }
             };
-            let selectedTraceId:string|null=null;
-            let selectedTraceDate="";
-            let selectedTraceAnimationToken=0;
             const showTrace=async(id:string,date:string,fitMap=true)=>{
               selectedTraceId=id;
               selectedTraceDate=date;
