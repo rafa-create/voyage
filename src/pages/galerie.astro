@@ -393,9 +393,18 @@ import { chemin } from "../lib/paths";
         const latitude = Number(photo.latitude);
         const longitude = Number(photo.longitude);
         const photoDate = stamp.slice(0, 10);
-        if (Number.isFinite(latitude) && Math.abs(latitude) <= 85 &&
-            Number.isFinite(longitude) && Math.abs(longitude) <= 180 &&
-            /^\d{4}-\d{2}-\d{2}$/.test(photoDate)) {
+        const hasPhotoGps = photo.latitude !== null && photo.latitude !== undefined && photo.latitude !== "" &&
+          photo.longitude !== null && photo.longitude !== undefined && photo.longitude !== "";
+        const fallbackStep = photoStep ||
+          [...steps].filter((step: any) => String(step.date || "") <= photoDate)
+            .sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)))[0] ||
+          steps.find((step: any) => step.date === photoDate);
+        const mapLatitude = hasPhotoGps ? latitude : Number(fallbackStep?.latitude);
+        const mapLongitude = hasPhotoGps ? longitude : Number(fallbackStep?.longitude);
+        const hasMapPosition = Number.isFinite(mapLatitude) && Math.abs(mapLatitude) <= 85 &&
+          Number.isFinite(mapLongitude) && Math.abs(mapLongitude) <= 180 &&
+          (hasPhotoGps || !!fallbackStep);
+        if (hasMapPosition && /^\d{4}-\d{2}-\d{2}$/.test(photoDate)) {
           const mapLink = document.createElement("button");
           mapLink.type = "button";
           mapLink.className = "gallery-view-on-map";
@@ -403,8 +412,8 @@ import { chemin } from "../lib/paths";
           mapLink.addEventListener("click", () => {
             window.location.href = "/?photoMap=" + encodeURIComponent(photo.src) +
               "&date=" + encodeURIComponent(photoDate) +
-              "&lat=" + encodeURIComponent(String(latitude)) +
-              "&lon=" + encodeURIComponent(String(longitude));
+              "&lat=" + encodeURIComponent(String(mapLatitude)) +
+              "&lon=" + encodeURIComponent(String(mapLongitude));
           });
           cap.append(document.createElement("br"), mapLink);
         }
