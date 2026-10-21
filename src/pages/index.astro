@@ -160,7 +160,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const photoDay=dateKey(photo);
           const linkedStage=photo.etape?stages.find(stage=>stage.slug===photo.etape):undefined;
           const fallbackStage=linkedStage||[...stages].filter(stage=>String(stage.date||"")<=photoDay).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||stages.find(stage=>stage.date===photoDay);
-          const hasPhotoGps=photo.latitude!==null&&photo.latitude!==undefined&&photo.latitude!==""&&photo.longitude!==null&&photo.longitude!=="";
+          const hasPhotoGps=Number.isFinite(Number(photo.latitude))&&Math.abs(Number(photo.latitude))<=85&&Number.isFinite(Number(photo.longitude))&&Math.abs(Number(photo.longitude))<=180&&photo.latitude!==null&&photo.latitude!==undefined&&photo.latitude!==""&&photo.longitude!==null&&photo.longitude!==undefined&&photo.longitude!=="";
           const photoMapLat=hasPhotoGps?Number(photo.latitude):Number(fallbackStage?.latitude);
           const photoMapLon=hasPhotoGps?Number(photo.longitude):Number(fallbackStage?.longitude);
           const hasMapPosition=Number.isFinite(photoMapLat)&&Math.abs(photoMapLat)<=85&&Number.isFinite(photoMapLon)&&Math.abs(photoMapLon)<=180&&(hasPhotoGps||!!fallbackStage);
