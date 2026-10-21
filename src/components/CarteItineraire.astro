@@ -1102,12 +1102,24 @@ const points = etapes
               ) : undefined;
               const hasCoordinates=Number.isFinite(detail.latitude)&&Number.isFinite(detail.longitude)&&
                 Math.abs(Number(detail.latitude))<=85&&Math.abs(Number(detail.longitude))<=180;
-              // Si le chemin de la photo diffère légèrement de celui de l'API, retrouver
-              // uniquement un marqueur photo à ses coordonnées, jamais une activité voisine.
-              if(!target&&detail.kind==="photo"&&hasCoordinates){
+              const normalizePhotoKey=(value:string)=>{
+                try{return new URL(value,window.location.origin).pathname.replace(/\\/+/g,"/");}
+                catch{return value.split("?")[0];}
+              };
+              // Comparer aussi les chemins normalisés (URL relative/absolue, caractères encodés)
+              // avant d'utiliser les coordonnées, qui peuvent être partagées par plusieurs photos.
+              if(!target&&detail.kind==="photo"&&detail.key){
+                const wanted=normalizePhotoKey(detail.key);
                 target=markers.find(marker=>marker.dataset.memoryType==="photo"&&
+                  normalizePhotoKey(marker.dataset.memoryKey||"")===wanted);
+              }
+              // Dernier recours : ne choisir un marqueur photo par coordonnées que si la position
+              // identifie une seule photo, pour ne jamais ouvrir arbitrairement un autre souvenir.
+              if(!target&&detail.kind==="photo"&&hasCoordinates){
+                const matches=markers.filter(marker=>marker.dataset.memoryType==="photo"&&
                   Math.abs(Number(marker.dataset.latitude)-Number(detail.latitude))<0.0001&&
                   Math.abs(Number(marker.dataset.longitude)-Number(detail.longitude))<0.0001);
+                if(matches.length===1)target=matches[0];
               }
               if(target){
                 const lat=Number(target.dataset.latitude),lon=Number(target.dataset.longitude);
