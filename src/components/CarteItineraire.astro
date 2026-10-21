@@ -1144,4 +1144,28 @@ const points = etapes
 <style is:global>
   /* Masquer le contrôle d’attribution cartographique dans l’interface. */
   #carte-voyage .maplibregl-ctrl-attrib { display: none !important; }
+  #carte-voyage .map-day-navigation-control .daily-heading-title {
+    display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; white-space: nowrap;
+  }
+  #carte-voyage .map-day-navigation-control #daily-heading-prefix {
+    margin: 0; font: 600 12px 'DM Sans',sans-serif; letter-spacing: 0; white-space: nowrap;
+  }
+  #carte-voyage .map-day-navigation-control #daily-date-picker {
+    width: 118px; min-width: 118px; height: 32px; padding: 3px 5px;
+    border: 1px solid #dedbd0; border-radius: 4px; background: #fffdf8; color: #173d3b;
+  }
+  #carte-voyage .map-day-navigation-control .daily-arrow {
+    display: grid; place-items: center; width: 30px; min-width: 30px; height: 32px;
+    padding: 0; border: 1px solid #dedbd0; border-radius: 4px;
+    background: #fffdf8; color: #173d3b; cursor: pointer;
+  }
+  #carte-voyage .map-day-navigation-control .daily-arrow:disabled { opacity: .35; cursor: default; }
+  @media (max-width: 480px) {
+    #carte-voyage .map-day-navigation-control { max-width: calc(100vw - 90px); padding: 7px; }
+    #carte-voyage .map-day-navigation-control .daily-heading-title { gap: 3px; }
+    #carte-voyage .map-day-navigation-control #daily-heading-prefix { font-size: 10px; }
+    #carte-voyage .map-day-navigation-control #daily-date-picker { width: 104px; min-width: 104px; }
+    #carte-voyage .map-day-navigation-control .daily-arrow { width: 25px; min-width: 25px; }
+    #carte-voyage .map-day-navigation-control .map-day-navigation-control { max-width: calc(100vw - 90px); }
+  }
 </style>
