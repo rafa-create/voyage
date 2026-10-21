@@ -467,8 +467,8 @@ const points = etapes
             }
             // Les étapes structurent les dates sans heure ; elles ancrent
             // l'itinéraire avant les événements détaillés de la même journée.
-            // Le libellé de la carte reprend le lieu et l'heure du premier souvenir du jour,
-            // comme le diaporama, avec le même géocodage inversé pour les activités.
+            // Le lieu de la légende est géocodé depuis le centre visible de la carte;
+            // seule l'heure provient de l'activité GPS de la journée sélectionnée.
             const reversePlace=async(lat:number,lon:number):Promise<string>=>{
               try{
                 const response=await fetch("https://photon.komoot.io/reverse?lon="+encodeURIComponent(String(lon))+"&lat="+encodeURIComponent(String(lat))+"&limit=1",{headers:{"Accept":"application/json"}});
