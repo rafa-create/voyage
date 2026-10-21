@@ -559,15 +559,27 @@ const points = etapes
               const bounds=map.getBounds();
               const west=bounds.getWest(),east=bounds.getEast();
               const south=bounds.getSouth(),north=bounds.getNorth();
+              const segmentIntersects=(x0:number,y0:number,x1:number,y1:number)=>{
+                // Découpage paramétrique du segment par le rectangle de la fenêtre.
+                const dx=x1-x0,dy=y1-y0;
+                const p=[-dx,dx,-dy,dy],q=[x0-west,east-x0,y0-south,north-y0];
+                let start=0,end=1;
+                for(let i=0;i<4;i++){
+                  if(p[i]===0){if(q[i]<0)return false;continue;}
+                  const ratio=q[i]/p[i];
+                  if(p[i]<0)start=Math.max(start,ratio);
+                  else end=Math.min(end,ratio);
+                  if(start>end)return false;
+                }
+                return true;
+              };
               for(let i=0;i<route.length;i++){
                 const [lat,lon]=route[i];
                 if(lon>=west&&lon<=east&&lat>=south&&lat<=north)return true;
-                if(i===0)continue;
-                const [previousLat,previousLon]=route[i-1];
-                // Tester chaque segment évite les faux positifs du rectangle englobant
-                // d'un parcours très long qui ne passe pas réellement près de la fenêtre.
-                if(Math.max(lon,previousLon)>=west&&Math.min(lon,previousLon)<=east&&
-                   Math.max(lat,previousLat)>=south&&Math.min(lat,previousLat)<=north)return true;
+                if(i>0){
+                  const [previousLat,previousLon]=route[i-1];
+                  if(segmentIntersects(previousLon,previousLat,lon,lat))return true;
+                }
               }
               return false;
             };
