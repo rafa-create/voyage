@@ -537,94 +537,89 @@ const points = etapes
             let cameraRequest = 0;
             requestDayCamera = (date:string, initialFocus=false, target?:[number,number]) => {
               const request = ++cameraRequest;
-              void (async () => {
+              // Appliquer un premier cadrage sans attendre le réseau : les marqueurs
+              // du jour sont déjà rendus. Le chargement GPS ne doit jamais bloquer
+              // Précédent/Suivant ni laisser la caméra sur l'ancienne journée.
+              const markerBounds = new maplibregl.LngLatBounds();
+              if (target && Number.isFinite(target[0]) && Number.isFinite(target[1])) {
+                markerBounds.extend(target);
+              } else {
+                for (const marker of Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))) {
+                  if (marker.dataset.date !== date) continue;
+                  const lat = Number(marker.dataset.latitude);
+                  const lon = Number(marker.dataset.longitude);
+                  if (Number.isFinite(lat) && Number.isFinite(lon) &&
+                      Math.abs(lat) <= 90 && Math.abs(lon) <= 180) markerBounds.extend([lon, lat]);
+                }
+              }
+
+              const fallbackBounds = () => {
                 const bounds = new maplibregl.LngLatBounds();
-                if (target && Number.isFinite(target[0]) && Number.isFinite(target[1])) {
-                  bounds.extend(target);
+                const stage = points.find((point) => point.date === date);
+                if (stage) bounds.extend([stage.longitude, stage.latitude]);
+                else {
+                  bounds.extend(initialBounds.getSouthWest());
+                  bounds.extend(initialBounds.getNorthEast());
                 }
-                const dailyActivity = memories
-                  .filter((memory) => memory.type === "sport" && memory.date === date && memory.id && memory.parcours)
-                  .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
-                let usedRoute = false;
-                // Si la journée comporte une activité GPS, cadrer son parcours en priorité,
-                // même si des photos ou d'autres souvenirs possèdent déjà des coordonnées.
-                if (!target && dailyActivity?.id) {
-                  try {
-                    const route = await fetchRoute(dailyActivity.id, routePrecisionForZoom(map.getZoom()));
-                    if (route?.length) {
-                      for (const [lat, lon] of route) bounds.extend([lon, lat]);
-                      usedRoute = !bounds.isEmpty();
-                    }
-                  } catch { /* Repli sur les positions des souvenirs du jour. */ }
-                }
-                if (!target && !usedRoute) {
-                  for (const marker of Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))) {
-                    if (marker.dataset.date !== date) continue;
-                    const lat = Number(marker.dataset.latitude);
-                    const lon = Number(marker.dataset.longitude);
-                    if (Number.isFinite(lat) && Number.isFinite(lon)) bounds.extend([lon, lat]);
-                  }
-                }
-                // Sans coordonnées ce jour-là, privilégier l'étape de cette date,
-                // puis l'itinéraire complet : ne jamais conserver le cadrage d'un autre jour.
-                if (bounds.isEmpty()) {
-                  const stage = points.find((point) => point.date === date);
-                  if (stage) bounds.extend([stage.longitude, stage.latitude]);
-                  else {
-                    bounds.extend(initialBounds.getSouthWest());
-                    bounds.extend(initialBounds.getNorthEast());
-                  }
-                }
+                return bounds;
+              };
+
+              const applyCamera = (bounds:maplibregl.LngLatBounds, usedRoute=false, attempt=0) => {
                 if (request !== cameraRequest || bounds.isEmpty()) return;
-                // La carte peut être encore en chargement après l'arrivée des souvenirs.
-                // Ne pas abandonner le cadrage initial : l'appliquer dès que MapLibre est prête.
-                const applyCamera = (attempt = 0) => {
-                  if (request !== cameraRequest || bounds.isEmpty()) return;
-                  // En admin, le conteneur peut finir sa mise en page après le chargement
-                  // de MapLibre. Ne pas lancer fitBounds tant qu'il n'a pas de dimensions.
-                  if (element.clientWidth < 2 || element.clientHeight < 2) {
-                    if (attempt < 30) requestAnimationFrame(() => applyCamera(attempt + 1));
-                    return;
-                  }
-                  map.resize();
-                  map.stop();
-                  const southWest = bounds.getSouthWest();
-                  const northEast = bounds.getNorthEast();
-                  const distance = southWest.distanceTo(northEast);
-                  const singlePoint = distance < 100;
-                  const maxZoom = target
-                    ? Math.max(map.getZoom(), 11)
-                    : usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14));
-                  const options = {
-                    padding: { top: 58, right: 58, bottom: 100, left: 58 },
-                    maxZoom,
-                    duration: initialFocus ? 1500 : 850,
-                  };
-                  // fitBounds peut conserver la vue courante lorsque la carte est intégrée
-                  // dans le panneau admin/mobile et que sa taille vient de changer.
-                  // Passer d'abord par le centre calculé explicitement garantit un mouvement
-                  // observable, puis fitBounds ajuste le zoom au tracé complet.
-                  const center = bounds.getCenter();
-                  if (target) {
-                    map.flyTo({ center, zoom: maxZoom, duration: options.duration, essential: true });
-                  } else {
-                    map.fitBounds(bounds, options);
-                    if (distance >= 100) {
-                      map.once("moveend", () => {
-                        if (request !== cameraRequest) return;
-                        map.fitBounds(bounds, { ...options, duration: 0 });
-                      });
-                    } else {
-                      map.flyTo({ center, zoom: maxZoom, duration: options.duration, essential: true });
-                    }
-                  }
+                if (element.clientWidth < 2 || element.clientHeight < 2) {
+                  if (attempt < 30) requestAnimationFrame(() => applyCamera(bounds, usedRoute, attempt + 1));
+                  return;
+                }
+                map.resize();
+                map.stop();
+                const southWest = bounds.getSouthWest();
+                const northEast = bounds.getNorthEast();
+                const distance = southWest.distanceTo(northEast);
+                const singlePoint = distance < 100;
+                const maxZoom = target
+                  ? Math.max(map.getZoom(), 11)
+                  : usedRoute ? 16 : (singlePoint ? (initialFocus ? 14 : 13) : (initialFocus ? 15 : 14));
+                const options = {
+                  padding: { top: 58, right: 58, bottom: 100, left: 58 },
+                  maxZoom,
+                  duration: initialFocus ? 1500 : 850,
                 };
-                // Ne pas attendre l'événement "idle" : sur mobile/admin, les tuiles
-                // ou les sources GeoJSON peuvent maintenir la carte occupée et empêcher
-                // le recentrage de la journée. MapLibre accepte fitBounds avant idle ;
-                // applyCamera vérifie déjà les dimensions et redimensionne le conteneur.
-                applyCamera();
-              })();
+                const center = bounds.getCenter();
+                if (target || singlePoint) {
+                  map.flyTo({ center, zoom: maxZoom, duration: options.duration, essential: true });
+                } else {
+                  map.fitBounds(bounds, options);
+                  map.once("moveend", () => {
+                    if (request !== cameraRequest) return;
+                    map.fitBounds(bounds, { ...options, duration: 0 });
+                  });
+                }
+              };
+
+              const immediateBounds = markerBounds.isEmpty() ? fallbackBounds() : markerBounds;
+              applyCamera(immediateBounds);
+
+              // Affiner ensuite le cadrage sur le parcours GPS complet si disponible.
+              // La réponse réseau ne peut agir que si cette journée est toujours sélectionnée.
+              const dailyActivity = memories
+                .filter((memory) => memory.type === "sport" && memory.date === date && memory.id && memory.parcours)
+                .sort((a, b) => String(b.order || "").localeCompare(String(a.order || "")))[0];
+              if (!target && dailyActivity?.id) {
+                void (async () => {
+                  try {
+                    const route = await fetchRoute(dailyActivity.id!, routePrecisionForZoom(map.getZoom()));
+                    if (request !== cameraRequest || !route?.length) return;
+                    const routeBounds = new maplibregl.LngLatBounds();
+                    for (const [lat, lon] of route) {
+                      if (Number.isFinite(lat) && Number.isFinite(lon) &&
+                          Math.abs(lat) <= 90 && Math.abs(lon) <= 180) routeBounds.extend([lon, lat]);
+                    }
+                    if (!routeBounds.isEmpty()) applyCamera(routeBounds, true);
+                  } catch {
+                    // Le cadrage immédiat sur les marqueurs reste valable si le GPS échoue.
+                  }
+                })();
+              }
             };
             let selectedTraceId:string|null=null;
             let selectedTraceDate="";
