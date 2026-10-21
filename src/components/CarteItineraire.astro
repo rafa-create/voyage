@@ -243,6 +243,7 @@ const points = etapes
         let requestDayCamera: (date:string, initialFocus?:boolean, target?:[number,number]) => void = () => {};
         const updateSelectedDay = (date:string, fitMap = true, initialFocus = false) => {
           selectedDay = date;
+          document.documentElement.dataset.voyageDay = date;
           const dailyMarkers = Array.from(element.querySelectorAll<HTMLElement>(".memory-map-marker"))
             .filter((marker) => marker.dataset.date === selectedDay);
           element.querySelectorAll<HTMLElement>(".memory-map-marker").forEach((marker) => {
@@ -306,36 +307,9 @@ const points = etapes
             dateLabel.style.borderRadius = selectedDay ? "3px" : "";
             dateLabel.style.display = selectedDay ? "inline-block" : "";
           }
-          // Cadrage immédiat à partir des marqueurs déjà présents : la navigation
-          // précédent/suivant ne doit pas dépendre du chargement asynchrone des traces GPS.
-          if (fitMap) {
-            const dayBounds = new maplibregl.LngLatBounds();
-            for (const marker of dailyMarkers) {
-              const lat = Number(marker.dataset.latitude);
-              const lon = Number(marker.dataset.longitude);
-              if (Number.isFinite(lat) && Number.isFinite(lon) &&
-                  Math.abs(lat) <= 85 && Math.abs(lon) <= 180) dayBounds.extend([lon, lat]);
-            }
-            if (dayBounds.isEmpty()) {
-              const stage = points.find((point) => point.date === date);
-              if (stage && Number.isFinite(stage.latitude) && Number.isFinite(stage.longitude)) {
-                dayBounds.extend([stage.longitude, stage.latitude]);
-              }
-            }
-            if (!dayBounds.isEmpty()) {
-              map.resize();
-              map.stop();
-              if (dayBounds.getNorthEast().distanceTo(dayBounds.getSouthWest()) < 25) {
-                map.easeTo({ center: dayBounds.getCenter(), zoom: initialFocus ? 15 : 13,
-                  duration: initialFocus ? 1500 : 850 });
-              } else {
-                map.fitBounds(dayBounds, { padding: { top: 55, right: 55, bottom: 100, left: 55 },
-                  maxZoom: initialFocus ? 16 : 15, duration: initialFocus ? 1500 : 850 });
-              }
-            }
-            // Le GPS peut ensuite affiner le cadrage lorsque la route est disponible.
-            requestDayCamera(date, initialFocus);
-          }
+          // Toute la caméra passe par un seul point d'entrée : éviter que deux
+          // animations concurrentes se remplacent lors des changements de journée.
+          if (fitMap) requestDayCamera(date, initialFocus);
         };
         window.addEventListener("voyage:jour", (event) => {
           const detail = (event as CustomEvent<{date?:string;fitMap?:boolean}>).detail;
