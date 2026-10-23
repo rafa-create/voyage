@@ -41,7 +41,7 @@ import { chemin } from "../../lib/paths";
         </form>
       </section>
 
-      <section class="admin-panel">
+      <section class="admin-panel admin-photo-upload-panel">
         <div class="admin-section-title">
           <div><p class="eyebrow">02 / UN NOUVEAU SOUVENIR</p><h2>Ajouter des photos</h2></div>
         </div>
@@ -159,12 +159,28 @@ import { chemin } from "../../lib/paths";
     </div>
   </section>
 
+<style is:global>
+    body.admin-photos-embed .admin-head,body.admin-photos-embed .admin-topline,body.admin-photos-embed #admin-app>.admin-panel:not(.admin-photo-upload-panel){display:none!important}
+    body.admin-photos-embed .admin-journey{padding:0!important;margin:0!important;max-width:none!important}
+    body.admin-photos-embed #admin-app{display:block!important}
+    body.admin-photos-embed .admin-photo-upload-panel{margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:1rem!important}
+    body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title{margin-bottom:.75rem}
+    body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title .eyebrow{display:none}
+    body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title h2{font-size:1.35rem}
+    body.admin-photos-embed .chosen-photo-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;grid-column:1/-1}
+    body.admin-photos-embed .chosen-photo-fields label{display:grid;gap:.25rem;font-size:.78rem;font-weight:600;min-width:0}
+    body.admin-photos-embed .chosen-photo-fields input{box-sizing:border-box;width:100%;min-width:0;padding:.55rem;border:1px solid #bbb;border-radius:7px;font:inherit;font-size:16px}
+    body.admin-photos-embed .chosen-file{grid-template-columns:64px minmax(0,1fr) auto}
+    @media(max-width:560px){body.admin-photos-embed .admin-photo-upload-panel{padding:.8rem!important}body.admin-photos-embed .chosen-photo-fields{grid-template-columns:repeat(2,minmax(0,1fr))}body.admin-photos-embed .chosen-photo-fields label:first-child{grid-column:1/-1}body.admin-photos-embed .chosen-file{grid-template-columns:56px minmax(0,1fr)}body.admin-photos-embed .chosen-file>.chosen-private{grid-column:2}}
+  </style>
   <script>
     import * as exifr from "exifr";
 
     type Etape = { slug:string; titre:string; ville:string; pays:string; date:string; dateFin?:string; statut:string };
     type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;dateHeure?:string|null;lieu?:string;legende?:string;commentaire?:string;latitude?:number|null;longitude?:number|null;alt:string;legacy?:boolean};
-    type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null; prive:boolean };
+    type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null;lieu:string; prive:boolean };
+    const isGalleryPhotoContext = new URLSearchParams(location.search).get("context")==="photos";
+    if(isGalleryPhotoContext)document.body.classList.add("admin-photos-embed");
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
     const status = $("admin-status");
     const selectors = ["active-select","upload-etape","video-etape","video-file-etape","edit-story-step"];
@@ -210,6 +226,7 @@ import { chemin } from "../../lib/paths";
         const choice=before[id];
         const current=etapes.find(e=>e.statut==="actuelle");
         select.value=choice!==undefined&&(etapes.some(e=>e.slug===choice)||id==="upload-etape"&&choice===""||(id==="video-etape"||id==="video-file-etape")&&choice==="sans-etape")?choice:(id==="upload-etape"||id==="video-etape"||id==="video-file-etape")?((id==="video-etape"||id==="video-file-etape")?"sans-etape":""):current?.slug||etapes[0]?.slug||"";
+        if(isGalleryPhotoContext&&id==="upload-etape")select.value="";
       }
       const filter=$<HTMLSelectElement>("library-filter");
       if(filter){
@@ -283,6 +300,7 @@ import { chemin } from "../../lib/paths";
         if(btn)btn.disabled=false;
       }catch(e){message("admin-status",e instanceof Error?e.message:"Connexion impossible.");}
     }
+    if(isGalleryPhotoContext){const auto=$<HTMLInputElement>("auto-date");if(auto)auto.checked=false;}
     start();
     $<HTMLFormElement>("site-access-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
@@ -352,11 +370,14 @@ import { chemin } from "../../lib/paths";
         const lieu=item.latitude!==null&&item.longitude!==null?"GPS exact":dateStep(item.date)?.ville?"Lieu estimé : "+dateStep(item.date)?.ville:"Lieu : étape choisie";
         date.textContent=(item.dateHeure?"Prise le "+item.dateHeure.replace("T"," à ").slice(0,16):item.date?"Prise le "+item.date:"Date non renseignée")+" · "+lieu;
         details.append(name,date);
+        const fields=document.createElement("div");fields.className="chosen-photo-fields";
+        const makeInput=(labelText:string,type:"text"|"number",value:string,placeholder:string)=>{const wrap=document.createElement("label");wrap.textContent=labelText;const input=document.createElement("input");input.type=type;input.value=value;input.placeholder=placeholder;if(type==="number")input.step="any";input.addEventListener("input",()=>{if(labelText==="Lieu")selected[index].lieu=input.value;else if(labelText==="Latitude")selected[index].latitude=input.value.trim()&&Number.isFinite(Number(input.value))?Number(input.value):null;else selected[index].longitude=input.value.trim()&&Number.isFinite(Number(input.value))?Number(input.value):null;});wrap.append(input);fields.append(wrap);};
+        makeInput("Lieu","text",item.lieu,"Ville ou lieu précis");makeInput("Latitude","number",item.latitude===null?"":String(item.latitude),"Ex. 43.2965");makeInput("Longitude","number",item.longitude===null?"":String(item.longitude),"Ex. 5.3698");
         const label=document.createElement("label");label.className="chosen-private";
         const check=document.createElement("input");check.type="checkbox";check.checked=item.prive;
         check.addEventListener("change",()=>{selected[index].prive=check.checked;});
         label.append(check," Privée");
-        el.append(image,details,label);container.append(el);
+        el.append(image,details,fields,label);container.append(el);
       }
     }
     $<HTMLInputElement>("upload-files")?.addEventListener("change",async e=>{
@@ -366,7 +387,7 @@ import { chemin } from "../../lib/paths";
       message("photo-progress","Lecture des dates EXIF…");
       for(const file of files){
         const metadata=await photoMetadata(file);
-        selected.push({file,preview:URL.createObjectURL(file),...metadata,prive:false});
+        selected.push({file,preview:URL.createObjectURL(file),...metadata,lieu:"",prive:false});
       }
       renderChosen();message("photo-progress",selected.length+" fichier(s) sélectionné(s).");
     });
@@ -406,7 +427,7 @@ import { chemin } from "../../lib/paths";
           if(body.size>30*1024*1024)throw Error(item.file.name+" dépasse 30 Mo.");
           const params=new URLSearchParams({
             visibilite:publicPhoto?"public":"prive",
-            auto:$<HTMLInputElement>("auto-date")?.checked?"1":"0",
+            auto:!isGalleryPhotoContext&&$<HTMLInputElement>("auto-date")?.checked?"1":"0",
           });
           const selectedStep=$<HTMLSelectElement>("upload-etape")?.value||"";
           if(selectedStep)params.set("etape",selectedStep);
@@ -415,6 +436,7 @@ import { chemin } from "../../lib/paths";
           if(item.latitude!==null&&item.longitude!==null){
             params.set("latitude",String(item.latitude));params.set("longitude",String(item.longitude));
           }
+          if(item.lieu.trim())params.set("lieu",item.lieu.trim());
           const res=await api("/api/prive/admin/upload?"+params.toString(),{
             method:"POST",headers:{"X-Voyage-Admin":"1","Content-Type":item.file.type||"application/octet-stream","X-Original-Filename":encodeURIComponent(item.file.name)},body
           });
