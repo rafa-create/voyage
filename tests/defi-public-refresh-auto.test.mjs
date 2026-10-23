@@ -27,7 +27,9 @@ function polyline(points){
 test("le rafraîchissement prioritaire ne récupère que le mois d'échecs courant et archive seulement le sport du jour",async()=>{
   const original=globalThis.fetch;
   const today=dateInZone(Date.now(),"Europe/Paris");
-  const yesterday=dateInZone(Date.now()-26*60*60*1000,"Europe/Paris");
+  const yesterday=new Date(Date.parse(today+"T12:00:00Z")-86400000).toISOString().slice(0,10);
+  const todayMs=Date.parse(today+"T12:00:00Z");
+  const yesterdayMs=Date.parse(yesterday+"T12:00:00Z");
   const env={PHOTOS_PRIVEES:bucket(),VOYAGE_BRIDGE_KEY:"t".repeat(48)};
   await env.PHOTOS_PRIVEES.put("__meta/defi/config.json",JSON.stringify({
     debut:yesterday,chessUsername:"rafaelorset",timezone:"Europe/Paris"
@@ -44,15 +46,15 @@ test("le rafraîchissement prioritaire ne récupère que le mois d'échecs coura
     if(str.includes("api.chess.com/pub/player/rafaelorset/games/")){
       monthRequests.push(str);
       return new Response(JSON.stringify({games:[{
-        end_time:Math.floor(Date.now()/1000),url:"https://www.chess.com/game/live/today",
+        end_time:Math.floor(todayMs/1000),url:"https://www.chess.com/game/live/today",
         time_class:"rapid",white:{username:"rafaelorset",rating:1012,result:"win"},
         black:{username:"opponent",rating:990,result:"checkmated"}
       }]}),{status:200,headers:{"content-type":"application/json"}});
     }
     if(str.endsWith("/api/voyage/strava/activities"))return new Response(JSON.stringify({items:[
-      {id:"5552001",startedAtMs:Date.now()-60*60*1000,durationSeconds:900,
+      {id:"5552001",startedAtMs:todayMs,durationSeconds:900,
         sportType:"Run",name:"Course du jour",visibility:"everyone",distanceMeters:3100,summaryPolyline:gps},
-      {id:"5552002",startedAtMs:Date.now()-26*60*60*1000,durationSeconds:900,
+      {id:"5552002",startedAtMs:yesterdayMs,durationSeconds:900,
         sportType:"Run",name:"Course d'hier",visibility:"everyone",distanceMeters:2900,summaryPolyline:gps}
     ]}),{status:200,headers:{"content-type":"application/json"}});
     if(str.endsWith("/api/chess.com/pub/player/rafaelorset/stats")||str.endsWith("/pub/player/rafaelorset/stats"))
