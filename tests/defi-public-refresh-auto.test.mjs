@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {dateInZone,freshPublicChallenge} from "../worker/defi.js";
+import {dateInZone,freshPublicChallenge,freshTodayChallenge} from "../worker/defi.js";
 import {archiveIndex,archiveMapPoints,publicArchivedRoute} from "../worker/parcours-archive.js";
 
 function bucket(){
@@ -24,6 +24,55 @@ function polyline(points){
     prevLat=la;prevLon=lo;return result;
   }).join("");
 }
+test("le rafraîchissement prioritaire ne récupère que le mois d'échecs courant et archive seulement le sport du jour",async()=>{
+  const original=globalThis.fetch;
+  const today=dateInZone(Date.now(),"Europe/Paris");
+  const yesterday=dateInZone(Date.now()-26*60*60*1000,"Europe/Paris");
+  const env={PHOTOS_PRIVEES:bucket(),VOYAGE_BRIDGE_KEY:"t".repeat(48)};
+  await env.PHOTOS_PRIVEES.put("__meta/defi/config.json",JSON.stringify({
+    debut:yesterday,chessUsername:"rafaelorset",timezone:"Europe/Paris"
+  }));
+  await env.PHOTOS_PRIVEES.put("__meta/defi/chess.json",JSON.stringify({
+    games:[{date:yesterday,mode:"rapid",rating:1000,result:"Victoire",
+      fin:Math.floor(Date.now()/1000)-86400,url:"https://www.chess.com/game/live/old"}],
+    ratingStats:{rapid:1000},lastSync:null
+  }));
+  const gps=polyline([[43.17,5.60],[43.171,5.602],[43.172,5.604]]);
+  const monthRequests=[];
+  globalThis.fetch=async url=>{
+    const str=String(url);
+    if(str.includes("api.chess.com/pub/player/rafaelorset/games/")){
+      monthRequests.push(str);
+      return new Response(JSON.stringify({games:[{
+        end_time:Math.floor(Date.now()/1000),url:"https://www.chess.com/game/live/today",
+        time_class:"rapid",white:{username:"rafaelorset",rating:1012,result:"win"},
+        black:{username:"opponent",rating:990,result:"checkmated"}
+      }]}),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(str.endsWith("/api/voyage/strava/activities"))return new Response(JSON.stringify({items:[
+      {id:"5552001",startedAtMs:Date.now()-60*60*1000,durationSeconds:900,
+        sportType:"Run",name:"Course du jour",visibility:"everyone",distanceMeters:3100,summaryPolyline:gps},
+      {id:"5552002",startedAtMs:Date.now()-26*60*60*1000,durationSeconds:900,
+        sportType:"Run",name:"Course d'hier",visibility:"everyone",distanceMeters:2900,summaryPolyline:gps}
+    ]}),{status:200,headers:{"content-type":"application/json"}});
+    if(str.endsWith("/api/chess.com/pub/player/rafaelorset/stats")||str.endsWith("/pub/player/rafaelorset/stats"))
+      return new Response(JSON.stringify({chess_rapid:{last:{rating:1012}}}),{status:200});
+    return new Response("not found",{status:404});
+  };
+  try{
+    const data=await freshTodayChallenge(env);
+    assert.equal(monthRequests.length,1);
+    assert.ok(monthRequests[0].endsWith("/games/"+today.slice(0,4)+"/"+today.slice(5,7)));
+    assert.equal(data.jours[0].date,today);
+    assert.equal(data.jours[0].echecs.url,"https://www.chess.com/game/live/today");
+    assert.ok(data.jours.find(day=>day.date===yesterday)?.echecs,
+      "les parties historiques déjà en cache sont conservées");
+    assert.equal(data.jours[0].activite.titre,"Course du jour");
+    assert.equal((await archiveIndex(env)).length,1,
+      "la synchronisation prioritaire n'archive pas la course d'hier");
+  }finally{globalThis.fetch=original;}
+});
+
 test("la page publique archive la sortie et valide le défi au même rafraîchissement",async()=>{
   const original=globalThis.fetch;
   const date=dateInZone(Date.now(),"Europe/Paris");
