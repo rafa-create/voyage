@@ -134,7 +134,7 @@ export default {
     // The public-site mode is stored separately from photo visibility. Default is open
     // so a missing setting never accidentally locks out visitors.
     const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
-    const siteAuthPath=/^\/connexion\/?$/.test(path)||[
+    const siteAuthPath=path.startsWith("/cdn-cgi/")||/^\/connexion\/?$/.test(path)||[
       "/api/public/site-access/status",
       "/api/public/site-access/login",
       "/api/public/site-access/logout"
