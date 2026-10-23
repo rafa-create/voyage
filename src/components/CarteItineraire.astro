@@ -972,12 +972,15 @@ const points = etapes
               }
               const panel=document.createElement("div");
               panel.className="map-popup-content";
-              const title=document.createElement("strong");title.textContent=memory.titre;
-              const when=document.createElement("span");
-              when.textContent=memory.dateHeure
-                ?memory.dateHeure.slice(0,10)+" · "+memory.dateHeure.slice(11,16)
-                :memory.date+" · heure non renseignée";
-              panel.append(title,when);
+              // Pour les photos, garder un aperçu compact : uniquement l'image et le lien galerie.
+              if(memory.type!=="photo"){
+                const title=document.createElement("strong");title.textContent=memory.titre;
+                const when=document.createElement("span");
+                when.textContent=memory.dateHeure
+                  ?memory.dateHeure.slice(0,10)+" · "+memory.dateHeure.slice(11,16)
+                  :memory.date+" · heure non renseignée";
+                panel.append(title,when);
+              }
               if(memory.type==="sport"){
                 const metrics=document.createElement("span");
                 metrics.style.cssText="display:block;margin:5px 0;color:#274c41;font-size:.82rem;";
@@ -998,7 +1001,7 @@ const points = etapes
                 }
                 metrics.textContent=details.join(" · ");
                 if(details.length)panel.append(metrics);
-              }else{
+              }else if(memory.type!=="photo"){
                 const precision=document.createElement("span");precision.textContent=memory.precision;
                 panel.append(precision);
               }
