@@ -483,12 +483,13 @@ import { chemin } from "../lib/paths";
     .gallery-add-button:hover { background:var(--forest); border-color:var(--forest); color:#fff; }
     .gallery-add-button:focus-visible { outline:2px solid var(--forest); outline-offset:3px; }
     .gallery-admin-dialog[hidden] { display:none !important; }
-    .gallery-admin-dialog { position:fixed; z-index:1000; inset:0; display:flex; flex-direction:column; background:var(--paper,#f6f3eb); padding:min(4vh,28px) max(12px,3vw); }
-    .gallery-admin-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:16px; max-width:980px; width:100%; margin:0 auto; padding:12px 16px; background:var(--white); border:1px solid var(--line); }
+    .gallery-admin-dialog { position:fixed; z-index:1000; inset:0; display:flex; flex-direction:column; background:var(--paper,#f6f3eb); padding:0; }
+    .gallery-admin-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; margin:0; padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left)); background:var(--white); border:0; border-bottom:1px solid var(--line); flex:0 0 auto; box-sizing:border-box; }
     .gallery-admin-dialog-head strong { font-size:.88rem; }
     .gallery-admin-dialog-head button { border:0; background:transparent; color:var(--forest); font-size:1.5rem; cursor:pointer; }
-    .gallery-admin-dialog iframe { display:block; width:100%; max-width:980px; flex:1; min-height:0; margin:0 auto; border:1px solid var(--line); border-top:0; background:var(--white); }
+    .gallery-admin-dialog iframe { display:block; width:100%; max-width:none; flex:1; min-height:0; margin:0; border:0; background:var(--paper,#f6f3eb); }
     body.gallery-admin-dialog-open { overflow:hidden; }
+    @media(max-width:600px){.gallery-admin-dialog-head{padding-top:max(12px,env(safe-area-inset-top));}.gallery-admin-dialog-head strong{font-size:.8rem;line-height:1.35}}
     @media(max-width:560px) { .gallery-page-heading { align-items:flex-start; } .gallery-admin-actions { gap:6px; } .gallery-add-button { width:32px; height:32px; } }
   </style>
   <script>
