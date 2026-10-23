@@ -5,13 +5,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "run_worker_first": [
-      "/media/*",
-      "/media-prive/*",
-      "/api/*",
-      "/espace/*",
-      "/admin/*",
-      "/etapes/*",
-      "/pays/*"
+      "/*"
     ]
   },
   "observability": {
