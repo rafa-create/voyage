@@ -55,16 +55,28 @@ const nav = [
       <script>
         const connectionLink = document.querySelector<HTMLAnchorElement>('.main-nav a[href$="/connexion/"]');
         if (connectionLink) {
-          fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" })
-            .then(async response => {
+          (async () => {
+            try {
+              const siteResponse = await fetch("/api/public/site-access/status", { credentials: "same-origin", cache: "no-store" });
+              if (siteResponse.ok) {
+                const site = await siteResponse.json();
+                if (site.mode === "restricted" && site.authenticated) {
+                  connectionLink.textContent = "Connecté";
+                  connectionLink.href = "/connexion/";
+                  connectionLink.setAttribute("aria-label", "Connecté — accès au carnet de voyage");
+                  connectionLink.classList.add("is-connected");
+                  return;
+                }
+              }
+              const response = await fetch("/api/prive/moi", { credentials: "same-origin", cache: "no-store" });
               if (!response.ok) return;
               const user = await response.json();
               connectionLink.textContent = "Connecté";
               connectionLink.href = user.isAdmin ? "/admin/" : "/espace/";
               connectionLink.setAttribute("aria-label", user.isAdmin ? "Connecté — espace administrateur" : "Connecté — albums privés");
               connectionLink.classList.add("is-connected");
-            })
-            .catch(() => {});
+            } catch {}
+          })();
         }
       </script>
     </header>
