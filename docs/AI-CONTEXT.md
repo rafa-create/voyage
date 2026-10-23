@@ -29,3 +29,22 @@
 - Vérifier que les URL de galerie et de téléchargement pointent vers le fichier original stocké, et non vers une miniature.
 - La conversion qui retire les métadonnées EXIF peut être utilisée lors d'une action explicite de publication d'une photo privée vers un espace public, pour éviter de divulguer involontairement un emplacement privé. Ne pas réutiliser ce traitement dans le flux normal d'import original.
 - Tester avec des JPEG d'iPhone haute résolution et un format HEIC/HEIF accepté par l'interface ; contrôler les dimensions, le type MIME, la lecture dans la galerie et la présence des métadonnées après téléchargement.
+
+## Page « Défi » — rafraîchissement prioritaire et synchronisation de fond
+### Comportement validé par l'utilisateur
+- À l'ouverture de `/defi`, afficher d'abord le cache public disponible pour rendre la page rapidement, puis demander immédiatement le rafraîchissement ciblé du jour. L'utilisateur a confirmé que ce comportement fonctionne.
+- Le rafraîchissement prioritaire met à jour les parties du jour : échecs du mois courant uniquement (l'API Chess.com expose les archives par mois) et activités sportives du jour uniquement. Il doit préserver les parties d'échecs plus anciennes déjà en cache.
+- Le rafraîchissement ciblé du sport utilise le fuseau configuré, n'importe que les activités datées du jour, limite l'import à trois activités et ne récupère pas les géométries de parcours dans cette passe.
+- Ensuite, tant que la page reste ouverte, le navigateur déclenche une demande de synchronisation de fond toutes les 60 secondes, puis relit le cache environ 10 secondes après la demande. La synchronisation de fond traite les données plus larges; elle répond rapidement au navigateur et continue côté Worker.
+- Le rafraîchissement ciblé possède un garde-fou dédié d'une minute. Les synchronisations amont gardent également leurs propres limites de fréquence; ne pas contourner ces protections pour forcer un rafraîchissement chaque minute.
+- Les rafraîchissements de cache ne doivent pas fermer ni perturber les détails d'un défi que l'utilisateur a déjà ouverts.
+- Les erreurs de synchronisation des échecs et du sport sont isolées : l'échec d'une source ne doit pas empêcher l'autre de se mettre à jour.
+
+### Endpoints et fichiers à préserver
+- `src/pages/defi.astro` orchestre le chargement : lecture du cache d'abord, rafraîchissement du jour ensuite, puis boucle de synchronisation de fond.
+- `GET /api/public/defi?aujourdhui=1` attend le rafraîchissement ciblé du jour et renvoie les données actualisées.
+- `GET /api/public/defi?arriere-plan=1` démarre `freshPublicChallenge(env)` en arrière-plan via `ctx.waitUntil` et renvoie immédiatement un état d'acceptation.
+- `GET /api/public/defi?statut=1` lit le cache sans déclencher une synchronisation amont.
+- `worker/defi.js` contient `freshTodayChallenge` et `syncChess(..., { todayOnly: true })`; `worker/sport-sync.js` prend en charge `todayOnly` et le fuseau horaire.
+- Ne pas remplacer le rafraîchissement ciblé par une synchronisation complète au chargement : cela ralentirait l'affichage et multiplierait les appels externes. Garder la synchronisation complète en arrière-plan et les tâches planifiées existantes.
+- Vérification : l'utilisateur a confirmé le fonctionnement de la priorité du jour suivie de la synchronisation de fond. Un test automatisé a été ajouté pour le périmètre du jour, mais ne pas affirmer que la suite de tests ou le build a été exécuté sans l'avoir réellement fait. Ne pas déployer sans accord explicite.
