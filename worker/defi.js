@@ -192,8 +192,8 @@ export async function freshPublicChallenge(env,{forceSports=false}={}){
       sync={etat:"erreur",prochaineVerification:PUBLIC_POLL_MIN_MS/1000};
     }
   }
-  // Mettre aussi à jour les dernières courses publiquement visibles,
-  // avec un plafond d'un appel toutes les dix minutes.
+  // Mettre aussi à jour les dernières courses visibles, en respectant le
+  // délai anti-abus appliqué par la synchronisation sportive.
   const stravaSync=await syncPublicRuns(env,{force:forceSports});
   const current=await publicChallenge(env);
   return {...current,synchronisation:sync,stravaSynchronisation:stravaSync};
