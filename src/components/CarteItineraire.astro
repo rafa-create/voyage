@@ -1155,18 +1155,21 @@ const points = etapes
             const requestedDate = mapRequest.get("date");
             const requestedLat = Number(mapRequest.get("lat"));
             const requestedLon = Number(mapRequest.get("lon"));
-            if ((requestedPhoto || requestedVideo || requestedFileVideo) && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+            const hasRequestedMapTarget = !!((requestedPhoto || requestedVideo || requestedFileVideo) &&
+                requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
                 Number.isFinite(requestedLat) && Math.abs(requestedLat) <= 85 &&
-                Number.isFinite(requestedLon) && Math.abs(requestedLon) <= 180) {
+                Number.isFinite(requestedLon) && Math.abs(requestedLon) <= 180);
+            if (hasRequestedMapTarget) {
               window.dispatchEvent(new CustomEvent("voyage:voir-sur-carte", {detail:{
-                date:requestedDate,kind:requestedFileVideo?"video-fichier":requestedVideo?"video":"photo",key:requestedFileVideo?"video-file:"+requestedFileVideo:requestedPhoto||undefined,latitude:requestedLat,longitude:requestedLon
+                date:requestedDate!,kind:requestedFileVideo?"video-fichier":requestedVideo?"video":"photo",key:requestedFileVideo?"video-file:"+requestedFileVideo:requestedPhoto||undefined,latitude:requestedLat,longitude:requestedLon
               }}));
               mapRequest.delete("photoMap");mapRequest.delete("videoMap");mapRequest.delete("videoFileMap");mapRequest.delete("date");mapRequest.delete("lat");mapRequest.delete("lon");
               const remaining = mapRequest.toString();
               window.history.replaceState({}, "", window.location.pathname + (remaining ? "?" + remaining : "") + window.location.hash);
             }
-            // Toutes les données et tous les marqueurs sont prêts : cadrage initial.
-            if (selectedDay) requestDayCamera(selectedDay, true);
+            // Si une photo/vidéo a demandé une position précise, ne pas écraser
+            // ce cadrage par le cadrage général du jour au démarrage.
+            if (selectedDay && !hasRequestedMapTarget) requestDayCamera(selectedDay, true);
             // Si la carte démarre dans un onglet masqué, la recadrer quand son
             // conteneur devient réellement visible (notamment sur mobile).
             let lastMapSize = "";
@@ -1174,7 +1177,7 @@ const points = etapes
               const size = element.clientWidth + "x" + element.clientHeight;
               if (size === lastMapSize || element.clientWidth < 2 || element.clientHeight < 2) return;
               lastMapSize = size;
-              if (selectedDay) requestAnimationFrame(() => requestDayCamera(selectedDay, true));
+              if (selectedDay && !hasRequestedMapTarget) requestAnimationFrame(() => requestDayCamera(selectedDay, true));
             });
             mapSizeObserver.observe(element);
           }catch{ /* Les étapes restent affichées si les événements échouent. */ }
