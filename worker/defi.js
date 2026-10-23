@@ -90,7 +90,7 @@ export function normalizeChessGame(game,username,timezone){
     rating:Number.isInteger(rating)&&rating>0&&rating<4000?rating:null,
     mode:["bullet","blitz","rapid","daily"].includes(mode)?mode:null};
 }
-export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
+export async function syncChess(env,{recentOnly=false,todayOnly=false,minIntervalMs=0}={}){
   const config=await getChallengeConfig(env);
   if(!config)return {ok:false,message:"Configure d'abord le défi depuis l'administration."};
   const today=dateInZone(new Date(),config.timezone);
@@ -101,7 +101,9 @@ export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
   }
   // Un voyage de 30 jours peut couvrir trois mois calendaires (31/01→01/03).
   // Lire les trois derniers mois garantit la récupération des parties Rapid.
-  const toFetch=months.slice(recentOnly?-3:-MAX_MONTHS_PER_SYNC);
+  // Chess.com ne propose pas d'archive par jour : pour le rafraîchissement prioritaire,
+  // ne lire que le mois courant et conserver les parties historiques déjà en cache.
+  const toFetch=todayOnly?months.slice(-1):months.slice(recentOnly?-3:-MAX_MONTHS_PER_SYNC);
   const all=new Map((old.games||[]).filter(x=>x.url).map(x=>[x.url,x]));
   let fetched=0;
   for(const month of toFetch){
@@ -135,6 +137,38 @@ export async function syncChess(env,{recentOnly=false,minIntervalMs=0}={}){
 // Le délai s'applique aussi aux appels en échec, pour ne pas saturer Chess.com.
 const PUBLIC_POLL_KEY="__meta/defi/chess-public-poll.json";
 const PUBLIC_POLL_MIN_MS=120000;
+
+// Rafraîchissement prioritaire de la journée courante. Le marqueur dédié évite
+// qu'un rechargement ou plusieurs visiteurs déclenchent plusieurs appels immédiats.
+const TODAY_CHESS_POLL_KEY="__meta/defi/chess-today-poll.json";
+const TODAY_CHESS_POLL_MS=60000;
+export async function freshTodayChallenge(env){
+  const config=await getChallengeConfig(env);
+  if(!config)return {configured:false};
+  const today=dateInZone(new Date(),config.timezone);
+  const poll=await getJSON(env.PHOTOS_PRIVEES,TODAY_CHESS_POLL_KEY,null);
+  const elapsed=Date.now()-Date.parse(poll?.at||"");
+  let chessSync={etat:"cache"};
+  if(!Number.isFinite(elapsed)||elapsed<0||elapsed>=TODAY_CHESS_POLL_MS){
+    await putJSON(env.PHOTOS_PRIVEES,TODAY_CHESS_POLL_KEY,{at:new Date().toISOString()});
+    try{
+      const result=await syncChess(env,{todayOnly:true});
+      chessSync={etat:result.skipped?"cache":"actualise"};
+    }catch{
+      chessSync={etat:"erreur"};
+    }
+  }
+  let sportSync={etat:"cache"};
+  try{
+    const {syncRecentSports}=await import("./sport-sync.js");
+    const result=await syncRecentSports(env,{force:true,todayOnly:true,timezone:config.timezone});
+    sportSync={etat:result.etat};
+  }catch{
+    sportSync={etat:"erreur"};
+  }
+  const current=await publicChallenge(env);
+  return {...current,synchronisation:chessSync,stravaSynchronisation:sportSync};
+}
 
 export async function freshPublicChallenge(env,{forceSports=false}={}){
   const config=await getChallengeConfig(env);
