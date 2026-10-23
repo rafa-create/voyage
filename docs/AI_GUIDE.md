@@ -104,3 +104,10 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - Les synchronisations échecs/sport doivent rester isolées en cas d'erreur, et un rafraîchissement de cache ne doit pas fermer un détail de défi déjà ouvert.
 - Fichiers principaux : `src/pages/defi.astro`, `worker/index.js`, `worker/defi.js`, `worker/sport-sync.js`, test `tests/defi-public-refresh-auto.test.mjs`.
 - La priorité du jour suivie de la synchronisation de fond a été confirmée manuellement par l'utilisateur. Le test a été ajouté, mais ne pas déclarer les tests/build validés sans exécution effective. Ne pas déclencher GitHub Actions ni déployer automatiquement.
+## Mode privé du site (liste blanche e-mail)
+- Le panneau « Qui peut consulter Voyages ? » de `/admin/` permet d’ouvrir le site à tous ou d’activer un mode privé avec une liste d’adresses e-mail (une par ligne, maximum 100).
+- En mode privé, les pages publiques redirigent les visiteurs non connectés vers `/connexion/`. Ils saisissent simplement leur e-mail; il n’y a ni mot de passe, ni code de vérification. Le propriétaire a explicitement accepté le risque d’usurpation d’une adresse autorisée.
+- Les sessions durent 7 jours dans un cookie sécurisé HttpOnly; les jetons sont aléatoires et leur hash est stocké dans R2. La liste est revalidée à chaque requête, donc supprimer une adresse invalide ses sessions.
+- Les routes d’administration, les albums privés et les API privées continuent d’utiliser Cloudflare Access/JWT. Une session e-mail n’accorde aucun privilège administrateur.
+- Endpoints publics de session : `GET /api/public/site-access/status`, `POST /api/public/site-access/login`, `POST /api/public/site-access/logout`. Configuration admin : `GET/POST /api/prive/admin/site-access`.
+- Ne pas affirmer que les tests/build ont réussi sans les exécuter et ne pas déclencher de déploiement sans accord explicite.
