@@ -342,8 +342,7 @@ import Base from "../layouts/Base.astro";
       }
     }
     get("sport-widgets")?.addEventListener("toggle",loadWidgets);
-    let backgroundChecks=0;
-    async function load(force=false,statusOnly=false){
+    async function load(force=false,statusOnly=false,todayOnly=false){
       // Ne pas reconstruire les cartes pendant que l'utilisateur consulte un détail ouvert.
       if(statusOnly&&document.querySelector("details.goal[open]")){
         set("defi-loading","Actualisation automatique en pause pendant la consultation.");
@@ -351,10 +350,12 @@ import Base from "../layouts/Base.astro";
       }
       const button=get("refresh-defi") as HTMLButtonElement|null;
       if(button)button.disabled=true;
-      set("defi-loading","Synchronisation…");
+      set("defi-loading",todayOnly?"Mise à jour des objectifs du jour…":"Synchronisation…");
       ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}mapOwner=null;
       try{
-        const response=await fetch("/api/public/defi"+(statusOnly?"?statut=1":force?"?actualiser=1":""),{cache:"no-store"});
+        const endpoint=todayOnly?"/api/public/defi?aujourdhui=1":
+          statusOnly?"/api/public/defi?statut=1":force?"/api/public/defi?actualiser=1":"/api/public/defi";
+        const response=await fetch(endpoint,{cache:"no-store"});
         if(!response.ok)throw Error("Impossible d'actualiser le défi.");
         state=await response.json() as Data;
         get("defi-content")!.hidden=!state.configured;
@@ -381,17 +382,32 @@ import Base from "../layouts/Base.astro";
         renderArchive(state.coursesRecentes||[],state.debut||days.at(-1)?.date||"");
         sportWidgets={feed:state.stravaFeed||"",summary:state.stravaSummary||""};
         loadWidgets();
-        const note=state.stravaSynchronisation?.etat==="erreur"?
-          "Données affichées · synchronisation à réessayer.":"";
-        set("defi-loading",note);
+        const notes:string[]=[];
+        if(state.synchronisation?.etat==="erreur")notes.push("Actualisation des échecs à réessayer.");
+        if(state.stravaSynchronisation?.etat==="erreur")notes.push("Actualisation des activités à réessayer.");
+        set("defi-loading",notes.join(" "));
         set("source-note","Une partie rapide et une activité comptent par jour. Appuie pour les détails.");
-        if(!statusOnly){backgroundChecks=0;setTimeout(()=>void load(false,true),60000);}
-        else if(backgroundChecks<3){backgroundChecks++;setTimeout(()=>void load(false,true),60000);}
       }catch(error){set("defi-loading",error instanceof Error?error.message:"Chargement impossible.");}
       finally{if(button)button.disabled=false;}
     }
-    // Actualiser les données dès l’ouverture de la page Défi.
-    void load(true);
+    // Afficher immédiatement le cache, puis mettre à jour les deux objectifs du jour.
+    // L'historique est synchronisé en arrière-plan et relu chaque minute sans limite de tentatives.
+    async function startDefi(){
+      await load(false,true);
+      await load(false,false,true);
+      if(state.configured)scheduleBackgroundSync();
+    }
+    function scheduleBackgroundSync(){
+      setTimeout(async()=>{
+        try{
+          await fetch("/api/public/defi?arriere-plan=1",{cache:"no-store"});
+        }catch{}
+        // Le worker continue sa synchronisation après la réponse ; relire le cache ensuite.
+        setTimeout(()=>void load(false,true),10000);
+        scheduleBackgroundSync();
+      },60000);
+    }
+    void startDefi();
   </script>
 
   <style is:global>
