@@ -110,7 +110,7 @@ const points = etapes
       const dayLegendLine = document.createElement("span");
       dayLegendLine.style.cssText = "display:inline-block;width:24px;height:0;border-top:4px solid #397A70;border-radius:3px;flex:none;";
       const dayLegendText = document.createElement("span");
-      dayLegendText.textContent = "Tracé vert sauge : parcours du jour sélectionné";
+      dayLegendText.textContent = "Parcours du jour";
       dayLegend.append(dayLegendLine, dayLegendText);
       dayControl.append(dayLegend);
       if (dayNavigation) dayControl.append(dayNavigation);
@@ -349,11 +349,14 @@ const points = etapes
           }
           const dateLabel = document.querySelector<HTMLElement>("#daily-date");
           if (dateLabel) {
-            dateLabel.style.backgroundColor = selectedDay ? currentDayColor : "transparent";
-            dateLabel.style.color = selectedDay ? "#fffdf8" : "";
-            dateLabel.style.padding = selectedDay ? "4px 8px" : "";
-            dateLabel.style.borderRadius = selectedDay ? "3px" : "";
+            // Le jour sélectionné est indiqué par la couleur du texte uniquement,
+            // sans pastille ni fond, en cohérence avec le tracé vert sauge.
+            dateLabel.style.backgroundColor = "transparent";
+            dateLabel.style.color = selectedDay ? currentDayColor : "";
+            dateLabel.style.padding = "";
+            dateLabel.style.borderRadius = "";
             dateLabel.style.display = selectedDay ? "inline-block" : "";
+            dateLabel.style.fontWeight = selectedDay ? "600" : "";
           }
           // Toute la caméra passe par un seul point d'entrée : éviter que deux
           // animations concurrentes se remplacent lors des changements de journée.
