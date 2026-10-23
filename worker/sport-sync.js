@@ -97,13 +97,16 @@ export async function syncRecentSports(env,{force=false,todayOnly=false,timezone
     const {archiveNewSports}=await import("./archive-auto.js");
     // En priorité, ne publier/archiver que les activités de la journée courante.
     // Le rattrapage des jours précédents reste réservé à la synchronisation de fond.
-    const today=new Intl.DateTimeFormat("en-CA",{
-      timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"
-    }).format(new Date(now));
-    const candidates=todayOnly
-      ?latest.filter(x=>new Intl.DateTimeFormat("en-CA",{
+    const dayInZone=(timestamp)=>{
+      const parts=new Intl.DateTimeFormat("en-GB",{
         timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"
-      }).format(new Date(x.startedAtMs))===today)
+      }).formatToParts(new Date(timestamp));
+      const part=type=>parts.find(item=>item.type===type)?.value||"";
+      return part("year")+"-"+part("month")+"-"+part("day");
+    };
+    const today=dayInZone(now);
+    const candidates=todayOnly
+      ?latest.filter(x=>dayInZone(x.startedAtMs)===today)
       :latest.filter(x=>x.startedAtMs>=backfillCutoff);
     archive=await archiveNewSports(env,candidates,
       {maxImports:todayOnly?3:8,maxRoutes:todayOnly?0:2});
