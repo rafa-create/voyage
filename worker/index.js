@@ -143,7 +143,7 @@ export default {
       (/\.(?:css|js|mjs|woff2?|ttf|otf|ico|svg|png|jpe?g|webp|avif)$/i.test(path)&&
        !path.startsWith("/media/")&&!path.startsWith("/media-prive/"));
     let siteAccess={mode:"open",emails:[]};
-    if(!privatePath){
+    if(!privatePath&&(!staticAssetPath||siteAuthPath)){
       siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open",emails:[]});
       if(siteAccess?.mode==="restricted"&&!siteAuthPath&&!staticAssetPath){
         const access=await requireSiteAccess(request,env,siteAccess);
