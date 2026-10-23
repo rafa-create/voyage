@@ -430,8 +430,11 @@ export default {
       const gpsLon=Number(url.searchParams.get("longitude"));
       const suppliedGps=url.searchParams.has("latitude")&&url.searchParams.has("longitude")&&
         Number.isFinite(gpsLat)&&Number.isFinite(gpsLon)&&Math.abs(gpsLat)<=85&&Math.abs(gpsLon)<=180;
-      const latitude=valid?coords.latitude:suppliedGps?gpsLat:null;
-      const longitude=valid?coords.longitude:suppliedGps?gpsLon:null;
+      // Les coordonnées saisies dans le formulaire ont priorité sur les EXIF.
+      const latitude=suppliedGps?gpsLat:valid?coords.latitude:null;
+      const longitude=suppliedGps?gpsLon:valid?coords.longitude:null;
+      const lieu=(url.searchParams.get("lieu")||"").trim();
+      if(lieu.length>240)return error("Le lieu ne peut pas dépasser 240 caractères.");
       const dateHeure=url.searchParams.get("dateHeure");
       const hasTime=typeof dateHeure==="string"&&
         /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(dateHeure)&&
@@ -442,6 +445,7 @@ export default {
         customMetadata:{alt,...(slug?{etape:slug}:{}),geoScanned:"1",
           ...(captured?{datePrise:captured}:{}),
           ...(hasTime?{dateHeure}:{ }),
+          ...(lieu?{lieu}:{}),
           ...(latitude!==null?{latitude:String(latitude),longitude:String(longitude),precision:"exact"}:{})}});
       return json({ok:true,etape:slug,visibilite,datePrise:captured,src:photoPath(key,visibilite)},201);
     }
