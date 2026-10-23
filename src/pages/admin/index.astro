@@ -253,7 +253,7 @@ import { chemin } from "../../lib/paths";
       const accessMode=$<HTMLSelectElement>("site-access-mode");
       if(accessMode)accessMode.value=accessConfig.mode==="restricted"?"restricted":"open";
       const accessEmails=$<HTMLTextAreaElement>("site-access-emails");
-      if(accessEmails)accessEmails.value=Array.isArray(accessConfig.emails)?accessConfig.emails.join("\\n"):"";
+      if(accessEmails)accessEmails.value=Array.isArray(accessConfig.emails)?accessConfig.emails.join("\n"):"";
       message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
     function formatBytes(bytes:number):string{
@@ -311,7 +311,7 @@ import { chemin } from "../../lib/paths";
       e.preventDefault();
       const mode=$<HTMLSelectElement>("site-access-mode")?.value;
       const rawEmails=$<HTMLTextAreaElement>("site-access-emails")?.value||"";
-      const emails=rawEmails.split(/[\\n,;]+/).map(email=>email.trim()).filter(Boolean);
+      const emails=rawEmails.split(/[\n,;]+/).map(email=>email.trim()).filter(Boolean);
       const feedback=$("site-access-feedback");
       try{
         const saved=await post("/api/prive/admin/site-access",{mode,emails});
