@@ -160,14 +160,14 @@ export default {
       if(siteAccess?.mode!=="restricted")return error("Le site est actuellement ouvert à tous.",409);
       const input=await readBody(request);
       const email=typeof input?.email==="string"?input.email.trim().toLowerCase():"";
-      if(email.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return error("Saisis une adresse e-mail valide.");
+      if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return error("Saisis une adresse e-mail valide.");
       const allowlist=Array.isArray(siteAccess?.emails)?siteAccess.emails:[];
       const adminEmail=String(env.ADMIN_EMAIL||"").trim().toLowerCase();
       if(email!==adminEmail&&!allowlist.includes(email))return error("Cette adresse e-mail n'est pas autorisée à consulter le site.",403);
       try{
         const session=await createSiteAccessSession(env,email);
         const next=typeof input?.next==="string"?input.next:"/";
-        const safeNext=next.startsWith("/")&&!next.startsWith("//")&&!next.includes("\\\\")&&!/[\\u0000-\\u001f]/.test(next)?next:"/";
+        const safeNext=next.startsWith("/")&&!next.startsWith("//")&&!next.includes("\\")&&!/[\u0000-\u001f]/.test(next)?next:"/";
         return new Response(JSON.stringify({ok:true,redirectTo:safeNext}),{
           headers:{...noStore,"Content-Type":"application/json; charset=utf-8","Set-Cookie":siteSessionCookie(session.token)}
         });
