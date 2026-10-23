@@ -145,7 +145,6 @@ const TODAY_CHESS_POLL_MS=60000;
 export async function freshTodayChallenge(env){
   const config=await getChallengeConfig(env);
   if(!config)return {configured:false};
-  const today=dateInZone(new Date(),config.timezone);
   const poll=await getJSON(env.PHOTOS_PRIVEES,TODAY_CHESS_POLL_KEY,null);
   const elapsed=Date.now()-Date.parse(poll?.at||"");
   let chessSync={etat:"cache"};
