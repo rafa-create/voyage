@@ -3,7 +3,7 @@ import { privateStravaFetch } from "./strava-bridge.js";
 import {syncRecentSports} from "./sport-sync.js";
 import * as exifr from "exifr";
 import {importGpx,publicArchives,archiveMapPoints,archiveIndex,isPublishedActivity,autoPublicationEnabled,setAutoPublication} from "./parcours-archive.js";
-import { publicChallenge, freshPublicChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
+import { publicChallenge, freshPublicChallenge, freshTodayChallenge, privateChallenge, setChallengeConfig, syncChess, addStravaActivity, deleteStravaActivity, setPublicStravaFeed, publicRoute } from "./defi.js";
 import {
   types, slugOk, imageKey, validDate, photoPath,
   getJSON, putJSON, steps, matchStep, listedPhotos, videos, urlYoutube,
@@ -170,6 +170,12 @@ export default {
       }catch{return error("Impossible de résoudre ce lien Google Maps pour le moment.",502);}
     }
     if(path==="/api/public/defi"&&request.method==="GET"){
+      if(url.searchParams.get("aujourdhui")==="1")return json(await freshTodayChallenge(env));
+      if(url.searchParams.get("arriere-plan")==="1"){
+        ctx.waitUntil(freshPublicChallenge(env)
+          .catch(e=>console.warn("Synchronisation publique du défi:",String(e))));
+        return json({ok:true,etat:"arriere_plan"});
+      }
       if(url.searchParams.get("statut")==="1")return json(await publicChallenge(env));
       const snapshot=await publicChallenge(env);
       ctx.waitUntil(freshPublicChallenge(env,{forceSports:url.searchParams.get("actualiser")==="1"})
