@@ -69,7 +69,6 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
   }
   async function initFilm(){
     if(!mapElement||!memory||!place||!playButton||!prevButton||!nextButton||!fullscreenButton||!filmSection)return;
-    if(!points.length){place.textContent="Aucune étape disponible pour ce voyage.";return;}
     const syncFullscreenButton=()=>{
       const active=filmSection.classList.contains("film-browser-fullscreen");
       fullscreenButton.textContent="⛶";
@@ -95,19 +94,26 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       }
     });
     let activeFilmItem:FilmItem|undefined;
-    const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:[points[0].longitude,points[0].latitude],zoom:4,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
+    const initialCenter: [number,number] = points.length ? [points[0].longitude,points[0].latitude] : [0,20];
+    const map = new maplibregl.Map({container:mapElement,style:"https://tiles.openfreemap.org/styles/liberty",center:initialCenter,zoom:points.length?4:2,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
     let viewportPlace="";
     let placeLookupToken=0;
     const updateViewportPlace=async()=>{
       const token=++placeLookupToken;
-      const center=map.getCenter();
-      const location=await reverseGeocode(center.lat,center.lng);
-      // Ignorer les réponses d'un ancien cadrage si l'utilisateur a bougé entre-temps.
-      if(token!==placeLookupToken)return;
-      viewportPlace=location;
       const current=activeFilmItem;
-      // Priorité au lieu enregistré avec le souvenir ; le géocodage de la carte sert de secours.
-      const currentLocation=current?.location||current?.place||viewportPlace;
+      let currentLocation="";
+      if(current?.kind==="photo"){
+        // Une photo est indépendante des étapes : utiliser son lieu enregistré ou ses propres GPS,
+        // jamais la ville de l'étape associée ni le centre de carte d'un autre souvenir.
+        currentLocation=current.location||current.place||
+          (valid(current.lat,current.lon)?await reverseGeocode(current.lat,current.lon):"");
+      }else{
+        const center=map.getCenter();
+        viewportPlace=await reverseGeocode(center.lat,center.lng);
+        currentLocation=current?.location||current?.place||viewportPlace;
+      }
+      // Ignorer les réponses d'un ancien cadrage ou d'un souvenir précédent.
+      if(token!==placeLookupToken||current!==activeFilmItem)return;
       const captionText=[currentLocation,current?.time].filter(Boolean).join(" · ");
       place.textContent=captionText;
       if(placeCaption)placeCaption.hidden=!captionText;
@@ -168,14 +174,14 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         const rawLat=photo.latitude,rawLon=photo.longitude;
         let lat=rawLat!==null&&rawLat!==undefined&&rawLat!==""?Number(rawLat):NaN;
         let lon=rawLon!==null&&rawLon!==undefined&&rawLon!==""?Number(rawLon):NaN;
-        const hasPhotoGps=valid(lat,lon);
-        const linkedStage=photo.etape?points.find(p=>p.slug===photo.etape):undefined;
-        if(!hasPhotoGps&&linkedStage){lat=linkedStage.latitude;lon=linkedStage.longitude;}
-        if(!valid(lat,lon))continue;
+        if(!valid(lat,lon)){lat=NaN;lon=NaN;}
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
-        const datedStage=linkedStage||[...points].filter(p=>p.date<=date).sort((a,b)=>b.date.localeCompare(a.date))[0]||points.find(p=>p.date===date);
-        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",place:[datedStage?.ville,datedStage?.pays].filter(Boolean).join(", "),time:formatClock(photo.dateHeure||photo.datePrise),lat,lon,detail:String(photo.commentaire||photo.description||photo.descriptionCourte||photo.legende||"").trim(),src:photo.src,slug:datedStage?.slug,zoom:12});
+        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+        // La localisation d'une photo vient uniquement de ses propres métadonnées/GPS.
+        // Ne jamais reprendre la ville ou les coordonnées d'une étape voisine.
+        const photoPlace=[photo.lieu||photo.localisation||photo.location||photo.place||photo.ville,photo.pays]
+          .filter((value,index,array)=>typeof value==="string"&&value.trim()&&array.indexOf(value)===index).join(", ");
+        items.push({kind:"photo",date,title:photo.legende||photo.alt||"Un souvenir en photo",place:photoPlace,time:formatClock(photo.dateHeure||photo.datePrise),lat,lon,detail:String(photo.commentaire||photo.description||photo.descriptionCourte||photo.legende||"").trim(),src:photo.src,zoom:12});
       }
       for(const activity of activities){
         if(!activity||!valid(activity.latitude,activity.longitude))continue;
