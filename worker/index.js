@@ -140,7 +140,7 @@ export default {
       "/api/public/site-access/logout"
     ].includes(path);
     const staticAssetPath=path.startsWith("/_astro/")||
-      (/\.(?:css|js|mjs|woff2?|ttf|otf|ico|svg|png|jpe?g|webp|avif)$/i.test(path)&&
+      (!path.startsWith("/api/")&&/\.(?:css|js|mjs|woff2?|ttf|otf|ico|svg|png|jpe?g|webp|avif)$/i.test(path)&&
        !path.startsWith("/media/")&&!path.startsWith("/media-prive/"));
     let siteAccess={mode:"open",emails:[]};
     if(!privatePath&&(!staticAssetPath||siteAuthPath)){
