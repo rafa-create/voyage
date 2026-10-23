@@ -1048,9 +1048,9 @@ const points = etapes
                 maxWidth: "280px",
               }).setDOMContent(panel);
               popup.on("open", () => {
-                // Placer la popup active au-dessus des autres éléments.
+                // Garder les commandes de navigation et la légende au-dessus des popups photo.
                 const popupElement = popup.getElement();
-                if (popupElement) popupElement.style.zIndex = "1000";
+                if (popupElement) popupElement.style.zIndex = "900";
                 element.querySelectorAll<HTMLElement>(".maplibregl-popup").forEach((other) => {
                   if (other !== popupElement) other.style.zIndex = "1";
                 });
