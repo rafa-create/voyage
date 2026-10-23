@@ -43,7 +43,7 @@ import { chemin } from "../lib/paths";
     const home = document.querySelector<HTMLAnchorElement>("#site-home-link");
     const params = new URLSearchParams(window.location.search);
     const rawNext = params.get("next") || "/";
-    const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("\\\\") ? rawNext : "/";
+    const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("\\") ? rawNext : "/";
     function showStatus(message: string, isError = false) {
       if (!status) return;
       status.textContent = message;
