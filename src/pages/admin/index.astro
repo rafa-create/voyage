@@ -160,12 +160,13 @@ import { chemin } from "../../lib/paths";
   </section>
 
 <style is:global>
-    body.admin-photos-embed .admin-head,body.admin-photos-embed .admin-topline,body.admin-photos-embed #admin-app>.admin-panel:not(.admin-photo-upload-panel){display:none!important}
+    body.admin-photos-embed .skip-link,body.admin-photos-embed .site-header,body.admin-photos-embed #admin-quick-tools,body.admin-photos-embed #admin-tools-modal,body.admin-photos-embed .admin-head,body.admin-photos-embed .admin-topline,body.admin-photos-embed #admin-app>.admin-panel:not(.admin-photo-upload-panel){display:none!important}
     body.admin-photos-embed .admin-journey{padding:0!important;margin:0!important;max-width:none!important}
     body.admin-photos-embed #admin-app{display:block!important}
     body.admin-photos-embed .admin-photo-upload-panel{margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:1rem!important}
     body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title{margin-bottom:.75rem}
     body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title .eyebrow{display:none}
+    body.admin-photos-embed .admin-photo-upload-panel .admin-inline-check{display:none!important}
     body.admin-photos-embed .admin-photo-upload-panel>.admin-section-title h2{font-size:1.35rem}
     body.admin-photos-embed .chosen-photo-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;grid-column:1/-1}
     body.admin-photos-embed .chosen-photo-fields label{display:grid;gap:.25rem;font-size:.78rem;font-weight:600;min-width:0}
@@ -420,6 +421,7 @@ import { chemin } from "../../lib/paths";
         for(const item of selected){
           message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
           const publicPhoto=!item.prive;
+          if((item.latitude===null)!==(item.longitude===null))throw Error(item.file.name+" : renseigne les deux coordonnées, latitude et longitude, ou laisse les deux vides.");
           // Importer l'original octet pour octet : le canvas réencode en JPEG et
           // détruit notamment l'EXIF/GPS. La suppression EXIF reste réservée à
           // l'action explicite de publication d'une photo privée.
