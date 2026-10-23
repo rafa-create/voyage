@@ -1,4 +1,4 @@
-import { requireAccess } from "./auth.js";
+import { requireAccess, requireSiteAccess, getSiteAccessSession, createSiteAccessSession, clearSiteAccessSession, siteSessionCookie, normalizeSiteEmails } from "./auth.js";
 import { privateStravaFetch } from "./strava-bridge.js";
 import {syncRecentSports} from "./sport-sync.js";
 import * as exifr from "exifr";
@@ -134,12 +134,48 @@ export default {
     // The public-site mode is stored separately from photo visibility. Default is open
     // so a missing setting never accidentally locks out visitors.
     const privatePath=/^(?:\/espace|\/admin)(?:\/|$)/.test(path)||path.startsWith("/api/prive/")||path.startsWith("/media-prive/");
+    const siteAuthPath=/^\/connexion\/?$/.test(path)||[
+      "/api/public/site-access/status",
+      "/api/public/site-access/login",
+      "/api/public/site-access/logout"
+    ].includes(path);
+    const staticAssetPath=path.startsWith("/_astro/")||
+      (/\.(?:css|js|mjs|woff2?|ttf|otf|ico|svg|png|jpe?g|webp|avif)$/i.test(path)&&
+       !path.startsWith("/media/")&&!path.startsWith("/media-prive/"));
+    let siteAccess={mode:"open",emails:[]};
     if(!privatePath){
-      const siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
-      if(siteAccess?.mode==="restricted"){
-        const access=await requireAccess(request,env,false);
+      siteAccess=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open",emails:[]});
+      if(siteAccess?.mode==="restricted"&&!siteAuthPath&&!staticAssetPath){
+        const access=await requireSiteAccess(request,env,siteAccess);
         if(access.error)return access.error;
       }
+    }
+
+    if(path==="/api/public/site-access/status"&&request.method==="GET"){
+      const session=siteAccess?.mode==="restricted"?await getSiteAccessSession(request,env,siteAccess):null;
+      return json({mode:siteAccess?.mode==="restricted"?"restricted":"open",authenticated:!!session,email:session?.email||null});
+    }
+    if(path==="/api/public/site-access/login"&&request.method==="POST"){
+      if(request.headers.get("Origin")!==url.origin)return error("Requête non autorisée.",403);
+      if(siteAccess?.mode!=="restricted")return error("Le site est actuellement ouvert à tous.",409);
+      const input=await readBody(request);
+      const email=typeof input?.email==="string"?input.email.trim().toLowerCase():"";
+      if(email.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return error("Saisis une adresse e-mail valide.");
+      const allowlist=Array.isArray(siteAccess?.emails)?siteAccess.emails:[];
+      const adminEmail=String(env.ADMIN_EMAIL||"").trim().toLowerCase();
+      if(email!==adminEmail&&!allowlist.includes(email))return error("Cette adresse e-mail n'est pas autorisée à consulter le site.",403);
+      try{
+        const session=await createSiteAccessSession(env,email);
+        const next=typeof input?.next==="string"?input.next:"/";
+        const safeNext=next.startsWith("/")&&!next.startsWith("//")&&!next.startsWith("/\\\\")?next:"/";
+        return new Response(JSON.stringify({ok:true,redirectTo:safeNext}),{
+          headers:{...noStore,"Content-Type":"application/json; charset=utf-8","Set-Cookie":siteSessionCookie(session.token)}
+        });
+      }catch(e){console.warn("Création de session du site:",String(e));return error("Impossible de créer la session pour le moment.",503);}
+    }
+    if(path==="/api/public/site-access/logout"&&request.method==="POST"){
+      if(request.headers.get("Origin")!==url.origin)return error("Requête non autorisée.",403);
+      return clearSiteAccessSession(request,env);
     }
 
     if(path.startsWith("/media/"))return readImage(request,env.PHOTOS_PUBLIQUES,decode(path.slice(7)));
@@ -283,15 +319,17 @@ export default {
       return json({buckets:totals,updatedAt:new Date().toISOString()});
     }
     if(path==="/api/prive/admin/site-access"&&request.method==="GET"){
-      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open"});
-      return json({mode:config?.mode==="restricted"?"restricted":"open"});
+      const config=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open",emails:[]});
+      return json({mode:config?.mode==="restricted"?"restricted":"open",emails:Array.isArray(config?.emails)?config.emails:[]});
     }
     if(path==="/api/prive/admin/site-access"&&request.method==="POST"){
       if(!mutationOk(request))return error("Action non autorisée.",403);
       const input=await readBody(request);
       if(!["open","restricted"].includes(input?.mode))return error("Mode d’accès invalide.");
-      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:input.mode,updatedAt:new Date().toISOString()});
-      return json({ok:true,mode:input.mode});
+      const emails=normalizeSiteEmails(input?.emails);
+      if(!emails)return error("La liste doit contenir au maximum 100 adresses e-mail valides.");
+      await putJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:input.mode,emails,updatedAt:new Date().toISOString()});
+      return json({ok:true,mode:input.mode,emails});
     }
     if(path==="/api/prive/admin/photo-modifier"){
       const input=await readBody(request);const bucket=bucketFor(env,input?.visibilite),key=input?.key;
