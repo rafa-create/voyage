@@ -171,7 +171,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
           const img=document.createElement("img");img.src=photo.src;img.alt=photo.alt||"Photo du voyage";img.loading="lazy";img.decoding="async";
           button.append(img);figure.append(button);
           const caption=document.createElement("figcaption");
-          const place = String(photo.legende || photo.commentaire || photo.alt || photo.etape || "Photo").replace(/-/g," ").replace(/\b\p{L}/gu, (letter:string) => letter.toLocaleUpperCase("fr-FR"));
+          const place = String(photo.legende || photo.commentaire || photo.alt || photo.etape || "Photo").replace(/-/g," ");
           const time=photo.dateHeure? " · "+photo.dateHeure.slice(11,16):"";
           caption.textContent=place+time;
           figure.append(caption);grid.append(figure);
