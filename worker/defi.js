@@ -149,7 +149,11 @@ export async function freshTodayChallenge(env){
   const elapsed=Date.now()-Date.parse(poll?.at||"");
   let chessSync={etat:"cache"};
   if(!Number.isFinite(elapsed)||elapsed<0||elapsed>=TODAY_CHESS_POLL_MS){
-    await putJSON(env.PHOTOS_PRIVEES,TODAY_CHESS_POLL_KEY,{at:new Date().toISOString()});
+    const syncStartedAt=new Date().toISOString();
+    await putJSON(env.PHOTOS_PRIVEES,TODAY_CHESS_POLL_KEY,{at:syncStartedAt});
+    // Le mois courant vient d'être rafraîchi : différer le rattrapage plus large
+    // pour éviter deux synchronisations Chess.com simultanées.
+    await putJSON(env.PHOTOS_PRIVEES,PUBLIC_POLL_KEY,{at:syncStartedAt});
     try{
       const result=await syncChess(env,{todayOnly:true});
       chessSync={etat:result.skipped?"cache":"actualise"};
