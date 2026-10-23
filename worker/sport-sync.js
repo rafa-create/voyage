@@ -64,7 +64,7 @@ export async function getCachedSports(env){
   const items=Array.isArray(snapshot.items)?snapshot.items.filter(x=>x.startedAtMs>=cutoff):[];
   return {connected:true,items,syncedAt:snapshot.syncedAt};
 }
-export async function syncRecentSports(env,{force=false}={}){
+export async function syncRecentSports(env,{force=false,todayOnly=false,timezone="Europe/Paris"}={}){
   if(!env.PHOTOS_PRIVEES||!env.VOYAGE_BRIDGE_KEY)return {etat:"non_configure",items:[]};
   const now=Date.now();
   const last=await getJSON(env.PHOTOS_PRIVEES,POLL,null);
@@ -95,11 +95,19 @@ export async function syncRecentSports(env,{force=false}={}){
   let backfill={page:1,olderItems:0,status:"aucune_pagination"};
   try{
     const {archiveNewSports}=await import("./archive-auto.js");
-    // Par passage, archiver au maximum huit nouveautés de la page récente.
-    // Les appels suivants continuent le rattrapage sans doublons.
-    archive=await archiveNewSports(env,latest.filter(x=>x.startedAtMs>=backfillCutoff),
-      {maxImports:8,maxRoutes:2});
-    if(latest.length===100){
+    // En priorité, ne publier/archiver que les activités de la journée courante.
+    // Le rattrapage des jours précédents reste réservé à la synchronisation de fond.
+    const today=new Intl.DateTimeFormat("en-CA",{
+      timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"
+    }).format(new Date(now));
+    const candidates=todayOnly
+      ?latest.filter(x=>new Intl.DateTimeFormat("en-CA",{
+        timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"
+      }).format(new Date(x.startedAtMs))===today)
+      :latest.filter(x=>x.startedAtMs>=backfillCutoff);
+    archive=await archiveNewSports(env,candidates,
+      {maxImports:todayOnly?3:8,maxRoutes:todayOnly?0:2});
+    if(!todayOnly&&latest.length===100){
       const progress=await getJSON(env.PHOTOS_PRIVEES,BACKFILL_CURSOR,{nextPage:2});
       const page=Math.max(2,Math.min(MAX_PAGE,Number(progress?.nextPage)||2));
       const older=await privateStravaFetch(env,"activities?page="+page);
