@@ -147,7 +147,7 @@ const points = etapes
       let satelliteControl: HTMLButtonElement;
       const satelliteSourceId = "voyage-satellite-source";
       const satelliteLayerId = "voyage-satellite-raster";
-      const satelliteIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v6m6-6v6M8 20v-4h8v4"/></svg>';
+      const satelliteIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/></svg>';
       const syncSatelliteControl = () => {
         satelliteControl.innerHTML = satelliteIcon;
         satelliteControl.title = satelliteEnabled ? "Revenir à la vue plan" : "Afficher la vue satellite";
@@ -157,7 +157,7 @@ const points = etapes
       satelliteControl = document.createElement("button");
       satelliteControl.type = "button";
       satelliteControl.className = "maplibregl-ctrl";
-      satelliteControl.style.cssText = "display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;cursor:pointer;box-shadow:0 1px 5px #0002;";
+      satelliteControl.style.cssText = "display:flex;align-items:center;justify-content:center;width:29px;height:29px;padding:0;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;cursor:pointer;box-shadow:0 1px 5px #0002;";
       satelliteControl.addEventListener("click", () => {
         satelliteEnabled = !satelliteEnabled;
         if (map.getLayer(satelliteLayerId)) {
@@ -849,10 +849,12 @@ const points = etapes
                 if(eventName==="dblclick") event.preventDefault();
               });
             }
-            allTracesButton.textContent="Afficher les liens";
+            const linksIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3A5 5 0 0 0 13 2.93l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.71-1.71"/></svg>';
+            allTracesButton.innerHTML=linksIcon;
+            allTracesButton.title="Afficher les liens";
             allTracesButton.setAttribute("aria-label","Afficher les liens");
             allTracesButton.setAttribute("aria-pressed","false");
-            allTracesButton.style.cssText="background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;padding:9px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
+            allTracesButton.style.cssText="display:flex;align-items:center;justify-content:center;width:29px;height:29px;padding:0;background:#fffdf8;color:#173d3b;border:1px solid #d8d2c5;border-radius:4px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 1px 5px #0002;";
             // Point d'entrée unique pour charger, sélectionner la résolution et afficher les traces.
             const loadAllTraces=async()=>{
               const request=++traceResolutionRequest;
@@ -898,11 +900,9 @@ const points = etapes
             allTracesButton.addEventListener("click",()=>{
               voyageLinksHidden = !voyageLinksHidden;
               syncVoyageLinkVisibility();
-              allTracesButton.textContent = voyageLinksHidden
-                ? "Afficher les liens"
-                : "Masquer les liens";
-              allTracesButton.setAttribute("aria-label", allTracesButton.textContent);
-              allTracesButton.setAttribute("aria-pressed", String(voyageLinksHidden));
+              allTracesButton.title = voyageLinksHidden ? "Afficher les liens" : "Masquer les liens";
+              allTracesButton.setAttribute("aria-label", allTracesButton.title);
+              allTracesButton.setAttribute("aria-pressed", String(!voyageLinksHidden));
             });
             const linksControl = document.createElement("div");
             linksControl.className = "maplibregl-ctrl map-links-control";
@@ -910,7 +910,7 @@ const points = etapes
             map.addControl({
               onAdd: () => linksControl,
               onRemove: () => linksControl.remove()
-            } as maplibregl.IControl, "top-left");
+            } as maplibregl.IControl, "top-right");
             const mapVisibilityToggle = document.getElementById("map-visibility-toggle");
             mapVisibilityToggle?.addEventListener("click", () => {
               const hidden = element.style.display === "none";
@@ -1197,6 +1197,23 @@ const points = etapes
     position: relative;
     z-index: 1001 !important;
     pointer-events: auto;
+  }
+  #carte-voyage .maplibregl-ctrl-top-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+  }
+  #carte-voyage .maplibregl-ctrl-top-right .maplibregl-ctrl {
+    margin: 0 10px 0 0;
+  }
+  #carte-voyage .map-links-control {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
   #carte-voyage .maplibregl-ctrl-attrib { display: none !important; }
   #carte-voyage .map-day-navigation-control .daily-heading-title {
