@@ -109,5 +109,7 @@ Les API d'administration nécessitent le mécanisme d'authentification existant;
 - En mode privé, les pages publiques redirigent les visiteurs non connectés vers `/connexion/`. Ils saisissent simplement leur e-mail; il n’y a ni mot de passe, ni code de vérification. Le propriétaire a explicitement accepté le risque d’usurpation d’une adresse autorisée.
 - Les sessions durent 7 jours dans un cookie sécurisé HttpOnly; les jetons sont aléatoires et leur hash est stocké dans R2. La liste est revalidée à chaque requête, donc supprimer une adresse invalide ses sessions.
 - Les routes d’administration, les albums privés et les API privées continuent d’utiliser Cloudflare Access/JWT. Une session e-mail n’accorde aucun privilège administrateur.
+- `wrangler.jsonc` doit garder `assets.run_worker_first: ["/*"]` afin que le Worker vérifie les pages HTML avant la livraison des fichiers Astro. Les ressources statiques non sensibles sont ensuite servies par `env.ASSETS.fetch`.
+- Si Cloudflare Access protège tout le domaine au niveau edge, limiter cette application aux routes `/admin/*`, `/espace/*`, `/api/prive/*` et `/media-prive/*`; sinon, la page de connexion e-mail sera interceptée avant d’atteindre le Worker.
 - Endpoints publics de session : `GET /api/public/site-access/status`, `POST /api/public/site-access/login`, `POST /api/public/site-access/logout`. Configuration admin : `GET/POST /api/prive/admin/site-access`.
 - Ne pas affirmer que les tests/build ont réussi sans les exécuter et ne pas déclencher de déploiement sans accord explicite.
