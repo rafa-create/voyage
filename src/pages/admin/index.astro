@@ -118,9 +118,11 @@ import { chemin } from "../../lib/paths";
           <label for="site-access-mode">Visibilité du site</label>
           <select id="site-access-mode" required>
             <option value="open">Ouvert à tous — aucune connexion demandée</option>
-            <option value="restricted">Restreint — connexion Cloudflare Access requise</option>
+            <option value="restricted">Privé — liste d’adresses e-mail autorisées</option>
           </select>
-          <p class="admin-note">Ce réglage concerne l’accès au site public. Les photos privées restent protégées séparément et ne sont jamais publiées par ce réglage. Le mode restreint nécessite que Cloudflare Access protège aussi les pages publiques et autorise les personnes souhaitées.</p>
+          <label for="site-access-emails">Adresses e-mail autorisées (une par ligne)</label>
+          <textarea id="site-access-emails" rows="5" maxlength="30000" placeholder="ami@example.com&#10;famille@example.com" autocomplete="off"></textarea>
+          <p class="admin-note">En mode privé, les visiteurs saisissent simplement leur adresse e-mail, sans mot de passe ni code. Seules les adresses listées ici et l’adresse administrateur sont acceptées. Attention : sans vérification de propriété, une personne connaissant une adresse autorisée peut l’usurper. Les photos privées et l’administration restent protégées séparément.</p>
           <button class="admin-primary" type="submit">Enregistrer les paramètres d’accès</button>
           <p id="site-access-feedback" role="status" class="admin-feedback"></p>
         </form>
@@ -250,6 +252,8 @@ import { chemin } from "../../lib/paths";
       const accessConfig=await api("/api/prive/admin/site-access");
       const accessMode=$<HTMLSelectElement>("site-access-mode");
       if(accessMode)accessMode.value=accessConfig.mode==="restricted"?"restricted":"open";
+      const accessEmails=$<HTMLTextAreaElement>("site-access-emails");
+      if(accessEmails)accessEmails.value=Array.isArray(accessConfig.emails)?accessConfig.emails.join("\\n"):"";
       message("admin-status","Tout est à jour · "+etapes.length+" étape(s), "+photos.length+" photo(s) dans R2.");
     }
     function formatBytes(bytes:number):string{
@@ -306,10 +310,12 @@ import { chemin } from "../../lib/paths";
     $<HTMLFormElement>("site-access-form")?.addEventListener("submit",async e=>{
       e.preventDefault();
       const mode=$<HTMLSelectElement>("site-access-mode")?.value;
+      const rawEmails=$<HTMLTextAreaElement>("site-access-emails")?.value||"";
+      const emails=rawEmails.split(/[\\n,;]+/).map(email=>email.trim()).filter(Boolean);
       const feedback=$("site-access-feedback");
       try{
-        await post("/api/prive/admin/site-access",{mode});
-        message("site-access-feedback",mode==="restricted"?"Mode restreint enregistré. Vérifie que Cloudflare Access protège bien toutes les pages publiques avant de partager le site.":"Le site est maintenant ouvert à tous.");
+        const saved=await post("/api/prive/admin/site-access",{mode,emails});
+        message("site-access-feedback",mode==="restricted"?"Mode privé enregistré · "+saved.emails.length+" adresse(s) autorisée(s). Les invités peuvent se connecter sur /connexion/.":"Le site est maintenant ouvert à tous.");
       }catch(err){if(feedback)feedback.textContent=err instanceof Error?err.message:"Enregistrement impossible.";}
     });
     $("storage-refresh")?.addEventListener("click",()=>{void loadStorage();});
