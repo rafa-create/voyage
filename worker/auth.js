@@ -130,7 +130,13 @@ export async function requireSiteAccess(request, env, config) {
   const acceptsHtml = (request.headers.get("Accept") || "").includes("text/html");
   if (["GET", "HEAD"].includes(request.method) && acceptsHtml) {
     const next = url.pathname + url.search;
-    return { error: Response.redirect(new URL("/connexion/?next=" + encodeURIComponent(next), url.origin), 302) };
+    return { error: new Response(null, {
+      status: 302,
+      headers: {
+        "Location": new URL("/connexion/?next=" + encodeURIComponent(next), url.origin).href,
+        "Cache-Control": "no-store"
+      }
+    }) };
   }
   return { error: new Response(JSON.stringify({ error: "Connexion nécessaire." }), {
     status: 401,
