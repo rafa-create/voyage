@@ -176,7 +176,7 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
         let lon=rawLon!==null&&rawLon!==undefined&&rawLon!==""?Number(rawLon):NaN;
         if(!valid(lat,lon)){lat=NaN;lon=NaN;}
         const date=String(photo.dateHeure||photo.datePrise||photo.ajouteLe||"").slice(0,10);
-        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
         // La localisation d'une photo vient uniquement de ses propres métadonnées/GPS.
         // Ne jamais reprendre la ville ou les coordonnées d'une étape voisine.
         const photoPlace=[photo.lieu||photo.localisation||photo.location||photo.place||photo.ville,photo.pays]
