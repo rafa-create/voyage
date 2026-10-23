@@ -106,8 +106,11 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
       if(token!==placeLookupToken)return;
       viewportPlace=location;
       const current=activeFilmItem;
-      place.textContent=viewportPlace?[viewportPlace,current?.time].filter(Boolean).join(" · "):"";
-      if(placeCaption)placeCaption.hidden=!viewportPlace;
+      // Priorité au lieu enregistré avec le souvenir ; le géocodage de la carte sert de secours.
+      const currentLocation=current?.location||current?.place||viewportPlace;
+      const captionText=[currentLocation,current?.time].filter(Boolean).join(" · ");
+      place.textContent=captionText;
+      if(placeCaption)placeCaption.hidden=!captionText;
     };
     map.on("moveend",()=>{void updateViewportPlace();});
     map.doubleClickZoom.disable();
@@ -294,9 +297,10 @@ const points = etapes.filter((e) => Number.isFinite(e.latitude) && Number.isFini
     const render=(animate=true)=>{
       const item=sequence[index];
       activeFilmItem=item;
-      // La localisation vient exclusivement du cadrage actuel, pas de l'étape liée au souvenir.
-      place.textContent="";
-      if(placeCaption)placeCaption.hidden=true;
+      // Afficher immédiatement le lieu et l'heure du souvenir quand ces informations existent.
+      const initialCaption=[item.location||item.place,item.time].filter(Boolean).join(" · ");
+      place.textContent=initialCaption;
+      if(placeCaption)placeCaption.hidden=!initialCaption;
       if(daySelect)daySelect.value=item.date;
       memory.replaceChildren();
       // Pour une photo, afficher sa description une seule fois, discrètement au-dessus de l'image.
