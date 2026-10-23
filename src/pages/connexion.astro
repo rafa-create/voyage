@@ -2,17 +2,112 @@
 import Base from "../layouts/Base.astro";
 import { chemin } from "../lib/paths";
 ---
-<Base title="Espace Admin">
+<Base title="Accéder au carnet de voyage">
   <section class="container connection-page">
     <div class="connection-content">
-      <h1>Espace Admin</h1>
-      <a class="button button-primary" href={chemin("/espace/")}>Connexion admin <span aria-hidden="true"></span></a>
+      <p class="eyebrow">CARNET DE VOYAGE</p>
+      <h1>Un voyage à partager<span aria-hidden="true">.</span></h1>
+      <p class="connection-intro">Saisis l’adresse e-mail qui a été autorisée par l’administrateur pour accéder au carnet.</p>
+      <form id="site-login-form" class="connection-form" hidden>
+        <label for="site-login-email">Adresse e-mail</label>
+        <input id="site-login-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="toi@example.com" required />
+        <button class="button button-primary" type="submit">Accéder au carnet <span aria-hidden="true">→</span></button>
+      </form>
+      <p id="site-login-status" class="connection-status" role="status" aria-live="polite">Vérification de l’accès…</p>
+      <button id="site-logout" class="button button-secondary" type="button" hidden>Se déconnecter</button>
+      <a id="site-home-link" class="button button-primary" href={chemin("/")} hidden>Revenir au carnet <span aria-hidden="true">→</span></a>
     </div>
   </section>
   <style>
-    .connection-page { min-height: 65vh; display: flex; align-items: center; padding: 90px 0 120px; }
-    .connection-content { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; }
-    .connection-page h1 { font-size: clamp(2.8rem,5.5vw,5rem); line-height: 1.15; margin: 0; }
+    .connection-page { min-height: 65vh; display: flex; align-items: center; padding: 70px 0 110px; }
+    .connection-content { width: min(100%, 560px); display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
+    .connection-content .eyebrow { margin: 0; color: #6f806d; font-size: .78rem; font-weight: 700; letter-spacing: .12em; }
+    .connection-page h1 { font-size: clamp(2.6rem,5.5vw,4.6rem); line-height: 1.08; margin: 0; }
+    .connection-page h1 span { color: #7b8c73; }
+    .connection-intro { max-width: 44ch; margin: 0; color: #5d6259; line-height: 1.65; }
+    .connection-form { width: 100%; display: grid; gap: 12px; }
+    .connection-form[hidden], [hidden] { display: none !important; }
+    .connection-form label { font-weight: 650; }
+    .connection-form input { box-sizing: border-box; width: 100%; padding: 14px 15px; border: 1px solid #c9c8be; border-radius: 10px; background: #fffefa; font: inherit; font-size: 16px; }
+    .connection-form button { margin-top: 5px; align-self: flex-start; cursor: pointer; }
+    .connection-status { margin: 0; line-height: 1.6; color: #565d52; }
+    .connection-status[data-error="true"] { color: #9a382e; }
+    #site-logout { cursor: pointer; }
     @media(max-width:780px) { .connection-page { padding: 44px 0 80px; } }
   </style>
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#site-login-form");
+    const emailInput = document.querySelector<HTMLInputElement>("#site-login-email");
+    const status = document.querySelector<HTMLParagraphElement>("#site-login-status");
+    const logout = document.querySelector<HTMLButtonElement>("#site-logout");
+    const home = document.querySelector<HTMLAnchorElement>("#site-home-link");
+    const params = new URLSearchParams(window.location.search);
+    const rawNext = params.get("next") || "/";
+    const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("\\\\") ? rawNext : "/";
+    function showStatus(message: string, isError = false) {
+      if (!status) return;
+      status.textContent = message;
+      status.dataset.error = isError ? "true" : "false";
+    }
+    async function initialize() {
+      try {
+        const response = await fetch("/api/public/site-access/status", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error("Impossible de vérifier l’accès.");
+        if (data.mode !== "restricted") {
+          showStatus("Le site est actuellement ouvert à tous. Aucune connexion n’est nécessaire.");
+          if (home) home.hidden = false;
+          return;
+        }
+        if (data.authenticated) {
+          showStatus("Tu es connecté en tant que " + data.email + ".");
+          if (home) home.hidden = false;
+          if (logout) logout.hidden = false;
+          return;
+        }
+        showStatus("Aucun mot de passe ni code n’est demandé. Seules les adresses autorisées par l’administrateur peuvent entrer.");
+        if (form) form.hidden = false;
+        emailInput?.focus();
+      } catch {
+        showStatus("Impossible de vérifier l’accès pour le moment. Réessaie dans quelques instants.", true);
+      }
+    }
+    form?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (button) button.disabled = true;
+      showStatus("Connexion en cours…");
+      try {
+        const response = await fetch("/api/public/site-access/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: emailInput?.value || "", next })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Connexion impossible.");
+        window.location.assign(data.redirectTo || "/");
+      } catch (error) {
+        showStatus(error instanceof Error ? error.message : "Connexion impossible.", true);
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+    logout?.addEventListener("click", async () => {
+      logout.disabled = true;
+      try {
+        const response = await fetch("/api/public/site-access/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" }
+        });
+        if (!response.ok) throw new Error("Déconnexion impossible.");
+        window.location.assign("/connexion/");
+      } catch (error) {
+        showStatus(error instanceof Error ? error.message : "Déconnexion impossible.", true);
+        logout.disabled = false;
+      }
+    });
+    initialize();
+  </script>
 </Base>
