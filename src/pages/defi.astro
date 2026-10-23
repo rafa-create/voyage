@@ -342,7 +342,7 @@ import Base from "../layouts/Base.astro";
       }
     }
     get("sport-widgets")?.addEventListener("toggle",loadWidgets);
-    async function load(force=false,statusOnly=false,todayOnly=false){
+    async function load(statusOnly=false,todayOnly=false){
       // Ne pas reconstruire les cartes pendant que l'utilisateur consulte un détail ouvert.
       if(statusOnly&&document.querySelector("details.goal[open]")){
         set("defi-loading","Actualisation automatique en pause pendant la consultation.");
@@ -354,7 +354,7 @@ import Base from "../layouts/Base.astro";
       ++routeSerial;if(activeMap){activeMap.remove();activeMap=null;}mapOwner=null;
       try{
         const endpoint=todayOnly?"/api/public/defi?aujourdhui=1":
-          statusOnly?"/api/public/defi?statut=1":force?"/api/public/defi?actualiser=1":"/api/public/defi";
+          statusOnly?"/api/public/defi?statut=1":"/api/public/defi?actualiser=1";
         const response=await fetch(endpoint,{cache:"no-store"});
         if(!response.ok)throw Error("Impossible d'actualiser le défi.");
         state=await response.json() as Data;
@@ -393,8 +393,8 @@ import Base from "../layouts/Base.astro";
     // Afficher immédiatement le cache, puis mettre à jour les deux objectifs du jour.
     // L'historique est synchronisé en arrière-plan et relu chaque minute sans limite de tentatives.
     async function startDefi(){
+      await load(true);
       await load(false,true);
-      await load(false,false,true);
       if(state.configured)scheduleBackgroundSync();
     }
     function scheduleBackgroundSync(){
@@ -403,7 +403,7 @@ import Base from "../layouts/Base.astro";
           await fetch("/api/public/defi?arriere-plan=1",{cache:"no-store"});
         }catch{}
         // Le worker continue sa synchronisation après la réponse ; relire le cache ensuite.
-        setTimeout(()=>void load(false,true),10000);
+        setTimeout(()=>void load(true),10000);
         scheduleBackgroundSync();
       },60000);
     }
