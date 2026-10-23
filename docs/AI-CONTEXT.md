@@ -48,3 +48,14 @@
 - `worker/defi.js` contient `freshTodayChallenge` et `syncChess(..., { todayOnly: true })`; `worker/sport-sync.js` prend en charge `todayOnly` et le fuseau horaire.
 - Ne pas remplacer le rafraîchissement ciblé par une synchronisation complète au chargement : cela ralentirait l'affichage et multiplierait les appels externes. Garder la synchronisation complète en arrière-plan et les tâches planifiées existantes.
 - Vérification : l'utilisateur a confirmé le fonctionnement de la priorité du jour suivie de la synchronisation de fond. Un test automatisé a été ajouté pour le périmètre du jour, mais ne pas affirmer que la suite de tests ou le build a été exécuté sans l'avoir réellement fait. Ne pas déployer sans accord explicite.
+## Mode privé du site — liste blanche d’e-mails
+
+- Le réglage est stocké dans R2 sous `__meta/site-access.json`, avec `mode: "open" | "restricted"` et une liste `emails` normalisée en minuscules.
+- L’administration se fait depuis `/admin/`, panneau « Qui peut consulter Voyages ? ». Une adresse par ligne est acceptée; les doublons sont éliminés et la limite est de 100 adresses.
+- En mode `restricted`, les pages publiques et leurs API passent par la session du site. Une personne sans session est redirigée vers `/connexion/`; la connexion vérifie seulement que l’adresse saisie figure dans la liste blanche (ou correspond à `ADMIN_EMAIL`). Aucun code ni mot de passe n’est envoyé ou demandé.
+- La session utilise un jeton aléatoire dans un cookie `HttpOnly; Secure; SameSite=Lax`, valable 7 jours. Seul le hash SHA-256 du jeton est utilisé comme clé d’un enregistrement de session dans R2. La liste blanche est revalidée à chaque requête protégée : retirer une adresse révoque donc ses sessions.
+- `GET /api/public/site-access/status`, `POST /api/public/site-access/login` et `POST /api/public/site-access/logout` gèrent l’état, la connexion et la déconnexion. Les sessions e-mail ne donnent aucun accès aux routes d’administration, aux albums privés ou aux API privées : celles-ci continuent d’exiger Cloudflare Access/JWT.
+- Les ressources statiques de construction (`/_astro/`, CSS, JS, polices et médias statiques génériques) restent accessibles pour que la page de connexion et les styles puissent charger. Les photos servies via `/media/` restent soumises au contrôle d’accès.
+- Limite explicitement acceptée par le propriétaire : l’adresse e-mail n’est pas vérifiée. Une personne connaissant une adresse autorisée peut l’usurper pour voir le site public. Ne jamais présenter ce mécanisme comme une preuve d’identité ou comme une authentification forte.
+- Fichiers principaux : `worker/auth.js`, `worker/index.js`, `src/pages/connexion.astro`, `src/pages/admin/index.astro`, `src/layouts/Base.astro`, test `tests/site-access-auth.test.mjs`.
+- Ne pas déployer automatiquement. Le code et le test ont été ajoutés, mais les tests et le build ne sont pas déclarés validés tant qu’ils n’ont pas été exécutés.
