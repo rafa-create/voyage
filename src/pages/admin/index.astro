@@ -179,7 +179,7 @@ import { chemin } from "../../lib/paths";
 
     type Etape = { slug:string; titre:string; ville:string; pays:string; date:string; dateFin?:string; statut:string };
     type Photo = {key:string;src:string;etape:string|null;visibilite:"public"|"prive";datePrise:string|null;dateHeure?:string|null;lieu?:string;legende?:string;commentaire?:string;latitude?:number|null;longitude?:number|null;alt:string;legacy?:boolean};
-    type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null;lieu:string; prive:boolean };
+    type Chosen = { file:File; preview:string; date:string|null; dateHeure:string|null;latitude:number|null;longitude:number|null;coordonnees:string;lieu:string; prive:boolean };
     const isGalleryPhotoContext = new URLSearchParams(location.search).get("context")==="photos";
     if(isGalleryPhotoContext)document.body.classList.add("admin-photos-embed");
     const $ = <T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
@@ -372,8 +372,9 @@ import { chemin } from "../../lib/paths";
         date.textContent=(item.dateHeure?"Prise le "+item.dateHeure.replace("T"," à ").slice(0,16):item.date?"Prise le "+item.date:"Date non renseignée")+" · "+lieu;
         details.append(name,date);
         const fields=document.createElement("div");fields.className="chosen-photo-fields";
-        const makeInput=(labelText:string,type:"text"|"number",value:string,placeholder:string)=>{const wrap=document.createElement("label");wrap.textContent=labelText;const input=document.createElement("input");input.type=type;input.value=value;input.placeholder=placeholder;if(type==="number")input.step="any";input.addEventListener("input",()=>{if(labelText==="Lieu")selected[index].lieu=input.value;else if(labelText==="Latitude")selected[index].latitude=input.value.trim()&&Number.isFinite(Number(input.value))?Number(input.value):null;else selected[index].longitude=input.value.trim()&&Number.isFinite(Number(input.value))?Number(input.value):null;});wrap.append(input);fields.append(wrap);};
-        makeInput("Lieu","text",item.lieu,"Ville ou lieu précis");makeInput("Latitude","number",item.latitude===null?"":String(item.latitude),"Ex. 43.2965");makeInput("Longitude","number",item.longitude===null?"":String(item.longitude),"Ex. 5.3698");
+        const makeInput=(labelText:string,type:"text",value:string,placeholder:string,onInput:(value:string)=>void)=>{const wrap=document.createElement("label");wrap.textContent=labelText;const input=document.createElement("input");input.type=type;input.value=value;input.placeholder=placeholder;input.addEventListener("input",()=>onInput(input.value));wrap.append(input);fields.append(wrap);};
+        makeInput("Lieu","text",item.lieu,"Ville ou lieu précis",value=>{selected[index].lieu=value;});
+        makeInput("Coordonnées GPS","text",item.coordonnees,"(43.2235112, 5.5408353)",value=>{selected[index].coordonnees=value;const match=value.trim().match(/^\\(?\\s*(-?\\d+(?:\\.\\d+)?)\\s*,\\s*(-?\\d+(?:\\.\\d+)?)\\s*\\)?$/);if(!value.trim()){selected[index].latitude=null;selected[index].longitude=null;return;}if(match){const lat=Number(match[1]),lon=Number(match[2]);if(Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180){selected[index].latitude=lat;selected[index].longitude=lon;return;}}selected[index].latitude=null;selected[index].longitude=null;});
         const label=document.createElement("label");label.className="chosen-private";
         const check=document.createElement("input");check.type="checkbox";check.checked=item.prive;
         check.addEventListener("change",()=>{selected[index].prive=check.checked;});
@@ -388,7 +389,8 @@ import { chemin } from "../../lib/paths";
       message("photo-progress","Lecture des dates EXIF…");
       for(const file of files){
         const metadata=await photoMetadata(file);
-        selected.push({file,preview:URL.createObjectURL(file),...metadata,lieu:"",prive:false});
+        const coordonnees=metadata.latitude!==null&&metadata.longitude!==null?`(${metadata.latitude}, ${metadata.longitude})`:"";
+        selected.push({file,preview:URL.createObjectURL(file),...metadata,coordonnees,lieu:"",prive:false});
       }
       renderChosen();message("photo-progress",selected.length+" fichier(s) sélectionné(s).");
     });
@@ -421,7 +423,8 @@ import { chemin } from "../../lib/paths";
         for(const item of selected){
           message("photo-progress","Envoi "+(done+1)+"/"+selected.length+" · "+item.file.name);
           const publicPhoto=!item.prive;
-          if((item.latitude===null)!==(item.longitude===null))throw Error(item.file.name+" : renseigne les deux coordonnées, latitude et longitude, ou laisse les deux vides.");
+          if(item.coordonnees.trim()&&(item.latitude===null||item.longitude===null))throw Error(item.file.name+" : coordonnées invalides. Utilise le format (43.2235112, 5.5408353).");
+          if((item.latitude===null)!==(item.longitude===null))throw Error(item.file.name+" : renseigne latitude et longitude, ou laisse les deux vides.");
           // Importer l'original octet pour octet : le canvas réencode en JPEG et
           // détruit notamment l'EXIF/GPS. La suppression EXIF reste réservée à
           // l'action explicite de publication d'une photo privée.
