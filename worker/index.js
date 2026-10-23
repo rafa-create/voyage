@@ -167,7 +167,7 @@ export default {
       try{
         const session=await createSiteAccessSession(env,email);
         const next=typeof input?.next==="string"?input.next:"/";
-        const safeNext=next.startsWith("/")&&!next.startsWith("//")&&!next.startsWith("/\\\\")?next:"/";
+        const safeNext=next.startsWith("/")&&!next.startsWith("//")&&!next.includes("\\\\")&&!/[\\u0000-\\u001f]/.test(next)?next:"/";
         return new Response(JSON.stringify({ok:true,redirectTo:safeNext}),{
           headers:{...noStore,"Content-Type":"application/json; charset=utf-8","Set-Cookie":siteSessionCookie(session.token)}
         });
