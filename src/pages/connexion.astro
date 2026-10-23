@@ -65,7 +65,7 @@ import { chemin } from "../lib/paths";
           if (logout) logout.hidden = false;
           return;
         }
-        showStatus("Aucun mot de passe ni code n’est demandé. Seules les adresses autorisées par l’administrateur peuvent entrer.");
+        showStatus("Ce carnet est réservé aux proches de Rafa. Saisis ton adresse e-mail pour entrer. Si elle n’est pas encore autorisée, demande à Rafa de t’ajouter à la liste des e-mails.");
         if (form) form.hidden = false;
         emailInput?.focus();
       } catch {
@@ -85,7 +85,7 @@ import { chemin } from "../lib/paths";
           body: JSON.stringify({ email: emailInput?.value || "", next })
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Connexion impossible.");
+        if (!response.ok) throw new Error(response.status === 403 ? "Cette adresse n’est pas encore dans la liste des invités. Demande à Rafa de t’ajouter aux e-mails autorisés, puis réessaie." : (data.error || "Connexion impossible."));
         window.location.assign(data.redirectTo || "/");
       } catch (error) {
         showStatus(error instanceof Error ? error.message : "Connexion impossible.", true);
