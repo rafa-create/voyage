@@ -1213,10 +1213,17 @@ const points = etapes
   #carte-voyage .map-links-control {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    width: 29px;
+    min-width: 29px;
     padding: 0;
     border: 0;
     background: transparent;
     box-shadow: none;
+  }
+  #carte-voyage .map-links-control button {
+    flex: 0 0 29px;
+    margin: 0;
   }
   #carte-voyage .maplibregl-ctrl-attrib { display: none !important; }
   #carte-voyage .map-day-navigation-control .daily-heading-title {
