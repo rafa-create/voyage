@@ -16,6 +16,7 @@ import { chemin } from "../lib/paths";
       <p id="site-login-status" class="connection-status" role="status" aria-live="polite">Vérification de l’accès…</p>
       <button id="site-logout" class="button button-secondary" type="button" hidden>Se déconnecter</button>
       <a id="site-home-link" class="button button-primary" href={chemin("/")} hidden>Revenir au carnet <span aria-hidden="true">→</span></a>
+      <a id="admin-login-link" class="button button-secondary" href={chemin("/admin/")} hidden>Connexion administrateur <span aria-hidden="true">→</span></a>
     </div>
   </section>
   <style>
@@ -32,7 +33,7 @@ import { chemin } from "../lib/paths";
     .connection-form button { margin-top: 5px; align-self: flex-start; cursor: pointer; }
     .connection-status { margin: 0; line-height: 1.6; color: #565d52; }
     .connection-status[data-error="true"] { color: #9a382e; }
-    #site-logout { cursor: pointer; }
+    #site-logout, #admin-login-link { cursor: pointer; }
     @media(max-width:780px) { .connection-page { padding: 44px 0 80px; } }
   </style>
   <script>
@@ -41,6 +42,7 @@ import { chemin } from "../lib/paths";
     const status = document.querySelector<HTMLParagraphElement>("#site-login-status");
     const logout = document.querySelector<HTMLButtonElement>("#site-logout");
     const home = document.querySelector<HTMLAnchorElement>("#site-home-link");
+    const adminLogin = document.querySelector<HTMLAnchorElement>("#admin-login-link");
     const params = new URLSearchParams(window.location.search);
     const rawNext = params.get("next") || "/";
     const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("\\") ? rawNext : "/";
@@ -67,6 +69,7 @@ import { chemin } from "../lib/paths";
         }
         showStatus("Ce carnet est réservé aux proches de Rafa. Saisis ton adresse e-mail pour entrer. Si elle n’est pas encore autorisée, demande à Rafa de t’ajouter à la liste des e-mails.");
         if (form) form.hidden = false;
+        if (adminLogin) adminLogin.hidden = false;
         emailInput?.focus();
       } catch {
         showStatus("Impossible de vérifier l’accès pour le moment. Réessaie dans quelques instants.", true);
