@@ -278,6 +278,20 @@ export default {
     if(/^\/(?:espace|admin)(?:\/|$)/.test(path)){
       const page=await env.ASSETS.fetch(request);
       const headers=new Headers(page.headers);headers.set("Cache-Control","private, no-store");
+      // L'admin est authentifié par Cloudflare Access. En mode site restreint,
+      // lui créer aussi une session du carnet pour qu'il puisse consulter les
+      // pages publiques sans devoir se reconnecter comme un invité.
+      if(auth.user.isAdmin&&["GET","HEAD"].includes(request.method)&&page.ok){
+        const siteConfig=await getJSON(env.PHOTOS_PRIVEES,"__meta/site-access.json",{mode:"open",emails:[]});
+        if(siteConfig?.mode==="restricted"&&!(await getSiteAccessSession(request,env,siteConfig))){
+          try{
+            const session=await createSiteAccessSession(env,auth.user.email);
+            headers.append("Set-Cookie",siteSessionCookie(session.token));
+          }catch(e){
+            console.warn("Création de session du carnet pour l’administrateur:",String(e));
+          }
+        }
+      }
       return new Response(page.body,{status:page.status,headers});
     }
     if(path==="/api/prive/moi"&&request.method==="GET")return json(auth.user);
